@@ -1,0 +1,33 @@
+# Hermes (Claw Agent fork) config for a weavr agent. Copy into $HERMES_HOME/config.yaml
+# and replace the absolute paths. Proven 6 Sep 2026 (see README.md).
+model:
+  default: "anthropic/claude-sonnet-5"
+  provider: "anthropic"
+
+terminal:
+  backend: "local"
+  cwd: "."
+
+tools:
+  tool_search:
+    enabled: "off"          # keep every weavr tool in the prompt; "auto" hides them behind tool_search
+
+# The money gate is the plugin in ../plugins/weavr-wallet-gate (copy it to
+# $HERMES_HOME/plugins/ and run `hermes plugins enable weavr-wallet-gate`).
+# The MCP trust tier never sees the wallet tool (it runs through the terminal
+# tool); the plugin's pre_tool_call hook escalates each signing run to the human
+# approval gate with a message that names the action. A shell hook cannot do
+# this: Hermes keeps only `block` / `modify` from shell-hook output.
+
+mcp_servers:
+  clawpump:                 # the fork seeds this entry; keep it off unless you use ClawPump
+    enabled: false
+  weavr:
+    url: "https://api.weavr.sh/mcp"
+    enabled: true
+    trust: "untrusted"      # read-only tools run freely; every write-capable call asks first
+    # headers: { X-Weavr-Key: "${WEAVR_PARTNER_KEY}" }   # Phase 3, once the partner key ships
+    tools:
+      resources: false      # the sign/simulate cards are for MCP Apps hosts; Hermes shows raw HTML
+      prompts: false
+      exclude: [portfolio_status]

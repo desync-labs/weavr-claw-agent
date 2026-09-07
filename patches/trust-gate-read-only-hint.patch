@@ -1,0 +1,15 @@
+Clawpump/claw-agent @ 7b81ee9 (upstream hermes-agent 0.20.6): the MCP trust
+tier reads `annotations.readOnlyHint` with getattr(), but mcp>=2.0 renamed the
+field to `read_only_hint` (camelCase kept only as an alias for validation), so
+every tool on an `untrusted` server is treated as write-capable and asks for
+consent — including the reads. One line in tools/mcp_tool.py:
+
+--- a/tools/mcp_tool.py
++++ b/tools/mcp_tool.py
+@@ def _annotation_read_only_hint(mcp_tool: Any) -> bool:
+     if isinstance(annotations, dict):
+         hint = annotations.get("readOnlyHint")
+     else:
+-        hint = getattr(annotations, "readOnlyHint", None)
++        hint = mcp_field(annotations, "read_only_hint", "readOnlyHint")  # trust-gate fix: mcp 2.x renamed the field
+     return hint is True

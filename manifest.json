@@ -1,0 +1,20 @@
+{
+  "_about": "weavr's deployed Solana programs, the allowlist the wallet tool signs for. Copied from composable-portfolios-ops/manifest.json; set WEAVR_MANIFEST or WEAVR_PROGRAM_IDS to override.",
+  "repos": {
+    "splyce-composable-core": {
+      "deployed_programs": {
+        "stoken": "84iktrtfvLZm5zD5puEPhVdYRWg8G7sJjqsLqnufDhAk",
+        "accountant": "GaJ8eAA2sDsUjU9Cy2di1vbTfc676o5McC48w1uAHorR",
+        "asset_manager_escrow": "2CwNQT3gDQ3c3iZCpofKGnC81FMwRAzbKHDEQZ3WQhjq"
+      }
+    },
+    "composable-portfolios-programs": {
+      "deployed_programs": {
+        "portfolio_factory": "CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn",
+        "portfolio_allocator": "AUsqh1WMuRJqXAR4pc5JJ2PVp96a7WVnv4pq4Z5t2KV7",
+        "portfolio_nav": "GWVnx75Sk46CbMT6jPmY2dKnCeEM3G7MNWK2hCf3ePky",
+        "pyth_price_adapter": "GzwD9oA6x6BAyowmSGrW6n85bwUUR8kBukWyixui9A7u"
+      }
+    }
+  }
+}
