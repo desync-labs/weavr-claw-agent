@@ -1,0 +1,27 @@
+Clawpump/claw-agent @ 7b81ee9 (upstream hermes-agent 0.20.6): in the TUI
+(prompt_toolkit), the MCP trust gate's consent prompt never renders. The gate
+calls tools.approval.request_elicitation_consent → prompt_dangerous_approval
+without a callback, and prompt_dangerous_approval hands that None straight to
+_prompt_dangerous_approval_inner, whose prompt_toolkit guard then denies
+fail-closed ("approval requested on a thread with no approval callback while
+prompt_toolkit is active"). The dangerous-command path resolves the per-thread
+CLI/TUI callback in _human_approval_gate; this makes prompt_dangerous_approval
+do the same, so every `trust: untrusted` write tool (create_portfolio, …)
+shows the [o]nce | [s]ession | [d]eny panel in the TUI. Gateway (Telegram)
+sessions are unaffected; they never reach this function. Seen 17 Sep 2026.
+
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ def prompt_dangerous_approval(command: str, description: str,
+     if timeout_seconds is None:
+         timeout_seconds = _get_approval_timeout()
+ 
++    # Resolve the per-thread CLI/TUI callback when the caller passed none.
++    # The MCP trust gate and elicitation path (request_elicitation_consent)
++    # call this directly; without the callback the prompt_toolkit guard in
++    # _prompt_dangerous_approval_inner denies fail-closed and the TUI never
++    # shows the panel.  (weavr fix; the dangerous-command path already
++    # resolves it in _human_approval_gate.)
++    approval_callback = _resolve_cli_approval_callback(approval_callback)
++
+     # Everything below is a human prompt: either the registered CLI callback

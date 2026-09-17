@@ -4,17 +4,19 @@
  * the bisecting control for the PayBox signer — same checks, same flows, no
  * PayBox — and the dust-only fallback when PayBox is out of the picture.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { isVersioned } from './tx-checks.mjs';
+import { loadKeypair } from './local-wallet.mjs';
 
 const require = createRequire(import.meta.url);
-const { Keypair, Transaction, VersionedTransaction } = require('@solana/web3.js');
+const { Transaction, VersionedTransaction } = require('@solana/web3.js');
 
 export function localSigner({ env = process.env, keypairFile } = {}) {
   const file = keypairFile ?? env.SIGN_LOCAL_KEYPAIR_FILE;
   if (!file) { const err = new Error('missing SIGN_LOCAL_KEYPAIR_FILE'); err.code = 'CONFIG'; throw err; }
-  const keypair = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(file, 'utf8'))));
+  if (!existsSync(file)) { const err = new Error(`no wallet at ${file}; run --wallet create (new) or --wallet import <keypair.json> (existing)`); err.code = 'CONFIG'; throw err; }
+  const keypair = loadKeypair(file);
   return {
     wallet: keypair.publicKey.toBase58(),
     kind: 'local',

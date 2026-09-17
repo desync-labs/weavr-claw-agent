@@ -18,7 +18,7 @@ import re
 
 # `node $WEAVR_SIGN_TOOL …`, `node "${WEAVR_SIGN_TOOL}" …` or the file path, quoted or not.
 PATTERN = re.compile(r"(?:sign-(solana|local)\.mjs|\$\{?WEAVR_SIGN_TOOL\}?)[\"']?\s+(.*)$")
-SIGNING_FLAGS = re.compile(r"--(deployment|deposit|file|tx)\b")
+SIGNING_FLAGS = re.compile(r"--(deployment|deposit|withdraw|refresh-nav|file|tx)\b")
 
 
 def describe(tail: str) -> str:
@@ -29,6 +29,13 @@ def describe(tail: str) -> str:
     depo = re.search(r"--deposit\s+(\S+)\s+--amount\s+(\S+)", tail)
     if depo:
         return f"deposit ${depo.group(2)} into {depo.group(1)}"
+    wd = re.search(r"--withdraw\s+(\S+)", tail)
+    if wd:
+        shares = re.search(r"--shares\s+(\S+)", tail)
+        return f"withdraw {shares.group(1) if shares else 'some'} shares from {wd.group(1)}"
+    nav = re.search(r"--refresh-nav\s+(\S+)", tail)
+    if nav:
+        return f"refresh the valuation of {nav.group(1)} (the wallet pays the network fee)"
     if "--file" in tail:
         suffix = " and send it" if "--send" in tail else " and wait for the portfolio" if "--await" in tail else ""
         return "sign a saved payload" + suffix

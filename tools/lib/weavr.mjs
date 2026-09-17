@@ -73,16 +73,37 @@ export async function finishDeployment(client, deploymentId, signer, allowed, { 
   return { ok: !last.isError, exit: last.isError ? 7 : 0, output: { step: 'await_portfolio', ...scrub(last.payload) } };
 }
 
-/** Build, sign and send a deposit. */
-export async function makeDeposit(client, portfolio, amountUsd, signer, allowed) {
-  const built = await client.mcpCall('build_deposit', { portfolio, user: signer.wallet, amountUsd });
-  if (built.isError) return { ok: false, exit: 7, output: { step: 'build_deposit', ...scrub(built.payload) } };
+/**
+ * The one-signature user flows share a shape: a `build_*` tool answers a
+ * walletPayload, the checks run, the signer signs, `send_signed` sends.
+ * `report` is what the JSON line carries besides weavr's answer.
+ */
+async function buildSignSend(client, buildTool, buildArgs, signer, allowed, report) {
+  const built = await client.mcpCall(buildTool, buildArgs);
+  if (built.isError) return { ok: false, exit: 7, output: { step: buildTool, ...scrub(built.payload) } };
   const txs = built.payload.walletPayload?.transactions ?? [];
-  if (!txs.length) return { ok: false, exit: 7, output: { step: 'build_deposit', ...scrub(built.payload) } };
+  if (!txs.length) return { ok: false, exit: 7, output: { step: buildTool, ...scrub(built.payload) } };
   const signedResult = await signChecked(txs, signer, allowed);
   if (!signedResult.ok) return signedResult;
   const sent = await client.mcpCall('send_signed', { signed: signedResult.signed });
-  return { ok: !sent.isError, exit: sent.isError ? 7 : 0, output: { step: 'send_signed', portfolio, amountUsd, ...scrub(sent.payload) } };
+  return { ok: !sent.isError, exit: sent.isError ? 7 : 0, output: { step: 'send_signed', ...report, ...scrub(sent.payload) } };
+}
+
+/** Build, sign and send a deposit. */
+export function makeDeposit(client, portfolio, amountUsd, signer, allowed) {
+  return buildSignSend(client, 'build_deposit', { portfolio, user: signer.wallet, amountUsd }, signer, allowed, { portfolio, amountUsd });
+}
+
+/** Build, sign and send a withdrawal request (whole shares; queued and paid in order). */
+export function makeWithdraw(client, portfolio, shares, signer, allowed, { minAmountOut } = {}) {
+  const args = { portfolio, user: signer.wallet, shares: String(shares) };
+  if (minAmountOut !== undefined) args.minAmountOut = String(minAmountOut);
+  return buildSignSend(client, 'build_withdraw', args, signer, allowed, { portfolio, shares: String(shares) });
+}
+
+/** Build, sign and send a valuation refresh: the user-side crank, paid by the wallet. */
+export function makeRefreshNav(client, portfolio, signer, allowed) {
+  return buildSignSend(client, 'build_refresh_nav', { portfolio, payer: signer.wallet }, signer, allowed, { portfolio });
 }
 
 /** Read the transactions out of a saved walletPayload (or a bare list). */

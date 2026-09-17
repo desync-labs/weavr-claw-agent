@@ -20,6 +20,22 @@ still discovers 30 tools; in a live gateway session the reads ran freely and
 
 Upstream: `hermes-agent` PR pending; the fork inherits it whenever it syncs.
 
+## 3. The TUI never shows the trust-gate prompt (required for `claw` / `hermes` in a terminal)
+
+In the TUI, `create_portfolio` on the `untrusted` weavr server was denied in
+0.0 s with no panel: `tools/approval.py::request_elicitation_consent` calls
+`prompt_dangerous_approval` without a callback, and that function passes the
+`None` on instead of resolving the per-thread CLI/TUI callback the way
+`_human_approval_gate` does, so the prompt_toolkit fail-closed guard fires
+("approval requested on a thread with no approval callback while
+prompt_toolkit is active"). Add one line to `prompt_dangerous_approval`:
+`approval_callback = _resolve_cli_approval_callback(approval_callback)`.
+Diff: `tui-elicitation-approval-callback.patch`. Test:
+`test_tui_elicitation_callback.py` (run inside the fork venv). Telegram
+sessions never hit this path, which is why the 6 Sep rehearsal did not see it.
+The plugin money gate (`request_tool_approval`) already resolves the callback
+and renders in the TUI. Seen 17 Sep 2026.
+
 ## 2. The money gate is a plugin hook, not the trust tier (no fork change)
 
 `trust: untrusted` gates direct MCP calls. The wallet tool signs and sends
