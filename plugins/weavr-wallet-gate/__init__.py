@@ -31,8 +31,14 @@ def describe(tail: str) -> str:
         return f"deposit ${depo.group(2)} into {depo.group(1)}"
     wd = re.search(r"--withdraw\s+(\S+)", tail)
     if wd:
+        usd = re.search(r"--amount\s+(\S+)", tail)
+        if usd:
+            return f"withdraw ${usd.group(1)} from {wd.group(1)}"
         shares = re.search(r"--shares\s+(\S+)", tail)
-        return f"withdraw {shares.group(1) if shares else 'some'} shares from {wd.group(1)}"
+        amount = shares.group(1) if shares else "some"
+        if str(amount).lower() == "all":
+            return f"withdraw everything from {wd.group(1)}"
+        return f"withdraw {amount} shares from {wd.group(1)}"
     nav = re.search(r"--refresh-nav\s+(\S+)", tail)
     if nav:
         return f"refresh the valuation of {nav.group(1)} (the wallet pays the network fee)"

@@ -47,3 +47,13 @@ export async function readBalances(address, conn) {
     note: 'SOL pays network fees only; deposits are paid in USDC (Solana), so a deposit of $X needs at least X USDC here.',
   };
 }
+
+/** Share balance of `mint` held by `address`, in base units. Zero if none. */
+export async function readShareBalance(address, mint, conn) {
+  const parsed = await conn.getParsedTokenAccountsByOwner(new PublicKey(address), { mint: new PublicKey(mint) });
+  let raw = 0n;
+  for (const { account } of parsed?.value ?? []) {
+    raw += BigInt(account?.data?.parsed?.info?.tokenAmount?.amount ?? '0');
+  }
+  return raw;
+}
