@@ -6,10 +6,11 @@ weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulatio
 
 | Path | What |
 |---|---|
-| `tools/sign-solana.mjs` | the wallet tool: signs weavr transactions with the PayBox CLI (`--address`, `--deployment <id>`, `--deposit <ticker> --amount <usd>`) |
+| `tools/sign-solana.mjs` | the wallet tool: signs weavr transactions with the PayBox CLI (`--address`, `--balance`, `--deployment <id>`, `--deposit <ticker> --amount <usd>`, `--withdraw <ticker> --shares <n>`, `--refresh-nav <ticker>`) |
 | `tools/sign-check.mjs` | a zero-cost check that the key, the grant and the client agree; prints the PayBox client id |
-| `tools/sign-local.mjs` | the same tool with a local keypair file, for testing with a throwaway wallet |
-| `tools/lib/` | the checks (fee payer must be your wallet, every instruction inside weavr's programs), the weavr flows, the two signers |
+| `tools/sign-local.mjs` | the same tool with a keypair file on this machine (small amounts only), plus `--wallet status\|create\|import <keypair.json>` so the agent can offer the user a new wallet or take an existing one |
+| `tools/lib/` | the checks (fee payer must be your wallet, every instruction inside weavr's programs), the weavr flows, the two signers, the wallet's lifecycle, balances |
+| `skills/weavr/SKILL.md` | the skill for this host: wallet first (choose or create), balance and funding rules before every money step, then the flows; a superset of `https://api.weavr.sh/hosts/hermes/SKILL.md` |
 | `plugins/weavr-wallet-gate/` | a Hermes plugin: every signing run becomes an approval you answer, with a message naming the action and the amount |
 | `patches/` | a one-line fix for Claw Agent releases whose trust gate asks before read-only tools too |
 | `manifest.json` | weavr's onchain programs, the allowlist the wallet tool signs for |
@@ -29,9 +30,18 @@ In `~/.hermes/config.yaml`, make the weavr entry match the one in `config.yaml` 
 
 ```bash
 mkdir -p ~/.hermes/skills/weavr
-curl -s https://api.weavr.sh/hosts/hermes/SKILL.md -o ~/.hermes/skills/weavr/SKILL.md
+cp skills/weavr/SKILL.md ~/.hermes/skills/weavr/SKILL.md   # this repo's copy: wallet choice + funding rules (the served one lacks them)
 claw mcp test weavr                                     # Connected, 30 tools
 ```
+
+### Local wallet instead of PayBox (small amounts)
+
+Skip step 2 and set, in `~/.hermes/.env`, `WEAVR_SIGN_TOOL=<repo>/tools/sign-local.mjs` and
+`SIGN_LOCAL_KEYPAIR_FILE=<a 0700 dir outside the repo>/agent-keypair.json`. Do not create the
+file: in chat the agent asks whether you want a new wallet or your own, and runs `--wallet create`
+for you; it then tells you the address, that a create needs about 0.15 SOL there, and that
+deposits need USDC. The key is a plain file the agent's shell can read, so keep only what you
+would accept losing.
 
 ### 2. PayBox
 

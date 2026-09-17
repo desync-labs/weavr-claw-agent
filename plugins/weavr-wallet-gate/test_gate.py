@@ -13,6 +13,11 @@ def test_ignores_other_tools_and_plain_commands():
     assert gate(tool_name="mcp__weavr__list_assets", args={}) is None
     assert gate(tool_name="terminal", args={"command": "ls -la"}) is None
     assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --address"}) is None
+    # the wallet's lifecycle and balances move no money: no approval
+    assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --wallet status"}) is None
+    assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --wallet create"}) is None
+    assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --wallet import /x/keypair.json"}) is None
+    assert gate(tool_name="terminal", args={"command": 'node "${WEAVR_SIGN_TOOL}" --balance'}) is None
 
 
 def test_escalates_signing_runs_with_a_named_action():
@@ -26,6 +31,12 @@ def test_escalates_signing_runs_with_a_named_action():
     assert r["action"] == "approve" and "signer local" in r["message"]
     r = gate(tool_name="terminal", args={"command": "node /x/sign-solana.mjs --file p.json --send"})
     assert "sign a saved payload and send it" in r["message"]
+    r = gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --withdraw MAJB --shares 12"})
+    assert r["action"] == "approve" and "withdraw 12 shares from MAJB" in r["message"]
+    r = gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --shares 3 --withdraw MAJB --min-out 5"})
+    assert "withdraw 3 shares from MAJB" in r["message"]
+    r = gate(tool_name="terminal", args={"command": 'node "${WEAVR_SIGN_TOOL}" --refresh-nav MAJB'})
+    assert r["action"] == "approve" and "refresh the valuation of MAJB" in r["message"]
 
 
 if __name__ == "__main__":

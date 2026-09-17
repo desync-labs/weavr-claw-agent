@@ -7,11 +7,12 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedPrograms, programsFromManifest, EXIT } from './tx-checks.mjs';
-import { finishDeployment, makeDeposit, signChecked, transactionsFromFile, weavrClient } from './weavr.mjs';
+import { finishDeployment, makeDeposit, makeRefreshNav, makeWithdraw, signChecked, transactionsFromFile, weavrClient } from './weavr.mjs';
+import { connectionFor, readBalances } from './balance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-export const USAGE = '--address | --deployment <id> | --deposit <ticker> --amount <usd> | --file <walletPayload.json> [--send | --await <deploymentId>] | --tx <encoded>...';
+export const USAGE = '--wallet status|create|import <keypair.json> | --address | --balance | --deployment <id> | --deposit <ticker> --amount <usd> | --withdraw <ticker> --shares <whole> [--min-out <usd>] | --refresh-nav <ticker> | --file <walletPayload.json> [--send | --await <deploymentId>] | --tx <encoded>...';
 
 export function out(obj, code = 0) {
   process.stdout.write(JSON.stringify(obj) + '\n');
@@ -32,15 +33,40 @@ export function resolveAllowed(env = process.env) {
   return allowedPrograms(programsFromManifest(found));
 }
 
-export async function runCli(argv, makeSigner, env = process.env) {
+/**
+ * `walletOps` (status/create/importFrom) manages a key file on this machine;
+ * the PayBox tool passes none, its wallet lives in the PayBox app.
+ */
+export async function runCli(argv, makeSigner, env = process.env, { wallet: walletOps } = {}) {
   const has = (f) => argv.includes(f);
   const val = (f) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined; };
   const vals = (f) => argv.flatMap((a, i) => (a === f && argv[i + 1] != null ? [argv[i + 1]] : []));
   const fail = (error, detail, code) => out({ error, ...(detail ? { detail } : {}) }, code);
 
   try {
+    // Wallet lifecycle runs before a signer exists: there may be no key yet.
+    if (has('--wallet')) {
+      const sub = val('--wallet');
+      if (sub === 'status') {
+        if (walletOps) return out(walletOps.status());
+        try { const s = makeSigner(); return out({ configured: true, signer: s.kind, address: s.wallet }); }
+        catch (e) { return out({ configured: false, detail: String(e.message).slice(0, 200) }); }
+      }
+      if (!walletOps) return fail('UNSUPPORTED', 'this wallet is managed in the PayBox app; --wallet create/import apply to sign-local.mjs', EXIT.USAGE);
+      if (sub === 'create') return out(walletOps.create());
+      if (sub === 'import') return out(walletOps.importFrom(argv[argv.indexOf('--wallet') + 2]));
+      return fail('USAGE', '--wallet status | create | import <keypair.json>', EXIT.USAGE);
+    }
+
     const signer = makeSigner();
     if (has('--address')) return out({ address: signer.wallet });
+    if (has('--balance')) {
+      try {
+        return out(await readBalances(signer.wallet, connectionFor(env)));
+      } catch (e) {
+        return fail('RPC_UNAVAILABLE', `could not read balances: ${String(e.message).slice(0, 160)}`, EXIT.FAILED);
+      }
+    }
     const allowed = resolveAllowed(env);
     const client = weavrClient({ mcpUrl: env.WEAVR_MCP_URL, apiUrl: env.WEAVR_API_URL });
     const finish = (r) => out(r.output ?? { signed: r.signed }, r.exit ?? 0);
@@ -68,6 +94,17 @@ export async function runCli(argv, makeSigner, env = process.env) {
       const portfolio = val('--deposit'); const amountUsd = Number(val('--amount'));
       if (!portfolio || !(amountUsd > 0)) return fail('USAGE', '--deposit <ticker> --amount <usd>', EXIT.USAGE);
       return finish(await makeDeposit(client, portfolio, amountUsd, signer, allowed));
+    }
+    if (has('--withdraw')) {
+      const portfolio = val('--withdraw'); const shares = val('--shares'); const minOut = val('--min-out');
+      if (!portfolio || !/^[1-9]\d*$/.test(shares ?? '')) return fail('USAGE', '--withdraw <ticker> --shares <whole shares, at least 1> [--min-out <usd>]', EXIT.USAGE);
+      if (minOut !== undefined && !(Number(minOut) >= 0)) return fail('USAGE', '--min-out <usd>', EXIT.USAGE);
+      return finish(await makeWithdraw(client, portfolio, shares, signer, allowed, minOut !== undefined ? { minAmountOut: minOut } : {}));
+    }
+    if (has('--refresh-nav')) {
+      const portfolio = val('--refresh-nav');
+      if (!portfolio) return fail('USAGE', '--refresh-nav <ticker>', EXIT.USAGE);
+      return finish(await makeRefreshNav(client, portfolio, signer, allowed));
     }
     if (has('--deployment')) {
       const id = val('--deployment');
