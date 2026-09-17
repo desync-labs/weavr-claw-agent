@@ -233,8 +233,10 @@ const CASES = [
     },
   },
   {
-    // A file that matches no shipped preset holds the owner's edits; init
-    // writes a preset over it, so the remedy is the one number, by hand.
+    // A file that matches no shipped preset holds the owner's edits; a
+    // re-run of init without --policy keeps them and rewrites only the
+    // notice, so that is the remedy, and a preset flag (which would refuse
+    // the edited file) is never in it.
     name: 'notice mismatch on a policy.json edited by hand',
     check: 'notice',
     plant: (ctx) => {
@@ -244,11 +246,11 @@ const CASES = [
       writeFileSync(ctx.paths.policyFile, `${JSON.stringify(p, null, 2)}\n`);
     },
     line: /CLAWA1 announces 120s; policy\.invariants\.rebalanceDelaySecs is 60; the signer self-locks/,
-    fix: /^\s+fix: set invariants\.rebalanceDelaySecs to 120 in \S+policy\.json by hand \(the file matches no shipped preset, so init would write a preset over your edits\), restart the signer, then weavr-curator ops unlock --why "<reason>" --home \S+\. To move the notice onchain to 60s instead/,
+    fix: /^\s+fix: weavr-curator init --portfolio \S+ --home \S+ again, without --policy \(it keeps \S+policy\.json as you edited it and rewrites only invariants\.rebalanceDelaySecs to the chain's 120s\), restart the signer, then weavr-curator ops unlock --why "<reason>" --home \S+\. To move the notice onchain to 60s instead/,
     extra: (r, ctx) => {
       const { fix } = check(r, 'notice');
-      assert.ok(fix.includes(`in ${ctx.paths.policyFile} by hand`), fix);
-      assert.doesNotMatch(fix, /init --portfolio/);
+      assert.ok(fix.includes(`init --portfolio ${ctx.mint} --home ${ctx.home} again, without --policy (it keeps ${ctx.paths.policyFile} as you edited it`), fix);
+      assert.doesNotMatch(fix, /--policy (standard|rehearsal)|by hand/);
       assert.ok(fix.indexOf('ops unlock') < fix.indexOf('ops set-delay'));
       assert.match(check(r, 'policy file').text, /\(version 1, matches no shipped preset: edited by hand\)$/);
     },

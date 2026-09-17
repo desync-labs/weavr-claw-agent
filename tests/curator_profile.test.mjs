@@ -521,8 +521,28 @@ test('curator/README.md is the self-hoster page: short, in order, and without a 
     assert.ok(at > last, `${heading} present and in order`);
     last = at;
   }
-  for (const needle of ['weavr-curator init --portfolio', 'weavr-curator doctor', 'docker compose -f curator/compose/curator.yml up -d', '/weavr-curator pause', 'weavr-curator ops resume', 'rotate-curator', 'cannot withdraw user funds', 'guardian cancel']) {
+  for (const needle of ['weavr-curator init --portfolio', 'weavr-curator doctor', 'docker compose --env-file ~/.config/weavr-curator/<TICKER>/compose.env -f curator/compose/curator.yml up -d', '/weavr-curator pause', 'weavr-curator ops resume', 'rotate-curator', 'cannot withdraw user funds', 'guardian cancel']) {
     assert.ok(text.includes(needle), `README mentions ${needle}`);
   }
   assert.doesNotMatch(text, /\bWEAVR\b|CLAWA1/);
+});
+
+// The CLI-era command carries --env-file <home>/compose.env: without it the
+// compose file reads no variable and stops. The compose header and the
+// policy page must show that form, and the bare pre-CLI form may survive
+// only as the counter-example under the real command on the self-hoster page.
+test('the compose header and the policy page give the start and restart commands in the --env-file form', () => {
+  const BARE = /docker compose -f curator\/compose\/curator\.yml/;
+  assert.match('run `docker compose -f curator/compose/curator.yml up -d` after init', BARE, 'the plant is caught');
+  const compose = readFileSync(COMPOSE, 'utf8');
+  const policy = readFileSync(join(ROOT, 'curator/policy/README.md'), 'utf8');
+  assert.ok(compose.includes('docker compose --env-file <home>/compose.env -f curator/compose/curator.yml up -d'), 'the compose header gives the start command');
+  assert.ok(policy.includes('docker compose --env-file <home>/compose.env -f curator/compose/curator.yml restart signer'), 'the policy page gives the restart command');
+  assert.doesNotMatch(compose, BARE, 'curator.yml shows the bare form');
+  assert.doesNotMatch(policy, BARE, 'policy/README.md shows the bare form');
+  const page = readFileSync(join(ROOT, 'curator/README.md'), 'utf8');
+  const real = page.indexOf('docker compose --env-file ~/.config/weavr-curator/<TICKER>/compose.env -f curator/compose/curator.yml up -d');
+  const bare = page.indexOf('`docker compose -f curator/compose/curator.yml up -d` on its own reads no');
+  assert.ok(real >= 0 && bare > real, 'the counter-example follows the real command');
+  assert.equal((page.match(new RegExp(BARE.source, 'g')) ?? []).length, 1, 'and the bare form appears nowhere else on the page');
 });

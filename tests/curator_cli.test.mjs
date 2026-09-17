@@ -658,7 +658,7 @@ test('init: equal agent and ops tokens are a cross naming the ops token file', a
   assert.ok(!r.text.includes(same), 'the token is never printed');
 });
 
-test('init: an env file carrying a token that differs from a reused token file is a cross naming both files, and the env files are left alone', async (t) => {
+test('init: the README\'s rotation: a new value in the token file, then init, rewrites both env copies from the file, says so, and prints no value', async (t) => {
   const key = Keypair.generate();
   const pk = key.publicKey.toBase58();
   const home = tmpHome();
@@ -669,41 +669,59 @@ test('init: an env file carrying a token that differs from a reused token file i
   const first = await runInit(w, home);
   assert.equal(first.exit, 0, first.text);
   const before = readFileSync(paths.signerToken, 'utf8');
+  const tokenOf = (file, name) => parseEnv(readFileSync(file, 'utf8')).values[name];
+  const printedBy = (r) => r.text + JSON.stringify(r);
 
-  // The README's rotation: a new value in both env files, the token file untouched.
+  // The recipe: the new value into the token file (0600, no trailing newline), then init.
   const rotated = randomBytes(32).toString('hex');
-  const setToken = (file, name) => writeFileSync(file, readFileSync(file, 'utf8').replace(new RegExp(`^${name}=.*$`, 'm'), `${name}=${rotated}`), { mode: 0o600 });
-  setToken(paths.signerEnv, 'CURATOR_SIGNER_TOKEN');
-  setToken(paths.agentEnv, 'CURATOR_SIGNER_TOKEN');
-  const r = await runInit(w, home);
-  assert.equal(r.exit, EXIT_INIT.CROSS);
-  const tokens = step(r, 'tokens');
-  assert.equal(tokens.kind, 'cross');
-  assert.ok(tokens.text.includes(`CURATOR_SIGNER_TOKEN in ${paths.signerEnv} is not the value in ${paths.signerToken}`), tokens.text);
-  assert.ok(tokens.text.includes(`CURATOR_SIGNER_TOKEN in ${paths.agentEnv} is not the value in ${paths.signerToken}`), tokens.text);
-  assert.match(tokens.fix, /write that value into the token file/);
-  assert.equal(parseEnv(readFileSync(paths.signerEnv, 'utf8')).values.CURATOR_SIGNER_TOKEN, rotated, 'signer.env not reverted');
-  assert.equal(parseEnv(readFileSync(paths.agentEnv, 'utf8')).values.CURATOR_SIGNER_TOKEN, rotated, 'hermes-home/.env not reverted');
-  assert.equal(readFileSync(paths.signerToken, 'utf8'), before, 'the token file is not silently adopted either');
-  const printed = r.text + JSON.stringify(r);
-  assert.ok(!printed.includes(rotated) && !printed.includes(before), 'no token value printed');
-
-  // The owner writes the rotated value into the token file: the re-run agrees and rewrites nothing the owner did not mean.
   writeFileSync(paths.signerToken, rotated, { mode: 0o600 });
-  const r2 = await runInit(w, home);
-  assert.equal(r2.exit, 0, r2.text);
-  assert.match(r2.text, /agent token reused/);
-  assert.equal(parseEnv(readFileSync(paths.signerEnv, 'utf8')).values.CURATOR_SIGNER_TOKEN, rotated);
-  assert.equal(parseEnv(readFileSync(paths.agentEnv, 'utf8')).values.CURATOR_SIGNER_TOKEN, rotated);
+  assert.equal(tokenOf(paths.signerEnv, 'CURATOR_SIGNER_TOKEN'), before, 'both copies still hold the old value');
+  assert.equal(tokenOf(paths.agentEnv, 'CURATOR_SIGNER_TOKEN'), before);
+  const r = await runInit(w, home);
+  assert.equal(r.exit, 0, r.text);
+  assert.match(r.text, /agent token reused, ops token reused/);
+  assert.equal(tokenOf(paths.signerEnv, 'CURATOR_SIGNER_TOKEN'), rotated, 'signer.env carries the new value');
+  assert.equal(tokenOf(paths.agentEnv, 'CURATOR_SIGNER_TOKEN'), rotated, 'hermes-home/.env carries the new value');
+  assert.equal(tokenOf(paths.signerEnv, 'CURATOR_OPS_TOKEN'), readFileSync(paths.opsToken, 'utf8'), 'the ops copy is untouched');
+  assert.equal(readFileSync(paths.signerToken, 'utf8'), rotated, 'the token file is what the owner wrote');
+  const info = step(r, 'tokens');
+  assert.equal(info.kind, 'info', r.text);
+  assert.equal(info.text, `CURATOR_SIGNER_TOKEN in ${paths.signerEnv} and CURATOR_SIGNER_TOKEN in ${paths.agentEnv} differed from the token file; refreshed from the files (restart both services to pick it up)`);
+  assert.deepEqual(info.refreshed, [`CURATOR_SIGNER_TOKEN in ${paths.signerEnv}`, `CURATOR_SIGNER_TOKEN in ${paths.agentEnv}`]);
+  const at = (re) => r.lines.findIndex((l) => re.test(l));
+  assert.ok(at(/^  · tokens: /) > at(/^  ✓ tokens and env: /) && at(/^  · tokens: /) < at(/^  ✓ agent home: /), 'said on its own line, once both env files are written');
+  assert.ok(!printedBy(r).includes(rotated) && !printedBy(r).includes(before), 'neither the old nor the new value is printed');
 
-  // The ops copy is compared the same way.
-  setToken(paths.signerEnv, 'CURATOR_OPS_TOKEN');
+  // A second re-run has nothing to refresh.
+  const again = await runInit(w, home);
+  assert.equal(again.exit, 0, again.text);
+  assert.equal(step(again, 'tokens'), undefined);
+
+  // The ops token rotates the same way; its only copy is in signer.env.
+  const opsBefore = readFileSync(paths.opsToken, 'utf8');
+  const opsRotated = randomBytes(32).toString('hex');
+  writeFileSync(paths.opsToken, opsRotated, { mode: 0o600 });
   const r3 = await runInit(w, home);
-  assert.equal(r3.exit, EXIT_INIT.CROSS);
-  assert.ok(step(r3, 'tokens').text.includes(`CURATOR_OPS_TOKEN in ${paths.signerEnv} is not the value in ${paths.opsToken}`), step(r3, 'tokens').text);
+  assert.equal(r3.exit, 0, r3.text);
+  assert.equal(tokenOf(paths.signerEnv, 'CURATOR_OPS_TOKEN'), opsRotated);
+  assert.equal(tokenOf(paths.signerEnv, 'CURATOR_SIGNER_TOKEN'), rotated, 'the agent copy is untouched');
+  assert.equal(step(r3, 'tokens').text, `CURATOR_OPS_TOKEN in ${paths.signerEnv} differed from the token file; refreshed from the files (restart both services to pick it up)`);
+  assert.ok(!printedBy(r3).includes(opsRotated) && !printedBy(r3).includes(opsBefore));
+
+  // The other direction never happens: a copy changed in an env file, with
+  // the token file untouched, is put back from the file, and the file never
+  // takes the copy's value.
+  const strayed = randomBytes(32).toString('hex');
+  writeFileSync(paths.agentEnv, readFileSync(paths.agentEnv, 'utf8').replace(/^CURATOR_SIGNER_TOKEN=.*$/m, `CURATOR_SIGNER_TOKEN=${strayed}`), { mode: 0o600 });
+  const r4 = await runInit(w, home);
+  assert.equal(r4.exit, 0, r4.text);
+  assert.equal(tokenOf(paths.agentEnv, 'CURATOR_SIGNER_TOKEN'), rotated, 'the copy is the file\'s value again');
+  assert.equal(readFileSync(paths.signerToken, 'utf8'), rotated, 'the file did not take the copy\'s value');
+  assert.equal(step(r4, 'tokens').text, `CURATOR_SIGNER_TOKEN in ${paths.agentEnv} differed from the token file; refreshed from the files (restart both services to pick it up)`);
+  assert.ok(!printedBy(r4).includes(strayed));
 });
 
-test('init: a token file generated on this run replaces the stale copies in the env files and says so', async (t) => {
+test('init: a token file missing while an env copy still holds a value is a cross naming both, nothing generated, nothing adopted; with the copies emptied a token is generated', async (t) => {
   const key = Keypair.generate();
   const pk = key.publicKey.toBase58();
   const home = tmpHome();
@@ -714,18 +732,53 @@ test('init: a token file generated on this run replaces the stale copies in the 
   const first = await runInit(w, home);
   assert.equal(first.exit, 0, first.text);
   const old = readFileSync(paths.signerToken, 'utf8');
+  const emptied = (file, name) => writeFileSync(file, readFileSync(file, 'utf8').replace(new RegExp(`^${name}=.*$`, 'm'), `${name}=`), { mode: 0o600 });
+
   rmSync(paths.signerToken);
+  const signerEnvBefore = readFileSync(paths.signerEnv, 'utf8');
+  const agentEnvBefore = readFileSync(paths.agentEnv, 'utf8');
   const r = await runInit(w, home);
-  assert.equal(r.exit, 0, r.text);
+  assert.equal(r.exit, EXIT_INIT.CROSS);
+  const cross = crossStep(r, 'tokens');
+  assert.ok(cross, r.text);
+  assert.equal(cross.text, `${paths.signerToken} is missing, but CURATOR_SIGNER_TOKEN in ${paths.signerEnv} and CURATOR_SIGNER_TOKEN in ${paths.agentEnv} still hold a value; a token is never adopted from an env copy`);
+  assert.ok(cross.fix.startsWith(`to rotate, write the new value into ${paths.signerToken} (mode 0600, no newline) and run init again`), cross.fix);
+  assert.match(cross.fix, /delete the CURATOR_SIGNER_TOKEN= lines from both env files$/);
+  assert.match(r.text, /✗ tokens: .*is missing, but .*still hold a value; a token is never adopted from an env copy\n\s+fix: to rotate, write the new value into/);
+  assert.ok(!existsSync(paths.signerToken), 'not generated, not adopted');
+  assert.equal(readFileSync(paths.signerEnv, 'utf8'), signerEnvBefore, 'signer.env untouched');
+  assert.equal(readFileSync(paths.agentEnv, 'utf8'), agentEnvBefore, 'hermes-home/.env untouched');
+  assert.ok(!(r.text + JSON.stringify(r)).includes(old), 'the value the copies hold is never printed');
+
+  // One copy is enough to stop it, and the line names only that one.
+  emptied(paths.agentEnv, 'CURATOR_SIGNER_TOKEN');
+  const r2 = await runInit(w, home);
+  assert.equal(r2.exit, EXIT_INIT.CROSS);
+  assert.equal(crossStep(r2, 'tokens').text, `${paths.signerToken} is missing, but CURATOR_SIGNER_TOKEN in ${paths.signerEnv} still holds a value; a token is never adopted from an env copy`);
+  assert.ok(crossStep(r2, 'tokens').fix.endsWith(`delete the CURATOR_SIGNER_TOKEN= line from ${paths.signerEnv}`), crossStep(r2, 'tokens').fix);
+  assert.ok(!existsSync(paths.signerToken));
+
+  // With no copy holding a value, init generates one and writes both copies from it.
+  emptied(paths.signerEnv, 'CURATOR_SIGNER_TOKEN');
+  const r3 = await runInit(w, home);
+  assert.equal(r3.exit, 0, r3.text);
   const fresh = readFileSync(paths.signerToken, 'utf8');
+  assert.match(fresh, /^[0-9a-f]{64}$/);
   assert.notEqual(fresh, old);
-  assert.match(r.text, /agent token generated, ops token reused/);
-  const info = step(r, 'tokens');
-  assert.equal(info.kind, 'info');
-  assert.ok(info.text.includes(`CURATOR_SIGNER_TOKEN in ${paths.signerEnv} and CURATOR_SIGNER_TOKEN in ${paths.agentEnv} held a value from before the token file was generated; replaced`), info.text);
+  assert.equal(mode(paths.signerToken), 0o600);
+  assert.match(r3.text, /agent token generated, ops token reused/);
+  assert.equal(step(r3, 'tokens'), undefined, 'nothing to refresh: no copy held a value');
   assert.equal(parseEnv(readFileSync(paths.signerEnv, 'utf8')).values.CURATOR_SIGNER_TOKEN, fresh);
   assert.equal(parseEnv(readFileSync(paths.agentEnv, 'utf8')).values.CURATOR_SIGNER_TOKEN, fresh);
-  assert.ok(!(r.text + JSON.stringify(r)).includes(fresh) && !r.text.includes(old));
+  assert.ok(!(r3.text + JSON.stringify(r3)).includes(fresh) && !r3.text.includes(old));
+
+  // The ops token file is guarded the same way.
+  rmSync(paths.opsToken);
+  const r4 = await runInit(w, home);
+  assert.equal(r4.exit, EXIT_INIT.CROSS);
+  assert.equal(crossStep(r4, 'tokens').text, `${paths.opsToken} is missing, but CURATOR_OPS_TOKEN in ${paths.signerEnv} still holds a value; a token is never adopted from an env copy`);
+  assert.ok(!existsSync(paths.opsToken));
+  assert.equal(parseEnv(readFileSync(paths.signerEnv, 'utf8')).values.CURATOR_SIGNER_TOKEN, fresh, 'the agent copy was not touched on the cross');
 });
 
 test('init: without --rpc the signer env carries a commented SOLANA_RPC_URL line and the next steps say to set it', async (t) => {
@@ -1052,7 +1105,7 @@ test('init: --home on an existing, non-empty directory no init made is a cross b
 
 // ---------------------------------------------------------------- the preset on a re-run
 
-test('init: a re-run without --policy keeps the preset the home was written from, --policy switches it and says so, and a policy.json edited by hand is not written over without a y or --yes', async (t) => {
+test('init: a re-run without --policy keeps the policy.json the home holds, edits and all; --policy switches a preset and says so, and never writes over an edited file without --yes', async (t) => {
   const key = Keypair.generate();
   const pk = key.publicKey.toBase58();
   const home = tmpHome();
@@ -1081,8 +1134,9 @@ test('init: a re-run without --policy keeps the preset the home was written from
   assert.ok(isRehearsal(policyOf()), 'the re-run kept the rehearsal preset');
   assert.equal(step(second, 'policy').preset, 'rehearsal');
   assert.equal(step(second, 'policy').presetFrom, 'home');
-  assert.match(second.text, /✓ policy: the rehearsal preset \(remembered from .*policy\.json; pass --policy to change it\) admits pSOL 40 \/ pCBBTC 40 \/ pUSDS 20; written to/);
-  assert.equal(fileStep(second), undefined, 'the same preset goes back: nothing to report about the file');
+  assert.match(second.text, /✓ policy: the rehearsal preset \(remembered from .*policy\.json; pass --policy to change it\) admits pSOL 40 \/ pCBBTC 40 \/ pUSDS 20; kept as it is/);
+  assert.equal(step(second, 'policy').kept, true);
+  assert.equal(fileStep(second), undefined, 'the file stays: nothing to report about it');
 
   // --policy standard switches, and the switch is its own line.
   const third = await runInit(w, home, { policy: 'standard' });
@@ -1097,57 +1151,124 @@ test('init: a re-run without --policy keeps the preset the home was written from
   assert.equal(step(fourth, 'policy').preset, 'standard');
   assert.equal(step(fourth, 'policy').presetFrom, 'home');
 
-  // A file that matches no shipped preset holds the owner's edits. The chain
-  // facts prompt comes first (answered y); the policy prompt is the one that
-  // names the file. n leaves the file as it is and stops; y replaces it and says so.
+  // A file that matches no shipped preset holds the owner's edits (the kind
+  // curator/policy/README.md invites). Without --policy it is the policy:
+  // kept byte for byte, checked against the book, and the line says so.
   const edit = () => { const p = policyOf(); p.turnover.maxTurnoverBps = 1234; writeFileSync(paths.policyFile, `${JSON.stringify(p, null, 2)}\n`); };
   edit();
-  const asked = [];
-  const answering = (reply) => ({ interactive: true, prompt: async (q) => { asked.push(q); return /edited by hand|not valid JSON/.test(q) ? reply : 'y'; } });
+  const editedBytes = readFileSync(paths.policyFile, 'utf8');
+  const kept = await runInit(w, home, {});
+  assert.equal(kept.exit, 0, kept.text);
+  assert.equal(readFileSync(paths.policyFile, 'utf8'), editedBytes, 'the edited file is untouched');
+  assert.equal(policyOf().turnover.maxTurnoverBps, 1234);
+  assert.equal(step(kept, 'policy').preset, null);
+  assert.equal(step(kept, 'policy').presetFrom, 'home');
+  assert.equal(step(kept, 'policy').kept, true);
+  assert.equal(fileStep(kept), undefined);
+  assert.match(kept.text, /✓ policy: .*policy\.json \(matches no shipped preset: edited by hand; pass --policy <preset> --yes to write a preset over it\) admits pSOL 40 \/ pCBBTC 40 \/ pUSDS 20; kept as it is/);
+  assert.equal(parseEnv(readFileSync(paths.composeEnv, 'utf8')).values.CURATOR_POLICY_FILE, paths.policyFile, 'the stack mounts the kept file');
+
+  // The kept file is validated like a preset: an edit the book breaks is the same cross, naming the file, and the file is not rewritten either.
+  const tight = policyOf(); tight.shape.maxLegs = 2; writeFileSync(paths.policyFile, `${JSON.stringify(tight, null, 2)}\n`);
+  const refused = await runInit(w, home, {});
+  assert.equal(refused.exit, EXIT_INIT.CROSS);
+  const refusal = crossStep(refused, 'policy');
+  assert.ok(refusal, refused.text);
+  assert.ok(refusal.text.startsWith(`the policy in ${paths.policyFile} refuses CLAWA1 as it stands`), refusal.text);
+  assert.ok(refusal.items.some((i) => i.code === 'MAX_LEGS' && i.message.startsWith(`the policy in ${paths.policyFile} allows at most 2 legs`)), JSON.stringify(refusal.items));
+  assert.equal(policyOf().shape.maxLegs, 2);
+  writeFileSync(paths.policyFile, editedBytes);
+
+  // The notice rule applies to the kept file: only that value is rewritten, said on its own line, and the edit survives it.
+  const renotice = policyOf(); renotice.invariants.rebalanceDelaySecs = 120; writeFileSync(paths.policyFile, `${JSON.stringify(renotice, null, 2)}\n`);
+  const renoticed = await runInit(w, home, {});
+  assert.equal(renoticed.exit, 0, renoticed.text);
+  assert.equal(policyOf().invariants.rebalanceDelaySecs, 60);
+  assert.equal(policyOf().turnover.maxTurnoverBps, 1234, 'the edit survived the notice rewrite');
+  assert.deepEqual({ ...policyOf(), invariants: { ...policyOf().invariants, rebalanceDelaySecs: 120 } }, renotice, 'nothing but the notice changed');
+  const noticeLine = step(renoticed, 'policy notice');
+  assert.equal(noticeLine.kind, 'info');
+  assert.equal(noticeLine.text, `the policy in ${paths.policyFile} expects a 120s notice; CLAWA1 announces 60s, so invariants.rebalanceDelaySecs is written as 60`);
+  assert.ok(renoticed.lines.some((l) => l.startsWith('  · policy notice: ')), 'on its own line');
+  assert.match(step(renoticed, 'policy').text, /; kept, with only its notice rewritten from chain$/);
+  assert.equal(step(renoticed, 'policy').noticeRewritten, true);
+
+  // --policy on the edited file is a cross naming it, before anything is
+  // written, and no prompt offers to write over it: a y is not enough.
+  const bytes = readFileSync(paths.policyFile, 'utf8');
   const envWrittenAt = statSync(paths.composeEnv).mtimeMs;
-  const declined = await runInit(w, home, { yes: false }, answering('n'));
-  assert.equal(declined.exit, EXIT_INIT.CROSS);
-  assert.ok(asked.some((q) => q === `write the standard preset over ${paths.policyFile}, which was edited by hand? [y/N] `), asked.join(' | '));
-  const cross = crossStep(declined, 'policy file');
-  assert.ok(cross, declined.text);
-  assert.ok(cross.text.startsWith(`${paths.policyFile} matches no shipped preset (edited by hand); not confirmed, so it is left as it is`), cross.text);
-  assert.match(cross.fix, /answer y, or pass --yes/);
-  assert.equal(policyOf().turnover.maxTurnoverBps, 1234, 'the edited file is untouched');
+  const asked = [];
+  const refusedFlag = await runInit(w, home, { policy: 'standard', yes: false }, { interactive: true, prompt: async (q) => { asked.push(q); return 'y'; } });
+  assert.equal(refusedFlag.exit, EXIT_INIT.CROSS);
+  const cross = crossStep(refusedFlag, 'policy file');
+  assert.ok(cross, refusedFlag.text);
+  assert.equal(cross.text, `${paths.policyFile} matches no shipped preset (edited by hand); --policy standard would write the preset over it`);
+  assert.ok(cross.fix.startsWith(`move ${paths.policyFile} aside, or omit --policy to keep it`), cross.fix);
+  assert.match(cross.fix, /pass --yes with --policy to write the standard preset over it/);
+  assert.match(refusedFlag.text, /✗ policy file: .*edited by hand.*\n\s+fix: move /);
+  assert.equal(readFileSync(paths.policyFile, 'utf8'), bytes, 'the file is unchanged');
+  assert.deepEqual(asked, []);
   assert.equal(statSync(paths.composeEnv).mtimeMs, envWrittenAt, 'init stopped before the env files: compose.env was not rewritten');
+  assert.equal(step(refusedFlag, 'curator key'), undefined, 'stopped before the key step');
 
-  const accepted = await runInit(w, home, { yes: false }, answering('y'));
-  assert.equal(accepted.exit, 0, accepted.text);
-  assert.ok(isStandard(policyOf()));
-  assert.equal(policyOf().turnover.maxTurnoverBps, STANDARD.turnover.maxTurnoverBps);
-  assert.equal(fileStep(accepted).kind, 'info');
-  assert.ok(fileStep(accepted).text.startsWith(`${paths.policyFile} matched no shipped preset (edited by hand); the standard preset is written over it (confirmed); put your edits back and restart the signer`), fileStep(accepted).text);
-
-  // --yes replaces it too, and the line says --yes did.
-  edit();
-  const withYes = await runInit(w, home, {});
+  // --policy with --yes writes the preset over it, and the line says so.
+  const withYes = await runInit(w, home, { policy: 'standard' });
   assert.equal(withYes.exit, 0, withYes.text);
   assert.ok(isStandard(policyOf()));
   assert.equal(policyOf().turnover.maxTurnoverBps, STANDARD.turnover.maxTurnoverBps);
-  assert.ok(fileStep(withYes).text.startsWith(`${paths.policyFile} matched no shipped preset (edited by hand); the standard preset is written over it (--yes); put your edits back and restart the signer`), fileStep(withYes).text);
+  assert.equal(fileStep(withYes).kind, 'info');
+  assert.ok(fileStep(withYes).text.startsWith(`${paths.policyFile} matched no shipped preset (edited by hand); the standard preset is written over it (--policy standard --yes); put your edits back and restart the signer`), fileStep(withYes).text);
+  assert.match(withYes.text, /✓ policy: the standard preset admits pSOL 40 \/ pCBBTC 40 \/ pUSDS 20; written to/);
+  assert.equal(step(withYes, 'policy').kept, false);
 
-  // A file whose only difference from its preset is the notice (a set-delay, or the doctor's by-hand fix) is that preset: remembered, no line about the file.
+  // An unedited file (the preset apart from the notice) passes --policy silently, without --yes: no line about the file.
+  const silent = await runInit(w, home, { policy: 'standard', yes: false }, { interactive: true, prompt: async () => 'y' });
+  assert.equal(silent.exit, 0, silent.text);
+  assert.equal(fileStep(silent), undefined);
+  const noticeOnly = policyOf(); noticeOnly.invariants.rebalanceDelaySecs = 120; writeFileSync(paths.policyFile, `${JSON.stringify(noticeOnly, null, 2)}\n`);
+  const silent2 = await runInit(w, home, { policy: 'standard', yes: false }, { interactive: true, prompt: async () => 'y' });
+  assert.equal(silent2.exit, 0, silent2.text);
+  assert.equal(fileStep(silent2), undefined);
+  assert.equal(policyOf().invariants.rebalanceDelaySecs, 60);
+
+  // Without --policy, a file whose only difference from its preset is the notice (a set-delay) is that preset: remembered, no line about the file, the notice rewritten from chain.
   const notice = policyOf(); notice.invariants.rebalanceDelaySecs = 120; writeFileSync(paths.policyFile, `${JSON.stringify(notice, null, 2)}\n`);
   const afterDelay = await runInit(w, home, {});
   assert.equal(afterDelay.exit, 0, afterDelay.text);
   assert.equal(step(afterDelay, 'policy').presetFrom, 'home');
+  assert.equal(step(afterDelay, 'policy').preset, 'standard');
   assert.equal(fileStep(afterDelay), undefined);
   assert.equal(policyOf().invariants.rebalanceDelaySecs, 60, 'the notice is rewritten from chain');
 
-  // A file that is not JSON is not a preset either: replaced only with --yes or a y.
+  // A file that is not a JSON document can be neither kept nor checked: a
+  // cross without --policy, the file untouched; with --policy it is an
+  // edited file, refused without --yes and written over with it.
   writeFileSync(paths.policyFile, '{ not json\n');
-  const broken = await runInit(w, home, { yes: false }, answering('n'));
+  const broken = await runInit(w, home, {});
   assert.equal(broken.exit, EXIT_INIT.CROSS);
-  assert.match(crossStep(broken, 'policy file').text, /is not valid JSON; not confirmed, so it is left as it is/);
+  assert.equal(crossStep(broken, 'policy file').text, `${paths.policyFile} is not a JSON document, so it can be neither kept nor checked`);
+  assert.match(crossStep(broken, 'policy file').fix, /move it aside and run init again \(it writes the standard preset\), or pass --policy standard\|rehearsal --yes/);
   assert.equal(readFileSync(paths.policyFile, 'utf8'), '{ not json\n');
-  const repaired = await runInit(w, home, {});
+  const brokenFlag = await runInit(w, home, { policy: 'standard', yes: false }, { interactive: false });
+  assert.equal(brokenFlag.exit, EXIT_INIT.CROSS);
+  assert.equal(crossStep(brokenFlag, 'policy file').text, `${paths.policyFile} is not a JSON document; --policy standard would write the preset over it`);
+  assert.equal(readFileSync(paths.policyFile, 'utf8'), '{ not json\n');
+  writeFileSync(paths.policyFile, '[1, 2]\n');
+  assert.equal(crossStep(await runInit(w, home, {}), 'policy file').text, `${paths.policyFile} is not a JSON document, so it can be neither kept nor checked`, 'a JSON array is not a document either');
+  writeFileSync(paths.policyFile, '{ not json\n');
+  const repaired = await runInit(w, home, { policy: 'standard' });
   assert.equal(repaired.exit, 0, repaired.text);
-  assert.match(fileStep(repaired).text, /was not valid JSON; the standard preset is written over it \(--yes\)/);
+  assert.match(fileStep(repaired).text, /was not a JSON document; the standard preset is written over it \(--policy standard --yes\)/);
   assert.ok(isStandard(policyOf()));
+
+  // A kept file without the SOL floor cannot be judged: a cross naming the number, never the preset's floor borrowed.
+  const noFloor = policyOf(); delete noFloor.rate.minSignerLamports; writeFileSync(paths.policyFile, `${JSON.stringify(noFloor, null, 2)}\n`);
+  const unjudged = await runInit(w, home, {});
+  assert.equal(unjudged.exit, EXIT_INIT.CROSS);
+  assert.equal(crossStep(unjudged, 'signer SOL').text, `the policy in ${paths.policyFile} has no number for rate.minSignerLamports, so the SOL floor cannot be read`);
+  assert.match(crossStep(unjudged, 'signer SOL').fix, /set rate\.minSignerLamports in .*policy\.json/);
+  assert.equal(step(unjudged, 'policy'), undefined, 'stopped at the floor');
+  assert.equal(readFileSync(paths.policyFile, 'utf8'), `${JSON.stringify(noFloor, null, 2)}\n`, 'the file is untouched');
 });
 
 // ---------------------------------------------------------------- pure pieces

@@ -1,8 +1,10 @@
 # The weavr curator on one host: the signer, which holds the curator key and
 # refuses under the policy document, and the agent (Hermes, the Claw Agent
-# fork), which decides. One `docker compose -f curator/compose/curator.yml up -d`
-# after `weavr-curator init` has written the env files and rendered the profile;
-# `weavr-curator doctor` checks everything named below before you start it.
+# fork), which decides. One
+# `docker compose --env-file <home>/compose.env -f curator/compose/curator.yml up -d`
+# after `weavr-curator init` has written <home>/compose.env and the env files and
+# rendered the profile; `weavr-curator doctor` checks everything named below
+# before you start it. Without --env-file nothing below is filled in.
 #
 # Images
 #   signer  ${CURATOR_SIGNER_IMAGE:-weavr-backend:curator-local}
@@ -18,7 +20,7 @@
 #           (`docker compose build` in its checkout produces `hermes-agent`),
 #           or set HERMES_IMAGE to an image you trust.
 #
-# Variables (from the shell or a .env beside this file; none is a secret)
+# Variables (from <home>/compose.env, which init writes and --env-file names; none is a secret)
 #   CURATOR_KEY_FILE          the curator keypair file on the host; mounted read-only, never in the environment
 #   CURATOR_POLICY_FILE       the policy document, e.g. ../policy/standard.json; edit and restart to change it
 #   CURATOR_SIGNER_ENV        the signer's secret env file (signer.env.example lists the names), 0600

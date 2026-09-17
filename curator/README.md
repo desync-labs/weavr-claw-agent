@@ -100,13 +100,14 @@ or one init made: `~/.config/weavr-curator/<TICKER>/`, or `--home <dir>`.
 4. Derives the chain facts the signer's invariants will hold, the guardian
    from the factory's config account, the treasury (the fee recipient) and
    the notice, and asks before writing them (`--yes` accepts).
-5. Copies the policy preset, `--policy standard` unless you pass
-   `--policy rehearsal`, with its notice rewritten to the portfolio's own, and
-   says so. Then it validates the preset against the book (every held leg
-   allowlisted and in a category, on an allowed chain, with the required
-   status, inside the risk, cost and weight bands, the sleeves inside theirs;
-   a number a rule needs and cannot find is a cross too) and writes it to
-   `<home>/curator/policy.json`. A refusal names the code, leg and fix.
+5. Settles the policy: the preset named by `--policy`, else `standard` on a
+   first run, else the `<home>/curator/policy.json` already there, edits and
+   all; its notice is rewritten to the portfolio's own, and said. It is then
+   validated against the book (every held leg allowlisted and in a category,
+   on an allowed chain, with the required status, inside the risk, cost and
+   weight bands, the sleeves inside theirs; a number a rule needs and cannot
+   find is a cross too) and written to `<home>/curator/policy.json`, a kept
+   file only for its notice. A refusal names the code, leg and fix.
 6. Generates the two bearer tokens into `<home>/curator/signer-token` and
    `<home>/curator/ops-token` (0600), or reuses the ones there, and writes
    `<home>/curator/signer.env` from them, with `SOLANA_RPC_URL` from
@@ -124,10 +125,10 @@ or one init made: `~/.config/weavr-curator/<TICKER>/`, or `--home <dir>`.
 
 Run it again after a cross or whenever something changed. A re-run reuses
 the key and both tokens, keeps every value you typed into `.env`, the RPC
-URL, the agent's memories and its cron job state, and rewrites everything
-else from the profile and from chain; it asks the same confirmation before
-writing the chain facts and signs nothing when the key already curates.
-`--json` prints the run as one document and never prompts: pass `--yes`.
+URL, your `policy.json`, the agent's memories and its cron job state, and
+rewrites the rest from the profile and from chain; it asks the same
+confirmation before writing the chain facts and signs nothing when the key
+already curates. `--json` prints one document and never prompts: pass `--yes`.
 
 `weavr-curator doctor`
 
@@ -218,17 +219,16 @@ Fastest first. `<home>` is the directory init wrote.
    --why "<reason>"`, a trigger for the next daily gate (`--clear` withdraws
    it); `weavr-curator ops set-delay --rebalance-delay-secs N --why
    "<reason>"` changes the notice onchain, and the signer locks on its next
-   tick: run init again (it rewrites the policy and the agent's `.env` from
-   chain), restart both services, then `ops unlock`; a restart keeps the lock.
+   tick: run init again (it rewrites the notice in `policy.json` and `.env`),
+   restart both services, then `ops unlock`; a restart keeps the lock.
 4. **Rotate the agent token.** The token files under `<home>/curator/` are
-   the source of truth; the doctor crosses until every copy agrees with
-   them. Move `<home>/curator/signer-token` away and run init again: it
-   generates a new token, replaces the stale copies in both env files and
-   says so; then restart both services. To rotate to a value of your own,
-   write it into `<home>/curator/signer-token` (0600, no newline) and delete
-   the old `CURATOR_SIGNER_TOKEN=` line from both env files first: init
-   never overwrites a copy that disagrees with a reused token file, it stops
-   and names both. The ops token rotates the same way.
+   the source of truth; the doctor crosses until every copy agrees. Write
+   the new value into `<home>/curator/signer-token` (0600, no trailing
+   newline), run init again, which rewrites the copy in both env files from
+   the file and says so, then restart both services. A missing token file
+   with a value still in an env file is a cross, never a token adopted from
+   the copy; delete the `CURATOR_SIGNER_TOKEN=` lines from both env files to
+   have init generate a fresh one. The ops token rotates the same way.
 5. **Rotate the curator key**, the real revoke, in two halves:
    `weavr-curator ops rotate-curator --new-curator <pubkey> --why "<reason>"`
    makes the signer sign the curator transfer with the current key; then the
@@ -243,10 +243,10 @@ Fastest first. `<home>` is the directory init wrote.
 Change the policy by editing `<home>/curator/policy.json` and restarting
 the signer (the compose line above, with `restart signer`); a document with
 an unknown or missing key refuses to boot, and the doctor compares the
-running digest with the file. A re-run of init writes the preset over that
-file (its notice from chain), so put your edits back after one. Change the
-thesis by editing `MANDATE.md` in the profile and running init again, which
-re-renders it; words, no numbers.
+running digest with the file. A re-run of init keeps your edited file and
+touches only its notice; `--policy` on it is a cross unless you pass `--yes`,
+which writes the preset over it. Change the thesis by editing `MANDATE.md`
+in the profile and running init again, which re-renders it; words, no numbers.
 
 ## What stays private, and what is weavr's
 

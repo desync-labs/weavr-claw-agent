@@ -45,7 +45,10 @@ portfolio's live legs and its onchain notice before you start.
 
 ## How to change it
 
-Edit the file, then restart the signer: `docker compose -f curator/compose/curator.yml restart signer`.
+Edit the file, then restart the signer:
+`docker compose --env-file <home>/compose.env -f curator/compose/curator.yml restart signer`
+(`<home>` is the directory `weavr-curator init` wrote; a re-run of init keeps
+your edited file and touches only its notice).
 The signer validates the whole document at boot and **refuses to start on an
 unknown or missing key**, so a typo is a boot failure, not a silent default.
 `weavr_curator policy` (or `/weavr-curator policy` in Telegram) shows what is
