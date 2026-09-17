@@ -36,7 +36,8 @@ try {
   if (command === 'init') {
     const { opts } = parseArgs(rest, { booleans: INIT_BOOLEANS });
     const rpcUrl = opts.rpc ?? process.env.SOLANA_RPC_URL ?? PUBLIC_RPC;
-    const interactive = Boolean(stdin.isTTY && stdout.isTTY);
+    // --json owns stdout: no prompt is ever written before the one object it prints.
+    const interactive = Boolean(stdin.isTTY && stdout.isTTY) && opts.json !== true;
     const prompt = interactive
       ? async (question) => {
         const rl = createInterface({ input: stdin, output: stdout });

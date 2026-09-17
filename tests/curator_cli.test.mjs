@@ -8,13 +8,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { init, EXIT_INIT } from '../lib/curator/init.mjs';
+import { init, EXIT_INIT, rememberedUrls } from '../lib/curator/init.mjs';
 import { homePaths, parseEnv } from '../lib/curator/home.mjs';
 import { factoryConfigAddress, decodeFactoryConfig, lamportsToSol } from '../lib/curator/chain.mjs';
 import { composeVariables, mergeJobs, readConfigModel } from '../lib/curator/render.mjs';
@@ -65,6 +65,8 @@ function runInit(w, home, extra = {}, deps = {}) {
     keygen: deps.keygen,
     ...(deps.env ? { env: deps.env } : {}),
     ...(deps.makeSigner ? { makeSigner: deps.makeSigner } : {}),
+    ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    ...(deps.root ? { root: deps.root } : {}),
   });
   return result.then((r) => ({ ...r, lines, sleeps, text: lines.join('\n') }));
 }
@@ -818,6 +820,336 @@ test('mergeJobs: state fields from the home, everything else from the profile, u
   assert.deepEqual(mergeJobs(profile, null).jobs, profile.jobs);
 });
 
+// ---------------------------------------------------------------- --json never prompts
+
+test('init: --json never prompts; a confirmation it would have asked for is a cross saying to pass --yes, and the bin prints exactly one JSON object', async (t) => {
+  const key = Keypair.generate();
+  const pk = key.publicKey.toBase58();
+  const home = tmpHome();
+  writeKey(homePaths(home).keyFile, key);
+  const w = await world({ curator: pk, balances: { [pk]: FLOOR } });
+  t.after(() => w.server.close());
+  const trap = async () => { throw new Error('the prompt seam was called under --json'); };
+
+  // The chain-facts confirmation.
+  const r = await runInit(w, home, { yes: false, json: true }, { interactive: true, prompt: trap });
+  assert.equal(r.exit, EXIT_INIT.CROSS);
+  assert.equal(r.lines.length, 0, 'json mode prints nothing before the object');
+  const confirm = crossStep(r, 'confirm');
+  assert.ok(confirm, JSON.stringify(r.steps));
+  assert.equal(confirm.text, '--json never prompts, so the chain facts above cannot be confirmed here');
+  assert.match(confirm.fix, /pass --yes/);
+  assert.ok(!existsSync(homePaths(home).policyFile), 'stopped before the policy');
+
+  // The signing confirmation is gated the same way, and nothing is built.
+  const key2 = Keypair.generate();
+  const pk2 = key2.publicKey.toBase58();
+  const home2 = tmpHome();
+  writeKey(homePaths(home2).keyFile, key2);
+  const w2 = await world({ curator: owner.publicKey.toBase58(), pendingCurator: pk2, balances: { [pk2]: FLOOR } });
+  t.after(() => w2.server.close());
+  const r2 = await runInit(w2, home2, { yes: false, json: true }, { interactive: true, prompt: trap });
+  assert.equal(r2.exit, EXIT_INIT.CROSS);
+  assert.equal(r2.lines.length, 0);
+  assert.equal(crossStep(r2, 'curation').text, '--json never prompts, so the signing above cannot be confirmed here; nothing built, nothing signed');
+  assert.equal(w2.server.hits.filter((h) => h.method === 'POST').length, 0, 'nothing built, nothing sent');
+  assert.equal(w2.row.pendingCurator, pk2, 'the row did not move');
+
+  // Without --json the same run asks, so the gate is --json itself, not a side effect of the seam.
+  const asked = [];
+  const r3 = await runInit(w, home, { yes: false }, { interactive: true, prompt: async (q) => { asked.push(q); return 'y'; } });
+  assert.equal(r3.exit, 0, r3.text);
+  assert.equal(asked.length, 1);
+
+  // The executable: stdout is one JSON object and nothing else, exit 2.
+  const bin = await runBin(['init', '--portfolio', 'CLAWA1', '--home', home, '--api', w.server.url, '--mcp', `${w.server.url}/mcp`, '--rpc', `${w.server.url}/rpc`, '--json'], { SOLANA_RPC_URL: '' });
+  assert.equal(bin.status, EXIT_INIT.CROSS, bin.stderr + bin.stdout);
+  assert.ok(bin.stdout.startsWith('{'), `stdout starts with the object: ${bin.stdout.slice(0, 80)}`);
+  const body = JSON.parse(bin.stdout);
+  assert.equal(body.exit, EXIT_INIT.CROSS);
+  assert.equal(body.ok, false);
+  assert.equal(body.steps.find((s) => s.name === 'confirm').kind, 'cross');
+  assert.match(body.steps.find((s) => s.name === 'confirm').text, /--json never prompts/);
+});
+
+// ---------------------------------------------------------------- remembered URLs and the RPC endpoint
+
+test('init: a re-run without --api/--mcp keeps the URLs the previous run wrote, a flag wins, and the line says what was kept', async (t) => {
+  const key = Keypair.generate();
+  const pk = key.publicKey.toBase58();
+  const home = tmpHome();
+  const paths = homePaths(home);
+  writeKey(paths.keyFile, key);
+  const w = await world({ curator: pk, balances: { [pk]: FLOOR } });
+  t.after(() => w.server.close());
+  // Any request that leaves the fake server is a test failure, never a network call.
+  const asked = [];
+  const fenced = (url, options) => {
+    asked.push(String(url));
+    if (!String(url).startsWith(w.server.url)) throw Object.assign(new Error(`left the fake server for ${url}`), { code: 'ECONNREFUSED' });
+    return fetch(url, options);
+  };
+
+  const first = await runInit(w, home, {}, { fetchImpl: fenced });
+  assert.equal(first.exit, 0, first.text);
+  assert.equal(step(first, 'tokens and env').apiUrlFrom, 'flag');
+  assert.equal(step(first, 'tokens and env').mcpUrlFrom, 'flag');
+  assert.doesNotMatch(first.text, /kept the api URL|kept the MCP URL/);
+
+  const second = await runInit(w, home, { api: undefined, mcp: undefined }, { fetchImpl: fenced });
+  assert.equal(second.exit, 0, second.text);
+  assert.equal(parseEnv(readFileSync(paths.composeEnv, 'utf8')).values.CURATOR_API_URL, w.server.url, 'compose.env keeps the api URL');
+  const agentEnv = parseEnv(readFileSync(paths.agentEnv, 'utf8')).values;
+  assert.equal(agentEnv.WEAVR_API_URL, w.server.url);
+  assert.equal(agentEnv.WEAVR_MCP_URL, `${w.server.url}/mcp`);
+  const env = step(second, 'tokens and env');
+  assert.equal(env.apiUrlFrom, 'home');
+  assert.equal(env.mcpUrlFrom, 'home');
+  assert.match(env.text, /; kept the api URL from compose\.env and the MCP URL from hermes-home\/\.env$/);
+  assert.ok(asked.every((u) => u.startsWith(w.server.url)), `every request went to the remembered api: ${asked.join(', ')}`);
+
+  // A flag wins over the remembered value; the other URL is still kept.
+  const third = await runInit(w, home, { api: undefined, mcp: `${w.server.url}/other-mcp` }, { fetchImpl: fenced });
+  assert.equal(third.exit, 0, third.text);
+  assert.equal(parseEnv(readFileSync(paths.agentEnv, 'utf8')).values.WEAVR_MCP_URL, `${w.server.url}/other-mcp`);
+  assert.equal(step(third, 'tokens and env').mcpUrlFrom, 'flag');
+  assert.equal(step(third, 'tokens and env').apiUrlFrom, 'home');
+  assert.match(step(third, 'tokens and env').text, /; kept the api URL from compose\.env$/);
+
+  // With nothing remembered the public api is the default: the fence refuses it and init stops, no network touched.
+  asked.length = 0;
+  const fresh = await runInit(w, tmpHome(), { api: undefined, mcp: undefined }, { fetchImpl: fenced });
+  assert.equal(fresh.exit, EXIT_INIT.CROSS);
+  assert.deepEqual(asked, ['https://api.weavr.sh/v1/portfolios/CLAWA1'], 'the default api was asked once and refused by the fence');
+});
+
+test('init: without --home a re-run finds the previous home under the root by ticker in any case or by mint, and keeps its URLs', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'weavr-curator-root-'));
+  const key = Keypair.generate();
+  const pk = key.publicKey.toBase58();
+  const w = await world({ curator: pk, balances: { [pk]: FLOOR } });
+  t.after(() => w.server.close());
+  const fenced = (url, options) => {
+    if (!String(url).startsWith(w.server.url)) throw Object.assign(new Error(`left the fake server for ${url}`), { code: 'ECONNREFUSED' });
+    return fetch(url, options);
+  };
+  const first = await runInit(w, undefined, {}, { root, keygen: () => key, fetchImpl: fenced });
+  assert.equal(first.exit, 0, first.text);
+  assert.equal(first.home, join(root, 'CLAWA1'));
+  assert.deepEqual(rememberedUrls({ portfolio: 'clawa1' }, { root }), { home: join(root, 'CLAWA1'), api: w.server.url, mcp: `${w.server.url}/mcp` });
+  assert.deepEqual(rememberedUrls({ portfolio: MINT }, { root }), { home: join(root, 'CLAWA1'), api: w.server.url, mcp: `${w.server.url}/mcp` });
+  assert.deepEqual(rememberedUrls({ portfolio: 'NOPE' }, { root }), { home: null, api: '', mcp: '' });
+  assert.deepEqual(rememberedUrls({ portfolio: 'CLAWA1' }, { root: join(root, 'missing') }), { home: null, api: '', mcp: '' });
+
+  const byTicker = await runInit(w, undefined, { portfolio: 'clawa1', api: undefined, mcp: undefined }, { root, fetchImpl: fenced });
+  assert.equal(byTicker.exit, 0, byTicker.text);
+  assert.equal(byTicker.home, join(root, 'CLAWA1'));
+  assert.equal(step(byTicker, 'tokens and env').apiUrlFrom, 'home');
+  const byMint = await runInit(w, undefined, { portfolio: MINT, api: undefined, mcp: undefined }, { root, fetchImpl: fenced });
+  assert.equal(byMint.exit, 0, byMint.text);
+  assert.equal(step(byMint, 'tokens and env').mcpUrlFrom, 'home');
+  assert.equal(parseEnv(readFileSync(homePaths(join(root, 'CLAWA1')).agentEnv, 'utf8')).values.WEAVR_MCP_URL, `${w.server.url}/mcp`);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test('init: SOLANA_RPC_URL from the shell is written into signer.env when --rpc is absent; --rpc wins; the shell wins over the previous run; never printed', async (t) => {
+  const key = Keypair.generate();
+  const pk = key.publicKey.toBase58();
+  const home = tmpHome();
+  const paths = homePaths(home);
+  writeKey(paths.keyFile, key);
+  const w = await world({ curator: pk, balances: { [pk]: FLOOR } });
+  t.after(() => w.server.close());
+  const rpcOf = () => parseEnv(readFileSync(paths.signerEnv, 'utf8')).values.SOLANA_RPC_URL;
+  const never = (r, ...urls) => { const printed = r.text + JSON.stringify(r); for (const u of urls) assert.ok(!printed.includes(u), `${u} never printed`); };
+
+  const shell = await runInit(w, home, {}, { env: { SOLANA_RPC_URL: 'http://127.0.0.1:1/from-the-shell' } });
+  assert.equal(shell.exit, 0, shell.text);
+  assert.equal(rpcOf(), 'http://127.0.0.1:1/from-the-shell');
+  assert.equal(step(shell, 'tokens and env').rpcUrlFrom, 'shell');
+  assert.equal(step(shell, 'tokens and env').rpcUrlSet, true);
+  assert.match(shell.text, /✓ tokens and env: .*SOLANA_RPC_URL from your shell environment/);
+  assert.doesNotMatch(shell.text, /left for you to set|set SOLANA_RPC_URL in/);
+  never(shell, 'from-the-shell');
+
+  const flag = await runInit(w, home, { rpc: 'http://127.0.0.1:1/from-the-flag' }, { env: { SOLANA_RPC_URL: 'http://127.0.0.1:1/from-the-shell' } });
+  assert.equal(rpcOf(), 'http://127.0.0.1:1/from-the-flag', '--rpc wins over the shell');
+  assert.equal(step(flag, 'tokens and env').rpcUrlFrom, 'flag');
+  assert.match(flag.text, /SOLANA_RPC_URL from --rpc/);
+  never(flag, 'from-the-flag', 'from-the-shell');
+
+  const kept = await runInit(w, home, {}, { env: {} });
+  assert.equal(rpcOf(), 'http://127.0.0.1:1/from-the-flag', 'the previous value survives a run with neither');
+  assert.equal(step(kept, 'tokens and env').rpcUrlFrom, 'home');
+  assert.match(kept.text, /SOLANA_RPC_URL kept from the previous run/);
+  never(kept, 'from-the-flag');
+
+  const again = await runInit(w, home, {}, { env: { SOLANA_RPC_URL: 'http://127.0.0.1:1/shell-again' } });
+  assert.equal(rpcOf(), 'http://127.0.0.1:1/shell-again', 'the shell wins over the previous run');
+  assert.equal(step(again, 'tokens and env').rpcUrlFrom, 'shell');
+  never(again, 'shell-again', 'from-the-flag');
+
+  const blank = await runInit(w, home, {}, { env: { SOLANA_RPC_URL: '   ' } });
+  assert.equal(rpcOf(), 'http://127.0.0.1:1/shell-again', 'a blank shell value is unset');
+  assert.equal(step(blank, 'tokens and env').rpcUrlFrom, 'home');
+});
+
+// ---------------------------------------------------------------- an existing --home
+
+test('init: --home on an existing, non-empty directory no init made is a cross before anything is written; --yes writes into it; a placed key or a previous init is not a stranger', async (t) => {
+  const key = Keypair.generate();
+  const pk = key.publicKey.toBase58();
+  const w = await world({ curator: pk, balances: { [pk]: FLOOR } });
+  t.after(() => w.server.close());
+  const interactive = { interactive: true, prompt: async () => 'y', keygen: () => key };
+
+  const dir = mkdtempSync(join(tmpdir(), 'weavr-someone-elses-'));
+  writeFileSync(join(dir, 'notes.txt'), 'mine\n');
+  chmodSync(dir, 0o755);
+  const r = await runInit(w, dir, { yes: false }, interactive);
+  assert.equal(r.exit, EXIT_INIT.CROSS);
+  const cross = crossStep(r, 'home');
+  assert.ok(cross, r.text);
+  assert.equal(cross.text, `${dir} exists and was not made by weavr-curator init; pass an empty or new directory`);
+  assert.match(cross.fix, /--yes/);
+  assert.match(r.text, /✗ home: .*exists and was not made by weavr-curator init; pass an empty or new directory\n\s+fix: /);
+  assert.equal(mode(dir), 0o755, 'the directory mode is untouched');
+  assert.deepEqual(readdirSync(dir), ['notes.txt'], 'nothing written beside what it held');
+  assert.equal(w.server.hits.filter((h) => h.method === 'POST').length, 0);
+
+  // --yes writes into it, says so, and the stray file survives.
+  const r2 = await runInit(w, dir, {}, { keygen: () => key });
+  assert.equal(r2.exit, 0, r2.text);
+  const info = r2.steps.find((s) => s.name === 'home');
+  assert.equal(info.kind, 'info');
+  assert.match(info.text, /exists and was not made by weavr-curator init; writing into it \(--yes\)/);
+  assert.equal(readFileSync(join(dir, 'notes.txt'), 'utf8'), 'mine\n');
+  assert.equal(mode(dir), 0o700);
+
+  // A home a previous init made is fine without --yes: curator/ is the marker.
+  const r3 = await runInit(w, dir, { yes: false }, interactive);
+  assert.equal(r3.exit, 0, r3.text);
+  assert.equal(r3.steps.find((s) => s.name === 'home'), undefined, 'no home step on a made home');
+
+  // An empty directory is fine without --yes, and so is a new one.
+  const empty = mkdtempSync(join(tmpdir(), 'weavr-empty-'));
+  const r4 = await runInit(w, empty, { yes: false }, interactive);
+  assert.equal(r4.exit, 0, r4.text);
+  assert.equal(r4.steps.find((s) => s.name === 'home'), undefined);
+  const r5 = await runInit(w, tmpHome(), { yes: false }, interactive);
+  assert.equal(r5.exit, 0, r5.text);
+
+  // A directory holding only the key file placed there for init to reuse is meant for init.
+  const placed = tmpHome();
+  writeKey(homePaths(placed).keyFile, key);
+  const r6 = await runInit(w, placed, { yes: false }, interactive);
+  assert.equal(r6.exit, 0, r6.text);
+  assert.equal(r6.steps.find((s) => s.name === 'home'), undefined);
+  assert.match(r6.text, /curator key: .*\(reused/);
+  rmSync(dir, { recursive: true, force: true });
+  rmSync(empty, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------- the preset on a re-run
+
+test('init: a re-run without --policy keeps the preset the home was written from, --policy switches it and says so, and a policy.json edited by hand is not written over without a y or --yes', async (t) => {
+  const key = Keypair.generate();
+  const pk = key.publicKey.toBase58();
+  const home = tmpHome();
+  const paths = homePaths(home);
+  writeKey(paths.keyFile, key);
+  const w = await world({ curator: pk, balances: { [pk]: FLOOR } });
+  t.after(() => w.server.close());
+  const policyOf = () => JSON.parse(readFileSync(paths.policyFile, 'utf8'));
+  const isRehearsal = (p) => p.verbs.denied.includes('deposit') && p.universe.requirePythFeedId === false && p.shape.minLegs === REHEARSAL.shape.minLegs;
+  const isStandard = (p) => !p.verbs.denied.includes('deposit') && p.universe.requirePythFeedId === true && p.shape.minLegs === STANDARD.shape.minLegs;
+  const fileStep = (r) => r.steps.find((s) => s.name === 'policy file');
+  // Both presets admit this book, so a swap between them changes what the agent may do without any refusal to show for it.
+  assert.deepEqual(validatePolicyAgainstBook(STANDARD, w.row, catalogue()), []);
+  assert.deepEqual(validatePolicyAgainstBook(REHEARSAL, w.row, catalogue()), []);
+
+  const first = await runInit(w, home, { policy: 'rehearsal' });
+  assert.equal(first.exit, 0, first.text);
+  assert.ok(isRehearsal(policyOf()));
+  assert.equal(step(first, 'policy').preset, 'rehearsal');
+  assert.equal(step(first, 'policy').presetFrom, 'flag');
+  assert.equal(fileStep(first), undefined, 'a first run has no file to speak of');
+
+  // No --policy: the file says which preset the home runs, and the line says it was remembered.
+  const second = await runInit(w, home, {});
+  assert.equal(second.exit, 0, second.text);
+  assert.ok(isRehearsal(policyOf()), 'the re-run kept the rehearsal preset');
+  assert.equal(step(second, 'policy').preset, 'rehearsal');
+  assert.equal(step(second, 'policy').presetFrom, 'home');
+  assert.match(second.text, /✓ policy: the rehearsal preset \(remembered from .*policy\.json; pass --policy to change it\) admits pSOL 40 \/ pCBBTC 40 \/ pUSDS 20; written to/);
+  assert.equal(fileStep(second), undefined, 'the same preset goes back: nothing to report about the file');
+
+  // --policy standard switches, and the switch is its own line.
+  const third = await runInit(w, home, { policy: 'standard' });
+  assert.equal(third.exit, 0, third.text);
+  assert.ok(isStandard(policyOf()));
+  assert.equal(step(third, 'policy').presetFrom, 'flag');
+  assert.equal(fileStep(third).kind, 'info');
+  assert.ok(fileStep(third).text.startsWith(`${paths.policyFile} held the rehearsal preset; the standard preset is written over it (--policy standard)`), fileStep(third).text);
+  assert.ok(third.lines.some((l) => /^  · policy file: .*held the rehearsal preset; the standard preset is written over it/.test(l)), 'on its own line');
+  // And back without the flag: the file now says standard.
+  const fourth = await runInit(w, home, {});
+  assert.equal(step(fourth, 'policy').preset, 'standard');
+  assert.equal(step(fourth, 'policy').presetFrom, 'home');
+
+  // A file that matches no shipped preset holds the owner's edits. The chain
+  // facts prompt comes first (answered y); the policy prompt is the one that
+  // names the file. n leaves the file as it is and stops; y replaces it and says so.
+  const edit = () => { const p = policyOf(); p.turnover.maxTurnoverBps = 1234; writeFileSync(paths.policyFile, `${JSON.stringify(p, null, 2)}\n`); };
+  edit();
+  const asked = [];
+  const answering = (reply) => ({ interactive: true, prompt: async (q) => { asked.push(q); return /edited by hand|not valid JSON/.test(q) ? reply : 'y'; } });
+  const envWrittenAt = statSync(paths.composeEnv).mtimeMs;
+  const declined = await runInit(w, home, { yes: false }, answering('n'));
+  assert.equal(declined.exit, EXIT_INIT.CROSS);
+  assert.ok(asked.some((q) => q === `write the standard preset over ${paths.policyFile}, which was edited by hand? [y/N] `), asked.join(' | '));
+  const cross = crossStep(declined, 'policy file');
+  assert.ok(cross, declined.text);
+  assert.ok(cross.text.startsWith(`${paths.policyFile} matches no shipped preset (edited by hand); not confirmed, so it is left as it is`), cross.text);
+  assert.match(cross.fix, /answer y, or pass --yes/);
+  assert.equal(policyOf().turnover.maxTurnoverBps, 1234, 'the edited file is untouched');
+  assert.equal(statSync(paths.composeEnv).mtimeMs, envWrittenAt, 'init stopped before the env files: compose.env was not rewritten');
+
+  const accepted = await runInit(w, home, { yes: false }, answering('y'));
+  assert.equal(accepted.exit, 0, accepted.text);
+  assert.ok(isStandard(policyOf()));
+  assert.equal(policyOf().turnover.maxTurnoverBps, STANDARD.turnover.maxTurnoverBps);
+  assert.equal(fileStep(accepted).kind, 'info');
+  assert.ok(fileStep(accepted).text.startsWith(`${paths.policyFile} matched no shipped preset (edited by hand); the standard preset is written over it (confirmed); put your edits back and restart the signer`), fileStep(accepted).text);
+
+  // --yes replaces it too, and the line says --yes did.
+  edit();
+  const withYes = await runInit(w, home, {});
+  assert.equal(withYes.exit, 0, withYes.text);
+  assert.ok(isStandard(policyOf()));
+  assert.equal(policyOf().turnover.maxTurnoverBps, STANDARD.turnover.maxTurnoverBps);
+  assert.ok(fileStep(withYes).text.startsWith(`${paths.policyFile} matched no shipped preset (edited by hand); the standard preset is written over it (--yes); put your edits back and restart the signer`), fileStep(withYes).text);
+
+  // A file whose only difference from its preset is the notice (a set-delay, or the doctor's by-hand fix) is that preset: remembered, no line about the file.
+  const notice = policyOf(); notice.invariants.rebalanceDelaySecs = 120; writeFileSync(paths.policyFile, `${JSON.stringify(notice, null, 2)}\n`);
+  const afterDelay = await runInit(w, home, {});
+  assert.equal(afterDelay.exit, 0, afterDelay.text);
+  assert.equal(step(afterDelay, 'policy').presetFrom, 'home');
+  assert.equal(fileStep(afterDelay), undefined);
+  assert.equal(policyOf().invariants.rebalanceDelaySecs, 60, 'the notice is rewritten from chain');
+
+  // A file that is not JSON is not a preset either: replaced only with --yes or a y.
+  writeFileSync(paths.policyFile, '{ not json\n');
+  const broken = await runInit(w, home, { yes: false }, answering('n'));
+  assert.equal(broken.exit, EXIT_INIT.CROSS);
+  assert.match(crossStep(broken, 'policy file').text, /is not valid JSON; not confirmed, so it is left as it is/);
+  assert.equal(readFileSync(paths.policyFile, 'utf8'), '{ not json\n');
+  const repaired = await runInit(w, home, {});
+  assert.equal(repaired.exit, 0, repaired.text);
+  assert.match(fileStep(repaired).text, /was not valid JSON; the standard preset is written over it \(--yes\)/);
+  assert.ok(isStandard(policyOf()));
+});
+
 // ---------------------------------------------------------------- pure pieces
 
 test('validatePolicyAgainstBook: each rule reports on a planted violation and is silent on a clean book', () => {
@@ -891,6 +1223,46 @@ test('validatePolicyAgainstBook: a number a rule needs and cannot find is INPUTS
   // The shipped presets carry every number, so a clean book is still clean.
   assert.deepEqual(validatePolicyAgainstBook(STANDARD, row(legs), pools), []);
   assert.deepEqual(validatePolicyAgainstBook(REHEARSAL, row(legs), pools), []);
+});
+
+test('validatePolicyAgainstBook: each missing input is its own INPUTS_INCOMPLETE item, absent, null or empty: weightBps, riskTier, maxExecutionLossBps, maxWeightBps', () => {
+  const pools = catalogue();
+  const row = (legs) => portfolioRow({ mint: MINT, creator: 'x', curator: 'x', feeRecipient: 'x', legs });
+  const legs = [['pSOL', 4000], ['pCBBTC', 4000], ['pUSDS', 2000]];
+  const without = (pool, field, value) => {
+    if (value === undefined) { const { [field]: dropped, ...rest } = pool; return rest; }
+    return { ...pool, [field]: value };
+  };
+
+  // One catalogue field at a time, on one leg: one item, naming that field, and no comparison run on it.
+  for (const field of ['riskTier', 'maxExecutionLossBps', 'maxWeightBps']) {
+    for (const value of [undefined, null, '']) {
+      const planted = pools.map((p) => (p.symbol === 'pCBBTC' ? without(p, field, value) : p));
+      const items = validatePolicyAgainstBook(STANDARD, row(legs), planted);
+      assert.deepEqual(items.map((i) => i.code), ['INPUTS_INCOMPLETE'], `${field}=${String(value)}: ${JSON.stringify(items)}`);
+      assert.equal(items[0].message, `the catalogue row for pCBBTC has no number for ${field}, so those rules cannot run on it`);
+      assert.match(items[0].fix, /read the catalogue again/);
+    }
+  }
+
+  // One target without a weight: one item naming the leg, and no weight rule or sleeve sum judged.
+  for (const value of [undefined, null, '']) {
+    const r = row(legs);
+    r.targets = r.targets.map((t) => (t.poolId === 'pCBBTC@solana' ? without(t, 'weightBps', value) : t));
+    const items = validatePolicyAgainstBook(STANDARD, r, pools);
+    assert.deepEqual(items.map((i) => i.code), ['INPUTS_INCOMPLETE'], `weightBps=${String(value)}: ${JSON.stringify(items)}`);
+    assert.equal(items[0].message, 'pCBBTC has no target weightBps in the portfolio row, so the weight rules cannot run on it');
+    assert.match(items[0].fix, /read the portfolio again/);
+  }
+
+  // A zero is a number, not a missing input: the rule runs and judges it.
+  const zeroWeight = row(legs);
+  zeroWeight.targets[1].weightBps = 0;
+  const zeroItems = validatePolicyAgainstBook(STANDARD, zeroWeight, pools);
+  assert.ok(zeroItems.some((i) => i.code === 'LEG_WEIGHT_CAP' && /pCBBTC targets 0 bps/.test(i.message)), JSON.stringify(zeroItems));
+  assert.ok(!zeroItems.some((i) => i.code === 'INPUTS_INCOMPLETE'));
+  const zeroTier = pools.map((p) => (p.symbol === 'pCBBTC' ? { ...p, riskTier: 0, maxExecutionLossBps: 0 } : p));
+  assert.deepEqual(validatePolicyAgainstBook(STANDARD, row(legs), zeroTier), []);
 });
 
 test('policyDigest strips _comment keys at every level and sorts keys, like the signer', () => {

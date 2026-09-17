@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { init } from '../lib/curator/init.mjs';
-import { doctor, parseMetrics } from '../lib/curator/doctor.mjs';
+import { COMPOSE_HOME_PATHS, COMPOSE_HOME_PATH_OF, PROFILE_JOB_IDS, doctor, parseMetrics } from '../lib/curator/doctor.mjs';
 import { homePaths } from '../lib/curator/home.mjs';
 import { factoryConfigAddress } from '../lib/curator/chain.mjs';
 import { policyDigest } from '../lib/curator/policy-check.mjs';
@@ -37,7 +37,7 @@ const other = () => Keypair.generate().publicKey.toBase58();
 const dockerAbsent = () => ({ status: null, stdout: '', stderr: '' });
 
 /** A rendered home plus a healthy fake signer pinned to it. */
-async function setup({ legs } = {}) {
+async function setup({ legs, preset } = {}) {
   const key = Keypair.generate();
   const pk = key.publicKey.toBase58();
   const guardian = other();
@@ -51,7 +51,7 @@ async function setup({ legs } = {}) {
   const rpc = fakeRpc({ balances: { [pk]: FLOOR * 3 }, accounts: { [CONFIG_PDA]: factoryConfigBytes({ guardian, treasury }) } });
   const state = { portfolios: [row], pools: catalogue(), rpc, signer: null };
   const server = await startFakeServer(state);
-  const r = await init({ portfolio: 'CLAWA1', home, api: server.url, mcp: `${server.url}/mcp`, yes: true }, { env: {}, rpc, log: () => {} });
+  const r = await init({ portfolio: 'CLAWA1', home, api: server.url, mcp: `${server.url}/mcp`, yes: true, ...(preset ? { policy: preset } : {}) }, { env: {}, rpc, log: () => {} });
   assert.equal(r.exit, 0, r.steps.map((s) => `${s.name}: ${s.text}`).join('\n'));
   const env = readFileSync(paths.agentEnv, 'utf8')
     .replace(/^OPENAI_API_KEY=$/m, `OPENAI_API_KEY=${PROVIDER_KEY}`)
@@ -199,11 +199,59 @@ const CASES = [
     fix: /weavr-curator init --portfolio/,
   },
   {
+    // The signer self-locks on exactly this drift and refuses every write
+    // while locked, set-delay included, so the fix cannot start with set-delay.
     name: 'notice mismatch',
     check: 'notice',
     plant: (ctx) => { ctx.row.rebalanceDelaySecs = 120; },
-    line: /CLAWA1 announces 120s; policy\.invariants\.rebalanceDelaySecs is 60/,
-    fix: /weavr-curator ops set-delay --rebalance-delay-secs 60/,
+    line: /CLAWA1 announces 120s; policy\.invariants\.rebalanceDelaySecs is 60; the signer self-locks on this and, while locked, refuses every write, set-delay included$/,
+    // The printed init carries the preset: init does not know which preset a
+    // home runs unless told, and a bare re-run of a rehearsal home would
+    // write standard over it while the book admits both.
+    fix: /^\s+fix: weavr-curator init --portfolio \S+ --home \S+ --policy standard again \(it rewrites invariants\.rebalanceDelaySecs to the chain's 120s and keeps the standard preset\), restart the signer, then weavr-curator ops unlock --why "<reason>" --home \S+\. /,
+    extra: (r, ctx) => {
+      const { fix } = check(r, 'notice');
+      assert.ok(fix.includes(`--portfolio ${ctx.mint} --home ${ctx.home} --policy standard again`), fix);
+      assert.match(check(r, 'policy file').text, /\(version 1, the standard preset\)$/);
+      assert.ok(fix.indexOf('ops unlock') < fix.indexOf('ops set-delay'), 'set-delay is never the first thing to run on a locked signer');
+      assert.match(fix, /ops set-delay --rebalance-delay-secs 60 --why "<reason>" --home \S+ from an unlocked signer whose policy file already carries 60s \(it locks on its next tick\), then restart it and unlock$/);
+      assert.doesNotMatch(fix, /once the signer curates/);
+    },
+  },
+  {
+    name: 'notice mismatch on a rehearsal home',
+    check: 'notice',
+    setup: { preset: 'rehearsal' },
+    plant: (ctx) => { ctx.row.rebalanceDelaySecs = 120; },
+    line: /CLAWA1 announces 120s; policy\.invariants\.rebalanceDelaySecs is 60; the signer self-locks/,
+    fix: /^\s+fix: weavr-curator init --portfolio \S+ --home \S+ --policy rehearsal again \(it rewrites invariants\.rebalanceDelaySecs to the chain's 120s and keeps the rehearsal preset\), restart the signer, then weavr-curator ops unlock/,
+    extra: (r, ctx) => {
+      const { fix } = check(r, 'notice');
+      assert.ok(fix.includes(`--portfolio ${ctx.mint} --home ${ctx.home} --policy rehearsal again`), fix);
+      assert.doesNotMatch(fix, /--policy standard/);
+      assert.match(check(r, 'policy file').text, /\(version 1, the rehearsal preset\)$/);
+    },
+  },
+  {
+    // A file that matches no shipped preset holds the owner's edits; init
+    // writes a preset over it, so the remedy is the one number, by hand.
+    name: 'notice mismatch on a policy.json edited by hand',
+    check: 'notice',
+    plant: (ctx) => {
+      ctx.row.rebalanceDelaySecs = 120;
+      const p = JSON.parse(readFileSync(ctx.paths.policyFile, 'utf8'));
+      p.turnover.maxTurnoverBps = 1234;
+      writeFileSync(ctx.paths.policyFile, `${JSON.stringify(p, null, 2)}\n`);
+    },
+    line: /CLAWA1 announces 120s; policy\.invariants\.rebalanceDelaySecs is 60; the signer self-locks/,
+    fix: /^\s+fix: set invariants\.rebalanceDelaySecs to 120 in \S+policy\.json by hand \(the file matches no shipped preset, so init would write a preset over your edits\), restart the signer, then weavr-curator ops unlock --why "<reason>" --home \S+\. To move the notice onchain to 60s instead/,
+    extra: (r, ctx) => {
+      const { fix } = check(r, 'notice');
+      assert.ok(fix.includes(`in ${ctx.paths.policyFile} by hand`), fix);
+      assert.doesNotMatch(fix, /init --portfolio/);
+      assert.ok(fix.indexOf('ops unlock') < fix.indexOf('ops set-delay'));
+      assert.match(check(r, 'policy file').text, /\(version 1, matches no shipped preset: edited by hand\)$/);
+    },
   },
   {
     name: 'policy refuses the book',
@@ -319,6 +367,152 @@ const CASES = [
     },
     line: /curator-review pins anthropic \/ gpt-5\.4; config\.yaml runs openai-api \/ gpt-5\.4/,
     fix: /set provider and model on those jobs/,
+  },
+  {
+    name: 'jobs.json with an empty jobs list',
+    check: 'agent jobs',
+    plant: (ctx) => writeFileSync(ctx.paths.jobsJson, '{"jobs":[],"updated_at":"x"}\n'),
+    line: /jobs\.json lacks curator-review, curator-universe, curator-weekly, curator-health \(the profile ships curator-review, curator-universe, curator-weekly, curator-health; a job that is not there never runs/,
+    fix: /run weavr-curator init again; it merges the profile's jobs into the file/,
+  },
+  {
+    name: 'jobs.json as a plain empty array',
+    check: 'agent jobs',
+    plant: (ctx) => writeFileSync(ctx.paths.jobsJson, '[]\n'),
+    line: /lacks curator-review, curator-universe, curator-weekly, curator-health/,
+    fix: /run weavr-curator init again/,
+  },
+  {
+    name: 'jobs.json as a plain array holding only the agent jobs',
+    check: 'agent jobs',
+    plant: (ctx) => writeFileSync(ctx.paths.jobsJson, JSON.stringify(JSON.parse(readFileSync(ctx.paths.jobsJson, 'utf8')).jobs.filter((j) => j.id !== 'curator-health'))),
+    line: /lacks curator-health \(/,
+    fix: /run weavr-curator init again/,
+    extra: (r) => assert.ok(!crossLine(r, 'agent jobs').includes('lacks curator-review'), 'only the missing id is named'),
+  },
+  {
+    name: 'jobs.json without the review job',
+    check: 'agent jobs',
+    plant: (ctx) => {
+      const doc = JSON.parse(readFileSync(ctx.paths.jobsJson, 'utf8'));
+      doc.jobs = doc.jobs.filter((j) => j.id !== 'curator-review');
+      writeFileSync(ctx.paths.jobsJson, JSON.stringify(doc, null, 2));
+    },
+    line: /lacks curator-review \(/,
+    fix: /run weavr-curator init again/,
+  },
+  {
+    name: 'jobs.json holds an object without a jobs array',
+    check: 'agent jobs',
+    plant: (ctx) => writeFileSync(ctx.paths.jobsJson, '{"updated_at":"x"}\n'),
+    line: /holds no jobs array/,
+    fix: /run weavr-curator init again/,
+  },
+  {
+    name: '/metrics without curator gauges',
+    check: 'agent heartbeat',
+    plant: (ctx) => { ctx.state.signer.metrics = '# HELP process_cpu_seconds_total Total user and system CPU time.\n# TYPE process_cpu_seconds_total counter\nprocess_cpu_seconds_total 1.5\n'; },
+    line: /\/metrics answered but carries no curator gauges: not this signer, or an older image$/,
+    fix: /pass --signer-url for the curator signer, or rebuild the signer image/,
+  },
+  {
+    name: '/metrics with curator gauges but no last tick',
+    check: 'agent heartbeat',
+    plant: (ctx) => { ctx.state.signer.metrics = { curator_paused: 0, curator_self_locked: 0 }; },
+    line: /\/metrics answered but carries no curator_last_tick_ts gauge \(2 other curator gauges\): an older signer image/,
+    fix: /rebuild the signer image/,
+  },
+  {
+    name: 'compose.env lacks HERMES_UID',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^HERMES_UID=.*$/m, '')),
+    line: /compose\.env lacks HERMES_UID$/,
+    fix: /run weavr-curator init again with --home .*; it re-derives the chain facts and writes every variable curator\.yml references/,
+  },
+  {
+    name: 'compose.env with an empty CURATOR_SIGNER_IMAGE and CURATOR_TICK_MS',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^CURATOR_SIGNER_IMAGE=.*$/m, 'CURATOR_SIGNER_IMAGE=').replace(/^CURATOR_TICK_MS=.*$/m, 'CURATOR_TICK_MS=  ')),
+    line: /compose\.env lacks CURATOR_SIGNER_IMAGE, CURATOR_TICK_MS$/,
+    fix: /run weavr-curator init again/,
+  },
+  {
+    name: 'compose.env CURATOR_KEY_FILE outside the home',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^CURATOR_KEY_FILE=.*$/m, 'CURATOR_KEY_FILE=/somewhere/else/curator.json')),
+    line: /compose\.env CURATOR_KEY_FILE is \/somewhere\/else\/curator\.json, outside \S+: the container would mount a different directory than the one the doctor inspected$/,
+    fix: /run weavr-curator init again with --home/,
+    extra: (r) => assert.equal(check(r, 'key file').kind, 'ok', 'the key the doctor inspected is still the one under the home'),
+  },
+  {
+    name: 'compose.env CURATOR_POLICY_FILE and CURATOR_SIGNER_ENV outside the home',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^CURATOR_POLICY_FILE=.*$/m, 'CURATOR_POLICY_FILE=/etc/weavr/policy.json').replace(/^CURATOR_SIGNER_ENV=.*$/m, 'CURATOR_SIGNER_ENV=/etc/weavr/signer.env')),
+    line: /CURATOR_POLICY_FILE is \/etc\/weavr\/policy\.json, outside .*; CURATOR_SIGNER_ENV is \/etc\/weavr\/signer\.env, outside/,
+    fix: /run weavr-curator init again with --home/,
+  },
+  {
+    name: 'compose.env HERMES_HOME as a relative path',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^HERMES_HOME=.*$/m, 'HERMES_HOME=hermes-home')),
+    line: /HERMES_HOME is hermes-home, not an absolute path under \S+: the container would mount a different directory/,
+    fix: /run weavr-curator init again with --home/,
+  },
+  {
+    name: 'compose.env HERMES_HOME as a sibling whose name starts with the home',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^HERMES_HOME=.*$/m, `HERMES_HOME=${ctx.home}-other/hermes-home`)),
+    line: /HERMES_HOME is \S+-other\/hermes-home, outside/,
+    fix: /run weavr-curator init again with --home/,
+  },
+  {
+    name: 'compose.env HERMES_HOME escaping the home through a parent segment',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^HERMES_HOME=.*$/m, `HERMES_HOME=${ctx.home}/../elsewhere`)),
+    line: /HERMES_HOME is \S+\/\.\.\/elsewhere, outside/,
+    fix: /run weavr-curator init again with --home/,
+  },
+  {
+    // Under the home is not enough: the container would mount the key, both
+    // tokens and signer.env into the agent at /opt/data, and every agent
+    // check above read <home>/hermes-home.
+    name: 'compose.env HERMES_HOME as the home itself',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^HERMES_HOME=.*$/m, `HERMES_HOME=${ctx.home}`)),
+    line: /HERMES_HOME is \S+, not \S+\/hermes-home: the container would mount a different directory than the one the doctor inspected$/,
+    fix: /run weavr-curator init again with --home/,
+    extra: (r, ctx) => assert.ok(check(r, 'compose env').text.includes(`HERMES_HOME is ${ctx.home}, not ${ctx.paths.hermesHome}:`), check(r, 'compose env').text),
+  },
+  {
+    name: 'compose.env HERMES_HOME as the home itself with a trailing slash',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^HERMES_HOME=.*$/m, `HERMES_HOME=${ctx.home}/`)),
+    line: /HERMES_HOME is \S+\/, not \S+\/hermes-home: the container would mount a different directory/,
+    fix: /run weavr-curator init again with --home/,
+  },
+  {
+    name: 'compose.env HERMES_HOME as another directory under the home',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^HERMES_HOME=.*$/m, `HERMES_HOME=${ctx.home}/hermes-home-old`)),
+    line: /HERMES_HOME is \S+\/hermes-home-old, not \S+\/hermes-home: the container would mount a different directory/,
+    fix: /run weavr-curator init again with --home/,
+    extra: (r) => assert.equal(check(r, 'agent jobs').kind, 'ok', 'the agent checks read the rendered home, not the one the container would mount'),
+  },
+  {
+    name: 'compose.env CURATOR_KEY_FILE as another file under the home',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^CURATOR_KEY_FILE=.*$/m, `CURATOR_KEY_FILE=${ctx.paths.opsToken}`)),
+    line: /CURATOR_KEY_FILE is \S+\/curator\/ops-token, not \S+\/solana\/curator\.json: the container would mount a different directory than the one the doctor inspected$/,
+    fix: /run weavr-curator init again with --home/,
+    extra: (r) => assert.equal(check(r, 'key file').kind, 'ok', 'the key file check read the file under solana/, not the one the container would mount'),
+  },
+  {
+    name: 'compose.env CURATOR_POLICY_FILE and CURATOR_SIGNER_ENV as siblings under the home that do not exist',
+    check: 'compose env',
+    plant: (ctx) => writeFileSync(ctx.paths.composeEnv, readFileSync(ctx.paths.composeEnv, 'utf8').replace(/^CURATOR_POLICY_FILE=.*$/m, `CURATOR_POLICY_FILE=${ctx.home}/curator/policy-old.json`).replace(/^CURATOR_SIGNER_ENV=.*$/m, `CURATOR_SIGNER_ENV=${ctx.home}/curator/signer.env.bak`)),
+    line: /CURATOR_POLICY_FILE is \S+\/curator\/policy-old\.json, not \S+\/curator\/policy\.json: [^;]*; CURATOR_SIGNER_ENV is \S+\/curator\/signer\.env\.bak, not \S+\/curator\/signer\.env: the container would mount a different directory/,
+    fix: /run weavr-curator init again with --home/,
+    extra: (r) => { assert.equal(check(r, 'policy file').kind, 'ok'); assert.equal(check(r, 'signer policy').kind, 'ok', 'the running signer matches the file the doctor read, which is not the file the container would mount'); },
   },
   {
     name: 'plugin missing',
@@ -470,7 +664,7 @@ const CASES = [
 
 for (const c of CASES) {
   test(`doctor: ${c.name} is a cross on "${c.check}" and exit 1`, async (t) => {
-    const ctx = await setup();
+    const ctx = await setup(c.setup ?? {});
     t.after(() => ctx.server.close());
     await c.plant(ctx);
     const r = await runDoctor(ctx);
@@ -513,6 +707,41 @@ test('doctor: after the README rotation (new token in both env files, signer res
   assert.match(status.fix, /must be one value/);
   const printed = r.text + JSON.stringify(r);
   assert.ok(!printed.includes(rotated) && !printed.includes(ctx.agentToken), 'no token value printed');
+});
+
+test('doctor: the job ids it requires are the ones the profile ships, the path variables are the four the compose file mounts, and a last tick of 0 is a skip, not a cross', async (t) => {
+  const shipped = JSON.parse(readFileSync(join(ROOT, 'curator/profile/cron/jobs.json'), 'utf8')).jobs.map((j) => j.id);
+  assert.deepEqual([...PROFILE_JOB_IDS].sort(), [...shipped].sort());
+  assert.deepEqual([...COMPOSE_HOME_PATHS], ['CURATOR_KEY_FILE', 'CURATOR_POLICY_FILE', 'CURATOR_SIGNER_ENV', 'HERMES_HOME']);
+  // Each path variable is compared with the file or directory the doctor's own checks read, never just with the home.
+  assert.deepEqual(COMPOSE_HOME_PATH_OF, { CURATOR_KEY_FILE: 'keyFile', CURATOR_POLICY_FILE: 'policyFile', CURATOR_SIGNER_ENV: 'signerEnv', HERMES_HOME: 'hermesHome' });
+  const yml = readFileSync(join(ROOT, 'curator/compose/curator.yml'), 'utf8');
+  for (const name of COMPOSE_HOME_PATHS) assert.ok(yml.includes(`\${${name}`), `${name} is a compose variable`);
+
+  const ctx = await setup();
+  t.after(() => ctx.server.close());
+  const clean = await runDoctor(ctx);
+  assert.equal(clean.exit, 0, clean.text);
+  assert.match(clean.text, /✓ agent jobs: curator-review, curator-universe, curator-weekly, curator-health present; 3 agent jobs pin openai-api \/ gpt-5\.4 like config\.yaml/);
+  assert.match(clean.text, /✓ compose env: .*compose\.env: mint \S+, every variable curator\.yml references set, the path variables the files and the agent home the doctor inspected/);
+  assert.match(clean.text, /✓ policy file: \S+policy\.json \(version 1, the standard preset\)/);
+  assert.equal(check(clean, 'policy file').preset, 'standard');
+  for (const [name, expected] of Object.entries(COMPOSE_HOME_PATH_OF)) assert.equal(readFileSync(ctx.paths.composeEnv, 'utf8').match(new RegExp(`^${name}=(.*)$`, 'm'))[1], ctx.paths[expected], `init writes ${name} as the path the doctor inspects`);
+
+  // Another spelling of the same path is the same mount: a trailing slash, a `..` that comes back.
+  const composeText = readFileSync(ctx.paths.composeEnv, 'utf8');
+  writeFileSync(ctx.paths.composeEnv, composeText.replace(/^HERMES_HOME=.*$/m, `HERMES_HOME=${ctx.paths.hermesHome}/`).replace(/^CURATOR_KEY_FILE=.*$/m, `CURATOR_KEY_FILE=${ctx.home}/solana/../solana/curator.json`));
+  const spelled = await runDoctor(ctx);
+  assert.equal(check(spelled, 'compose env').kind, 'ok', spelled.text);
+  writeFileSync(ctx.paths.composeEnv, composeText);
+
+  // The gauge is there and reads 0: a signer that has not ticked, which is a skip, unlike a body with no gauge.
+  ctx.state.signer.healthz.lastTickAgeSecs = null;
+  ctx.state.signer.metrics = { curator_last_tick_ts: 0, curator_hermes_heartbeat_ts: 0, curator_paused: 0 };
+  const r = await runDoctor(ctx);
+  assert.equal(check(r, 'agent heartbeat').kind, 'skip', r.text);
+  assert.match(r.text, /· agent heartbeat: skipped, the signer has not ticked yet/);
+  assert.equal(check(r, 'signer health').kind, 'ok');
 });
 
 test('doctor: a missing home is one cross and nothing else runs', async (t) => {
