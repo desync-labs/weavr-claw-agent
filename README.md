@@ -21,7 +21,7 @@ weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulatio
 
 ## Setup
 
-You need a Claw Agent install with a model provider configured and Node.js 20 or newer. A wallet is needed only to create and to deposit; step 2 gives you three ways to sign, and the sign link needs no account and no key on this box. `claw` and `hermes` are the same command.
+You need a Claw Agent install with a model provider configured and Node.js 20 or newer. A wallet is needed only to create and to deposit; step 3 gives you three ways to sign, and the sign link needs no account and no key on this box. `claw` and `hermes` are the same command.
 
 ### 1. Add weavr to the agent
 
@@ -29,15 +29,25 @@ You need a Claw Agent install with a model provider configured and Node.js 20 or
 claw mcp add weavr --url https://api.weavr.sh/mcp      # lists 30 tools, asks to enable them: Y
 ```
 
-In `~/.hermes/config.yaml`, make the weavr entry match the one in `config.yaml` here (`trust: untrusted`, `resources: false`, `prompts: false`, `exclude: [portfolio_status]`). Then give the agent the skill:
+In `~/.hermes/config.yaml`, make the weavr entry match the one in `config.yaml` here (`trust: untrusted`, `resources: false`, `prompts: false`, `exclude: [portfolio_status]`). Check:
 
 ```bash
-mkdir -p ~/.hermes/skills/weavr
-cp skills/weavr/SKILL.md ~/.hermes/skills/weavr/SKILL.md   # this repo's copy: wallet choice + funding rules (the served one lacks them)
 claw mcp test weavr                                     # Connected, 30 tools
 ```
 
-### 2. A wallet: PayBox, a local key, or the sign link
+### 2. This repo
+
+The wallet tool, the approval plugin and this host's skill:
+
+```bash
+git clone https://github.com/desync-labs/weavr-claw-agent ~/weavr-wallet/tools/claw-agent
+cd ~/weavr-wallet/tools/claw-agent && npm i
+cp -r plugins/weavr-wallet-gate ~/.hermes/plugins/ && claw plugins enable weavr-wallet-gate
+mkdir -p ~/.hermes/skills/weavr
+cp skills/weavr/SKILL.md ~/.hermes/skills/weavr/SKILL.md   # this repo's copy: wallet choice + funding rules (the served one lacks them)
+```
+
+### 3. A wallet: PayBox, a local key, or the sign link
 
 Pick one. PayBox is the default for a real wallet: the key is off the box and you approve each signature. A local key is for a dedicated wallet that lives on the box (an autonomous curator, or a small creator wallet). The sign link is for a host with no signer at all: the owner signs in a browser.
 
@@ -59,23 +69,15 @@ A dedicated keypair file that lives on this machine, in a `0600` file under a `0
 
 ```bash
 mkdir -p -m 700 ~/weavr-wallet/keys
-cd ~/weavr-wallet/tools && npm i @solana/web3.js
 export SIGN_LOCAL_KEYPAIR_FILE=~/weavr-wallet/keys/agent.json WEAVR_WALLET=local
-node claw-agent/tools/sign.mjs --wallet create            # prints the address, nothing else; refuses if a key is already there
-node claw-agent/tools/sign.mjs --balance                  # what it holds, and the SOL a create or an action needs
+cd ~/weavr-wallet/tools/claw-agent
+node tools/sign.mjs --wallet create                     # prints the address, nothing else; refuses if a key is already there
+node tools/sign.mjs --balance                           # what it holds, and the SOL a create or an action needs
 ```
 
 **The sign link**
 
 No wallet on this host. Set `WEAVR_WALLET=link`, or set no `WEAVR_SIGN_TOOL` at all: the skill calls `create_portfolio` with wallet `link` and no creator, sends the sign link to the owner in a private chat, and waits with `await_portfolio` until the portfolio is live. Deposits are made on the portfolio's page. `sign-check.mjs` answers `NO_WALLET` here; there is nothing to prove.
-
-### 3. This repo
-
-```bash
-git clone https://github.com/desync-labs/weavr-claw-agent ~/weavr-wallet/tools/claw-agent
-cd ~/weavr-wallet/tools/claw-agent && npm i
-cp -r plugins/weavr-wallet-gate ~/.hermes/plugins/ && claw plugins enable weavr-wallet-gate
-```
 
 Add to `~/.hermes/.env` (`chmod 600`), with your paths:
 
