@@ -26,12 +26,13 @@
  *   --file <walletPayload.json> [--send | --await <deploymentId>]
  *   --tx <encoded> [--tx ...]              -> {"signed": [...]}   (fallback; prints signed bytes)
  *
- * Refusals, before anything is signed: v0 transactions (exit 2 LEGACY_ONLY,
- * PayBox decodes legacy only), fee payer not the wallet or an instruction
- * outside the weavr programs of manifest.json plus the core programs (exit 4),
- * a PayBox status without a signature (exit 3 WALLET_DECLINED), a missing or
- * unknown setting (exit 5 CONFIG), a concurrent run (exit 6 BUSY), no wallet on
- * this host (exit 9 NO_WALLET).
+ * Refusals, before anything is signed: a v0 transaction in paybox mode (exit 2
+ * LEGACY_ONLY: the PayBox CLI decodes legacy only; a local key signs v0 as well
+ * as legacy, and link mode signs nothing), fee payer not the wallet or an
+ * instruction outside the weavr programs of manifest.json plus the core
+ * programs (exit 4), a PayBox status without a signature (exit 3
+ * WALLET_DECLINED), a missing or unknown setting (exit 5 CONFIG), a concurrent
+ * run (exit 6 BUSY), no wallet on this host (exit 9 NO_WALLET).
  *
  * Environment: WEAVR_WALLET; for paybox PAYBOX_CONFIG_DIR, PAYBOX_CREDENTIAL_ID,
  * PAYBOX_CLI (path to the SDK's dist/cli.js) and optional
