@@ -3,11 +3,14 @@
  * make a new one, or bring one in from a Solana CLI keypair file. The key is
  * a 64-byte JSON array at SIGN_LOCAL_KEYPAIR_FILE (0600, directory 0700); the
  * path is the only thing in the environment, and nothing here ever prints
- * the key. An existing wallet is never overwritten.
+ * the key. An existing wallet is never overwritten. Files are read through
+ * local-signer.mjs's reader, so a bad file is a fixed sentence and never the
+ * parser's quote of its contents.
  */
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
+import { readKeypairFile } from './local-signer.mjs';
 
 const require = createRequire(import.meta.url);
 const { Keypair } = require('@solana/web3.js');
@@ -18,24 +21,15 @@ function configError(message) {
   return err;
 }
 
-/** Load a 64-byte JSON keypair file; a CONFIG error names anything else. */
+/** Load the 64-byte JSON keypair at SIGN_LOCAL_KEYPAIR_FILE; a CONFIG error names anything else. */
 export function loadKeypair(file) {
-  let raw;
-  try {
-    raw = JSON.parse(readFileSync(file, 'utf8'));
-  } catch (e) {
-    throw configError(`${file}: cannot read a keypair there (${String(e.message).slice(0, 80)})`);
-  }
-  if (!Array.isArray(raw) || raw.length !== 64 || raw.some((b) => !Number.isInteger(b) || b < 0 || b > 255)) {
-    throw configError(`${file}: not a 64-byte JSON keypair`);
-  }
-  return Keypair.fromSecretKey(Uint8Array.from(raw));
+  return readKeypairFile(file);
 }
 
 export function localWalletOps({ env = process.env } = {}) {
   const file = env.SIGN_LOCAL_KEYPAIR_FILE;
   const need = () => {
-    if (!file) throw configError('missing SIGN_LOCAL_KEYPAIR_FILE');
+    if (!file) throw configError('missing SIGN_LOCAL_KEYPAIR_FILE: the path of the local wallet\'s key file, in a 0700 directory outside the repo');
     return file;
   };
   const refuseOverwrite = (f) => {
@@ -70,7 +64,8 @@ export function localWalletOps({ env = process.env } = {}) {
       const f = need();
       if (!source) throw configError('--wallet import needs the path of a 64-byte JSON keypair file');
       refuseOverwrite(f);
-      const kp = loadKeypair(source);
+      // the source is about to be copied and chmod 600 in place, so its own mode is not checked
+      const kp = readKeypairFile(source, { label: source, checkMode: false });
       place(f);
       copyFileSync(source, f);
       chmodSync(f, 0o600);

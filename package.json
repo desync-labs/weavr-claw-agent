@@ -4,15 +4,23 @@
   "description": "weavr wallet tool and approval plugin for a self-hosted Claw Agent (Hermes)",
   "type": "module",
   "private": true,
+  "bin": {
+    "weavr-curator": "bin/weavr-curator.mjs"
+  },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "test": "node --test 'tests/**/*.test.mjs'",
     "sign-check": "node tools/sign-check.mjs",
-    "gate-test": "python3 plugins/weavr-wallet-gate/test_gate.py"
+    "gate-test": "python3 plugins/weavr-wallet-gate/test_gate.py",
+    "curator-test": "node --test 'tests/curator_*.test.mjs'",
+    "curator-cli-test": "node --test 'tests/curator_cli*.test.mjs'"
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.4"
+  },
+  "devDependencies": {
+    "js-yaml": "^5.4.2"
   }
 }

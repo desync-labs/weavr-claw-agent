@@ -92,7 +92,7 @@ test('through the fake PayBox CLI: ok with a real signature, exit 0, and the cli
   try {
     const r = run(env);
     assert.equal(r.code, 0, r.stderr);
-    assert.deepEqual(r.json, { status: 'ok', address, sent: false, signer: 'paybox', clientId: 'client-xyz' });
+    assert.deepEqual(r.json, { status: 'ok', address, sent: false, signer: 'paybox', clientId: 'client-xyz', wallet: 'paybox' });
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -117,8 +117,24 @@ test('a revoked signer is WALLET_DECLINED with the reason and the client id to m
 });
 
 test('missing configuration is CONFIG, naming the variable', () => {
-  const r = run({ ...process.env, PAYBOX_CONFIG_DIR: '', PAYBOX_CREDENTIAL_ID: '', PAYBOX_CLI: '' });
-  assert.equal(r.code, EXIT.CONFIG);
-  assert.equal(r.json.error, 'CONFIG');
-  assert.match(r.json.detail, /PAYBOX_CLI/);
+  // The bare tool, no --wallet flag: a PayBox variable is set, so the wallet is inferred
+  // as paybox and the missing PAYBOX_CLI is named. Nothing set at all is link, and
+  // NO_WALLET (see wallet_modes.test.mjs); naming the PayBox wallet then reports the
+  // missing PayBox variables the same way.
+  const bare = { ...process.env, PAYBOX_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'sign-check-bare-')), PAYBOX_CREDENTIAL_ID: '', PAYBOX_CLI: '' };
+  delete bare.WEAVR_WALLET;
+  delete bare.SIGN_LOCAL_KEYPAIR_FILE;
+  delete bare.PAYBOX_SIGNING_KEY_FILE;
+  try {
+    const r = run(bare);
+    assert.equal(r.code, EXIT.CONFIG);
+    assert.equal(r.json.error, 'CONFIG');
+    assert.match(r.json.detail, /PAYBOX_CLI/);
+    assert.equal(r.json.wallet, 'paybox');
+    assert.equal(r.json.error !== 'NO_WALLET', true);
+  } finally { rmSync(bare.PAYBOX_CONFIG_DIR, { recursive: true, force: true }); }
+  const named = run({ ...bare, PAYBOX_CONFIG_DIR: '' }, ['--wallet', 'paybox']);
+  assert.equal(named.code, EXIT.CONFIG);
+  assert.equal(named.json.error, 'CONFIG');
+  assert.match(named.json.detail, /PAYBOX_CLI/);
 });

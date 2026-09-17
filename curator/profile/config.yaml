@@ -1,0 +1,102 @@
+# Hermes (Claw Agent fork) config for the weavr curator profile. This directory
+# is the whole $HERMES_HOME of the curator agent: `weavr-curator init` renders
+# it into the HERMES_HOME the compose file mounts, and the agent container
+# reads it from there.
+#
+# Key names verified against the fork's hermes_cli/config_defaults.py and
+# gateway/config.py: model.{default,provider}, agent.disabled_toolsets,
+# platform_toolsets.<platform>, tools.tool_search.enabled, approvals.cron_mode,
+# cron.allow_agent_scheduling, plugins.enabled, mcp_servers.<name>.{url,enabled,
+# trust,tools.include,tools.resources,tools.prompts}, and the top-level
+# telegram block whose dm_policy / group_policy / group_allow_from /
+# unauthorized_dm_behavior keys gateway/config.py bridges to the adapter.
+# ${VAR} references are expanded from the environment by hermes_cli/config.py.
+#
+# Secrets never live here: the provider key, TELEGRAM_BOT_TOKEN,
+# TELEGRAM_ALLOWED_USERS, TELEGRAM_HOME_CHANNEL, CURATOR_SIGNER_TOKEN,
+# CURATOR_SIGNER_URL and WEAVR_MCP_URL come from $HERMES_HOME/.env (0600);
+# curator/compose/agent.env.example lists the names.
+
+model:
+  # The template runs on the OpenAI API: provider "openai-api" reads
+  # OPENAI_API_KEY from the agent's .env. The model id is the owner's pick;
+  # change it here and in the three agent jobs of cron/jobs.json together.
+  default: "gpt-5.4"
+  provider: "openai-api"
+
+agent:
+  # The model never gets a shell. Every write goes through the weavr_curator
+  # plugin tool, so it cannot read CURATOR_SIGNER_TOKEN, bypass the signer's
+  # policy or schedule its own jobs.
+  disabled_toolsets: [terminal, cronjob, browser, code_execution]
+
+# What the model may hold at all, per platform. Without this the gateway falls
+# back to the platform default, which is eighteen toolsets (file, web, memory,
+# todo, delegation, vision, session_search and the rest), and disabled_toolsets
+# above only subtracts the four it names. The curator needs its own tool, the
+# skills it reads and clarify; nothing else has a job here.
+#
+# Mechanics, checked against the fork rather than assumed: the gateway resolves
+# this through hermes_cli/tools_config._get_platform_tools(config, platform)
+# (gateway/run.py::_resolve_enabled_toolsets_for_source), so the key is
+# platform_toolsets.<platform>; `agent.enabled_toolsets` is not read from this
+# file and would be inert. `weavr-curator` is the plugin's own toolset key
+# (TOOLSET in plugins/weavr-curator/__init__.py); drop it and the model loses
+# weavr_curator itself. Enabled MCP servers are added on top automatically, so
+# the weavr read tools survive, and the platform adds `kanban` of its own
+# accord. disabled_toolsets still subtracts at the end, allowlist or not.
+#
+# Verify on the host after any change (both must answer):
+#   hermes mcp test weavr
+#   hermes chat -Q -q "/weavr-curator status"
+platform_toolsets:
+  telegram: [skills, clarify, weavr-curator]
+  cli: [skills, clarify, weavr-curator]
+
+tools:
+  tool_search:
+    enabled: "off"          # the weavr read tools and weavr_curator stay in the prompt
+
+approvals:
+  cron_mode: "deny"         # an unattended run never auto-approves a dangerous call
+
+cron:
+  allow_agent_scheduling: false   # the four seeded jobs in cron/jobs.json are owner-owned
+
+plugins:
+  enabled: [weavr-curator]  # ../plugins/weavr-curator: weavr_curator tool, pre_tool_call gate, /weavr-curator (the fork's built-in /curator is unrelated)
+
+mcp_servers:
+  clawpump:                 # the fork seeds this entry; the curator never uses it
+    enabled: false
+  weavr:
+    url: "${WEAVR_MCP_URL}" # https://api.weavr.sh/mcp unless you run your own api
+    enabled: true
+    trust: "full"           # only the read tools below are registered, so there is nothing to gate
+    tools:
+      include:
+        - list_assets
+        - get_asset
+        - get_asset_history
+        - suggest_mix
+        - simulate_portfolio
+        - simulate_rebalance
+        - list_portfolios
+        - get_portfolio
+        - get_portfolio_history
+        - list_withdrawals
+        - get_withdrawal
+      resources: false      # the sign/simulate cards are for MCP Apps hosts; Hermes shows raw HTML
+      prompts: false
+
+telegram:
+  dm_policy: "allowlist"    # only TELEGRAM_ALLOWED_USERS; pairing never runs
+  # No allow_from here on purpose: the gateway's config loader does not expand
+  # ${VAR} in this file, so a literal would match nobody. With the key absent
+  # the adapter takes the allow-set from TELEGRAM_ALLOWED_USERS, and the host
+  # must refuse to start the gateway when that variable is empty (the agent
+  # image's cont-init step does; `weavr-curator doctor` checks it too),
+  # because an empty allow-set there is fail-open.
+  group_policy: "disabled"  # the curator never speaks in a group
+  group_allow_from: []
+  unauthorized_dm_behavior: "ignore"        # no pairing prompt for strangers

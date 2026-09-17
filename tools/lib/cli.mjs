@@ -1,22 +1,42 @@
 /**
- * Shared command line for the two signers. Output is JSON only, one line, so
+ * Shared command line for the wallet tool. Output is JSON only, one line, so
  * a text-only agent can read it; transaction bytes are printed only for
- * --tx / --file, the fallback paths.
+ * --tx / --file, the fallback paths. The wallet mode (paybox, local, link)
+ * is resolved first, from `--wallet <mode>`, WEAVR_WALLET or inference (see
+ * wallet-mode.mjs), and that flag is stripped before the rest of the command
+ * line is read. The same flag with a verb (`--wallet status|create|import`)
+ * is the wallet's lifecycle and runs before a signer exists: there may be no
+ * key yet. Every line printed carries `wallet: <mode>`.
  */
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedPrograms, programsFromManifest, EXIT } from './tx-checks.mjs';
-import { finishDeployment, makeDeposit, makeRefreshNav, makeWithdraw, signChecked, transactionsFromFile, weavrClient } from './weavr.mjs';
+import { finishDeployment, makeDeposit, makeRefreshNav, makeWithdraw, scrub, signChecked, transactionsFromFile, watchDeployment, weavrClient } from './weavr.mjs';
 import { connectionFor, readBalances } from './balance.mjs';
+import { resolveWalletMode } from './wallet-mode.mjs';
+import { payboxSigner } from './paybox-signer.mjs';
+import { localSigner } from './local-signer.mjs';
+import { localWalletOps } from './local-wallet.mjs';
+import { linkSigner, noWalletError, NO_WALLET_DETAIL } from './link-signer.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-export const USAGE = '--wallet status|create|import <keypair.json> | --address | --balance | --deployment <id> | --deposit <ticker> --amount <usd> | --withdraw <ticker> --amount <usd> | --shares all [--min-out <usd>] | --refresh-nav <ticker> | --file <walletPayload.json> [--send | --await <deploymentId>] | --tx <encoded>...';
+export const USAGE = '[--wallet paybox|local|link] --wallet status|create|import <keypair.json> | --address | --balance | --deployment <id> | --deposit <ticker> --amount <usd> | --withdraw <ticker> --amount <usd> | --shares all [--min-out <usd>] | --refresh-nav <ticker> | --file <walletPayload.json> [--send | --await <deploymentId>] | --tx <encoded>...';
 
 export function out(obj, code = 0) {
   process.stdout.write(JSON.stringify(obj) + '\n');
   process.exit(code);
+}
+
+/** The signer for a resolved wallet mode. */
+export function signerFor(mode, env = process.env) {
+  if (mode === 'paybox') return payboxSigner({ env });
+  if (mode === 'local') return localSigner({ env });
+  if (mode === 'link') return linkSigner();
+  const err = new Error(`unknown wallet mode ${JSON.stringify(mode)}`);
+  err.code = 'CONFIG';
+  throw err;
 }
 
 /** The ops manifest, or a WEAVR_PROGRAM_IDS override for installs without the ops checkout. */
@@ -34,66 +54,103 @@ export function resolveAllowed(env = process.env) {
 }
 
 /**
- * `walletOps` (status/create/importFrom) manages a key file on this machine;
- * the PayBox tool passes none, its wallet lives in the PayBox app.
+ * `--wallet status`: is there a wallet in this mode, and which address. Never
+ * throws for a wallet that is merely absent: the local wallet answers from its
+ * key file, link has none by definition, and PayBox is asked to build its
+ * signer, a failure there being the reason in `detail`.
  */
-export async function runCli(argv, makeSigner, env = process.env, { wallet: walletOps } = {}) {
-  const has = (f) => argv.includes(f);
-  const val = (f) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined; };
-  const vals = (f) => argv.flatMap((a, i) => (a === f && argv[i + 1] != null ? [argv[i + 1]] : []));
-  const fail = (error, detail, code) => out({ error, ...(detail ? { detail } : {}) }, code);
+export function walletStatus(mode, makeSigner = signerFor, env = process.env) {
+  if (mode === 'local') return localWalletOps({ env }).status();
+  if (mode === 'link') return { configured: false, signer: 'link', detail: NO_WALLET_DETAIL };
+  try {
+    const s = makeSigner(mode, env);
+    return { configured: true, signer: s.kind, address: s.wallet };
+  } catch (e) {
+    return { configured: false, signer: mode, detail: String(e.message).slice(0, 200) };
+  }
+}
+
+/**
+ * Run the tool. `makeSigner(mode, env)` builds the signer for the resolved
+ * mode (signerFor by default); an alias forces its mode by prepending
+ * `--wallet <mode>` to argv. Every output line gains `wallet: <mode>` once the
+ * mode is known; a field of that name already in a weavr payload is kept.
+ */
+export async function runCli(argv, makeSigner = signerFor, env = process.env) {
+  let mode;
+  const emit = (obj, code = 0) => out(mode && !('wallet' in obj) ? { ...obj, wallet: mode } : obj, code);
+  const fail = (error, detail, code) => emit({ error, ...(detail ? { detail } : {}) }, code);
 
   try {
-    // Wallet lifecycle runs before a signer exists: there may be no key yet.
+    const resolved = resolveWalletMode({ argv, env });
+    mode = resolved.mode;
+    const args = resolved.rest;
+    const has = (f) => args.includes(f);
+    const val = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : undefined; };
+    const vals = (f) => args.flatMap((a, i) => (a === f && args[i + 1] != null ? [args[i + 1]] : []));
+    const client = () => weavrClient({ mcpUrl: env.WEAVR_MCP_URL, apiUrl: env.WEAVR_API_URL });
+
+    // The wallet's lifecycle runs before a signer exists: there may be no key yet.
+    // The resolver leaves only its three verbs here.
     if (has('--wallet')) {
-      const sub = val('--wallet');
-      if (sub === 'status') {
-        if (walletOps) return out(walletOps.status());
-        try { const s = makeSigner(); return out({ configured: true, signer: s.kind, address: s.wallet }); }
-        catch (e) { return out({ configured: false, detail: String(e.message).slice(0, 200) }); }
+      const verb = val('--wallet');
+      if (verb === 'status') return emit(walletStatus(mode, makeSigner, env));
+      if (mode === 'paybox') {
+        return fail('UNSUPPORTED', 'this wallet is managed in the PayBox app; --wallet create and --wallet import apply to the local wallet (--wallet local, or sign-local.mjs)', EXIT.USAGE);
       }
-      if (!walletOps) return fail('UNSUPPORTED', 'this wallet is managed in the PayBox app; --wallet create/import apply to sign-local.mjs', EXIT.USAGE);
-      if (sub === 'create') return out(walletOps.create());
-      if (sub === 'import') return out(walletOps.importFrom(argv[argv.indexOf('--wallet') + 2]));
-      return fail('USAGE', '--wallet status | create | import <keypair.json>', EXIT.USAGE);
+      const ops = localWalletOps({ env });
+      if (verb === 'create') return emit(ops.create());
+      return emit(ops.importFrom(args[args.indexOf('--wallet') + 2]));
     }
 
-    const signer = makeSigner();
-    if (has('--address')) return out({ address: signer.wallet });
+    const signer = makeSigner(mode, env);
+
+    if (mode === 'link') {
+      // No signer on this host. The only thing to do is watch a deployment the
+      // owner signs from the sign link: no rebuild, no check, nothing signed.
+      if (has('--deployment')) {
+        const id = val('--deployment');
+        if (!id) return fail('USAGE', '--deployment <deploymentId>', EXIT.USAGE);
+        const w = await watchDeployment(client(), id, { timeoutSecs: 50 });
+        return emit({ step: 'await_portfolio', wallet: mode, ...scrub(w.payload) }, w.isError ? EXIT.WEAVR_ERROR : 0);
+      }
+      if (['--address', '--balance', '--tx', '--file', '--deposit', '--withdraw', '--refresh-nav'].some(has)) throw noWalletError();
+      return fail('USAGE', USAGE, EXIT.USAGE);
+    }
+
+    if (has('--address')) return emit({ address: signer.wallet });
     if (has('--balance')) {
       try {
-        return out(await readBalances(signer.wallet, connectionFor(env)));
+        return emit(await readBalances(signer.wallet, connectionFor(env)));
       } catch (e) {
         return fail('RPC_UNAVAILABLE', `could not read balances: ${String(e.message).slice(0, 160)}`, EXIT.FAILED);
       }
     }
     const allowed = resolveAllowed(env);
-    const client = weavrClient({ mcpUrl: env.WEAVR_MCP_URL, apiUrl: env.WEAVR_API_URL });
-    const finish = (r) => out(r.output ?? { signed: r.signed }, r.exit ?? 0);
+    const finish = (r) => emit(r.output ?? { signed: r.signed }, r.exit ?? 0);
 
     if (has('--tx')) {
       const r = await signChecked(vals('--tx'), signer, allowed);
-      return r.ok ? out({ signed: r.signed }) : finish(r);
+      return r.ok ? emit({ signed: r.signed }) : finish(r);
     }
     if (has('--file')) {
       const txs = transactionsFromFile(val('--file'));
       const r = await signChecked(txs, signer, allowed);
       if (!r.ok) return finish(r);
       if (has('--send')) {
-        const sent = await client.mcpCall('send_signed', { signed: r.signed });
-        return out({ step: 'send_signed', ...sent.payload }, sent.isError ? EXIT.WEAVR_ERROR : 0);
+        const sent = await client().mcpCall('send_signed', { signed: r.signed });
+        return emit({ step: 'send_signed', ...sent.payload }, sent.isError ? EXIT.WEAVR_ERROR : 0);
       }
       if (has('--await')) {
-        const w = await client.mcpCall('await_portfolio', { deploymentId: val('--await'), signed: r.signed, timeoutSecs: 50 });
-        const { walletPayload, ...rest } = w.payload ?? {};
-        return out({ step: 'await_portfolio', ...rest }, w.isError ? EXIT.WEAVR_ERROR : 0);
+        const w = await client().mcpCall('await_portfolio', { deploymentId: val('--await'), signed: r.signed, timeoutSecs: 50 });
+        return emit({ step: 'await_portfolio', ...scrub(w.payload) }, w.isError ? EXIT.WEAVR_ERROR : 0);
       }
-      return out({ signed: r.signed });
+      return emit({ signed: r.signed });
     }
     if (has('--deposit')) {
       const portfolio = val('--deposit'); const amountUsd = Number(val('--amount'));
       if (!portfolio || !(amountUsd > 0)) return fail('USAGE', '--deposit <ticker> --amount <usd>', EXIT.USAGE);
-      return finish(await makeDeposit(client, portfolio, amountUsd, signer, allowed));
+      return finish(await makeDeposit(client(), portfolio, amountUsd, signer, allowed));
     }
     if (has('--withdraw')) {
       const portfolio = val('--withdraw'); const shares = val('--shares'); const amount = val('--amount'); const minOut = val('--min-out');
@@ -102,7 +159,7 @@ export async function runCli(argv, makeSigner, env = process.env, { wallet: wall
       }
       if (amount != null && !(Number(amount) > 0)) return fail('USAGE', '--withdraw <ticker> --amount <usd>', EXIT.USAGE);
       if (minOut !== undefined && !(Number(minOut) >= 0)) return fail('USAGE', '--min-out <usd>', EXIT.USAGE);
-      return finish(await makeWithdraw(client, portfolio, shares, signer, allowed, {
+      return finish(await makeWithdraw(client(), portfolio, shares, signer, allowed, {
         ...(amount != null ? { amountUsd: amount } : {}),
         ...(minOut !== undefined ? { minAmountOut: minOut } : {}),
         connection: connectionFor(env),
@@ -111,16 +168,18 @@ export async function runCli(argv, makeSigner, env = process.env, { wallet: wall
     if (has('--refresh-nav')) {
       const portfolio = val('--refresh-nav');
       if (!portfolio) return fail('USAGE', '--refresh-nav <ticker>', EXIT.USAGE);
-      return finish(await makeRefreshNav(client, portfolio, signer, allowed));
+      return finish(await makeRefreshNav(client(), portfolio, signer, allowed));
     }
     if (has('--deployment')) {
       const id = val('--deployment');
       if (!id) return fail('USAGE', '--deployment <deploymentId>', EXIT.USAGE);
-      return finish(await finishDeployment(client, id, signer, allowed));
+      return finish(await finishDeployment(client(), id, signer, allowed));
     }
     return fail('USAGE', USAGE, EXIT.USAGE);
   } catch (e) {
-    const code = e.code === 'CONFIG' ? EXIT.CONFIG : e.code === 'BUSY' ? EXIT.BUSY : e.code === 'WALLET_DECLINED' ? EXIT.WALLET_DECLINED : EXIT.FAILED;
-    return fail(e.code && EXIT[e.code] !== undefined ? e.code : 'FAILED', String(e.message).slice(0, 200), code);
+    const code = e.code === 'CONFIG' ? EXIT.CONFIG : e.code === 'BUSY' ? EXIT.BUSY : e.code === 'WALLET_DECLINED' ? EXIT.WALLET_DECLINED : e.code === 'NO_WALLET' ? EXIT.NO_WALLET : EXIT.FAILED;
+    // NO_WALLET carries a fixed sentence the agent must see whole; anything else is capped.
+    const detail = e.code === 'NO_WALLET' ? e.message : String(e.message).slice(0, 200);
+    return fail(e.code && EXIT[e.code] !== undefined ? e.code : 'FAILED', detail, code);
   }
 }

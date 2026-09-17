@@ -53,7 +53,8 @@ test('import copies a 64-byte keypair file into place and refuses anything else'
   assert.throws(() => ops.importFrom(undefined), /needs the path/);
   const bad = join(dir, 'bad.json');
   writeFileSync(bad, JSON.stringify([1, 2, 3]));
-  assert.throws(() => ops.importFrom(bad), /not a 64-byte JSON keypair/);
+  // the fixed sentence names the source path, never what the parser saw in it
+  assert.throws(() => ops.importFrom(bad), (e) => e.code === 'CONFIG' && e.message === `${bad} is not a 64-byte JSON array`);
   const r = ops.importFrom(source);
   assert.equal(r.imported, true);
   assert.equal(r.address, kp.publicKey.toBase58());
@@ -115,9 +116,11 @@ test('sign-local.mjs: --wallet status/create through the CLI, one JSON line each
   assert.equal(s1.json.configured, true);
   assert.equal(s1.json.address, c.json.address);
   const a1 = run(LOCAL_TOOL, ['--address'], env);
-  assert.deepEqual(a1.json, { address: c.json.address });
+  assert.deepEqual(a1.json, { address: c.json.address, wallet: 'local' });
+  // neither a mode nor a verb: the same CONFIG refusal as an unknown WEAVR_WALLET, naming both lists
   const bogus = run(LOCAL_TOOL, ['--wallet', 'bogus'], env);
-  assert.equal(bogus.code, EXIT.USAGE);
+  assert.equal(bogus.code, EXIT.CONFIG);
+  assert.match(bogus.json.detail, /paybox, local, link.*status, create, import/);
   const again = run(LOCAL_TOOL, ['--wallet', 'create'], env);
   assert.equal(again.code, EXIT.CONFIG);
   assert.match(again.json.detail, /refusing to overwrite/);

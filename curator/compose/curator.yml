@@ -1,0 +1,78 @@
+# The weavr curator on one host: the signer, which holds the curator key and
+# refuses under the policy document, and the agent (Hermes, the Claw Agent
+# fork), which decides. One
+# `docker compose --env-file <home>/compose.env -f curator/compose/curator.yml up -d`
+# after `weavr-curator init` has written <home>/compose.env and the env files and
+# rendered the profile; `weavr-curator doctor` checks everything named below
+# before you start it. Without --env-file nothing below is filled in.
+#
+# Images
+#   signer  ${CURATOR_SIGNER_IMAGE:-weavr-backend:curator-local}
+#           No published signer image yet. Today it is built from a checkout
+#           of the weavr backend:  docker build -t weavr-backend:curator-local <backend>
+#           A published image is pending; until then the doctor checks that the
+#           image exists locally.
+#   agent   ${HERMES_IMAGE:-hermes-agent}
+#           The Claw Agent fork's docker workflow builds a :test tag for its
+#           own tests and publishes nothing: its publish job is gated on the
+#           upstream NousResearch/hermes-agent repository, whose image is
+#           nousresearch/hermes-agent on Docker Hub. Build the fork locally
+#           (`docker compose build` in its checkout produces `hermes-agent`),
+#           or set HERMES_IMAGE to an image you trust.
+#
+# Variables (from <home>/compose.env, which init writes and --env-file names; none is a secret)
+#   CURATOR_KEY_FILE          the curator keypair file on the host; mounted read-only, never in the environment
+#   CURATOR_POLICY_FILE       the policy document, e.g. ../policy/standard.json; edit and restart to change it
+#   CURATOR_SIGNER_ENV        the signer's secret env file (signer.env.example lists the names), 0600
+#   CURATOR_PORTFOLIO_MINT    the portfolio's shares mint, read from chain by init
+#   CURATOR_TREASURY          the portfolio's fee recipient, read from chain by init
+#   CURATOR_EXPECTED_GUARDIAN weavr's guardian key, read from chain by init
+#   CURATOR_API_URL           the weavr api, default https://api.weavr.sh
+#   CURATOR_START_PAUSED      default 1: the signer boots paused; resume with the ops token once the doctor is green
+#   HERMES_HOME               the agent's home on the host: the rendered profile plus its .env (0600)
+#   HERMES_UID / HERMES_GID   the host user that owns HERMES_HOME (the image remaps its user to these)
+#
+# Network: the two services share a private compose network and nothing is
+# published beyond the host. The agent reaches the signer as
+# http://signer:8091, so CURATOR_SIGNER_URL in ${HERMES_HOME}/.env must be
+# exactly that. The signer is also published on 127.0.0.1:8091 for the ops
+# commands you run from the host (never on another interface).
+services:
+  signer:
+    image: ${CURATOR_SIGNER_IMAGE:-weavr-backend:curator-local}
+    restart: unless-stopped
+    environment:
+      - SERVICE=curator
+      - CURATOR_KEYPAIR=/keys/curator.json
+      - CURATOR_POLICY_FILE=/policy/policy.json
+      - CURATOR_API_URL=${CURATOR_API_URL:-https://api.weavr.sh}
+      - CURATOR_PORTFOLIO_MINT=${CURATOR_PORTFOLIO_MINT:?the portfolio's shares mint (weavr-curator init writes it)}
+      - CURATOR_TREASURY=${CURATOR_TREASURY:?the portfolio's fee recipient (weavr-curator init writes it)}
+      - CURATOR_EXPECTED_GUARDIAN=${CURATOR_EXPECTED_GUARDIAN:?the guardian key (weavr-curator init writes it)}
+      - CURATOR_JOURNAL=/journal/journal.jsonl
+      - CURATOR_START_PAUSED=${CURATOR_START_PAUSED:-1}
+      - CURATOR_TICK_MS=${CURATOR_TICK_MS:-30000}
+      - CURATOR_PORT=8091
+    env_file:
+      - ${CURATOR_SIGNER_ENV:?the signer's secret env file (see signer.env.example)}
+    volumes:
+      - ${CURATOR_KEY_FILE:?the curator keypair file}:/keys/curator.json:ro
+      - ${CURATOR_POLICY_FILE:?the policy document (curator/policy/standard.json or rehearsal.json)}:/policy/policy.json:ro
+      - curator-journal:/journal
+    ports:
+      - "127.0.0.1:8091:8091"
+  agent:
+    image: ${HERMES_IMAGE:-hermes-agent}
+    restart: unless-stopped
+    depends_on:
+      - signer
+    volumes:
+      - ${HERMES_HOME:?the agent's home directory (weavr-curator init renders it)}:/opt/data
+    environment:
+      - HERMES_UID=${HERMES_UID:-10000}
+      - HERMES_GID=${HERMES_GID:-10000}
+    env_file:
+      - ${HERMES_HOME:?the agent's home directory (weavr-curator init renders it)}/.env
+    command: ["gateway", "run"]
+volumes:
+  curator-journal:
