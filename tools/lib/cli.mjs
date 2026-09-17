@@ -12,7 +12,7 @@ import { connectionFor, readBalances } from './balance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-export const USAGE = '--wallet status|create|import <keypair.json> | --address | --balance | --deployment <id> | --deposit <ticker> --amount <usd> | --withdraw <ticker> --shares <whole> [--min-out <usd>] | --refresh-nav <ticker> | --file <walletPayload.json> [--send | --await <deploymentId>] | --tx <encoded>...';
+export const USAGE = '--wallet status|create|import <keypair.json> | --address | --balance | --deployment <id> | --deposit <ticker> --amount <usd> | --withdraw <ticker> --amount <usd> | --shares all [--min-out <usd>] | --refresh-nav <ticker> | --file <walletPayload.json> [--send | --await <deploymentId>] | --tx <encoded>...';
 
 export function out(obj, code = 0) {
   process.stdout.write(JSON.stringify(obj) + '\n');
@@ -96,10 +96,17 @@ export async function runCli(argv, makeSigner, env = process.env, { wallet: wall
       return finish(await makeDeposit(client, portfolio, amountUsd, signer, allowed));
     }
     if (has('--withdraw')) {
-      const portfolio = val('--withdraw'); const shares = val('--shares'); const minOut = val('--min-out');
-      if (!portfolio || !/^[1-9]\d*$/.test(shares ?? '')) return fail('USAGE', '--withdraw <ticker> --shares <whole shares, at least 1> [--min-out <usd>]', EXIT.USAGE);
+      const portfolio = val('--withdraw'); const shares = val('--shares'); const amount = val('--amount'); const minOut = val('--min-out');
+      if (!portfolio || (shares == null && amount == null) || (shares != null && amount != null)) {
+        return fail('USAGE', '--withdraw <ticker> --amount <usd>  (or --shares all)', EXIT.USAGE);
+      }
+      if (amount != null && !(Number(amount) > 0)) return fail('USAGE', '--withdraw <ticker> --amount <usd>', EXIT.USAGE);
       if (minOut !== undefined && !(Number(minOut) >= 0)) return fail('USAGE', '--min-out <usd>', EXIT.USAGE);
-      return finish(await makeWithdraw(client, portfolio, shares, signer, allowed, minOut !== undefined ? { minAmountOut: minOut } : {}));
+      return finish(await makeWithdraw(client, portfolio, shares, signer, allowed, {
+        ...(amount != null ? { amountUsd: amount } : {}),
+        ...(minOut !== undefined ? { minAmountOut: minOut } : {}),
+        connection: connectionFor(env),
+      }));
     }
     if (has('--refresh-nav')) {
       const portfolio = val('--refresh-nav');

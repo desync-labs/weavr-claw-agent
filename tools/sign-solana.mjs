@@ -10,6 +10,7 @@
  *   --address                              → {"address": "..."}
  *   --deployment <deploymentId>            → rebuild → check → sign → await_portfolio → {"status": "live", ...}
  *   --deposit <ticker> --amount <usd>      → build_deposit → check → sign → send_signed → {"status": "confirmed", ...}
+ *   --withdraw <ticker> --amount <usd>     → build_withdraw → check → sign → send_signed → {"status": "confirmed", ...}
  *   --file <walletPayload.json> [--send | --await <deploymentId>]
  *   --tx <encoded> [--tx ...]              → {"signed": [...]}   (fallback; prints signed bytes)
  *

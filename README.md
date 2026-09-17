@@ -6,7 +6,7 @@ weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulatio
 
 | Path | What |
 |---|---|
-| `tools/sign-solana.mjs` | the wallet tool: signs weavr transactions with the PayBox CLI (`--address`, `--balance`, `--deployment <id>`, `--deposit <ticker> --amount <usd>`, `--withdraw <ticker> --shares <n>`, `--refresh-nav <ticker>`) |
+| `tools/sign-solana.mjs` | the wallet tool: signs weavr transactions with the PayBox CLI (`--address`, `--balance`, `--deployment <id>`, `--deposit <ticker> --amount <usd>`, `--withdraw <ticker> --amount <usd>`, `--refresh-nav <ticker>`) |
 | `tools/sign-check.mjs` | a zero-cost check that the key, the grant and the client agree; prints the PayBox client id |
 | `tools/sign-local.mjs` | the same tool with a keypair file on this machine (small amounts only), plus `--wallet status\|create\|import <keypair.json>` so the agent can offer the user a new wallet or take an existing one |
 | `tools/lib/` | the checks (fee payer must be your wallet, every instruction inside weavr's programs), the weavr flows, the two signers, the wallet's lifecycle, balances |
