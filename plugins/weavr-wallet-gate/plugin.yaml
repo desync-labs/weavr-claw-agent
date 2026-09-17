@@ -1,6 +1,6 @@
 name: weavr-wallet-gate
 version: 0.1.0
-description: "The money gate for the weavr wallet tool: every signing run of sign-solana.mjs / sign-local.mjs through the terminal tool is escalated to the human approval gate with a message that names the action."
+description: "The money gate for the weavr wallet tool: every signing run of sign.mjs (or its aliases sign-solana.mjs / sign-local.mjs) through the terminal tool is escalated to the human approval gate with a message that names the action and the wallet."
 author: weavr
 hooks:
   - pre_tool_call

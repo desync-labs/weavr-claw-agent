@@ -10,6 +10,8 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EXIT } from './tx-checks.mjs';
+import { resolveWalletMode } from './wallet-mode.mjs';
+import { noWalletError } from './link-signer.mjs';
 
 const require = createRequire(import.meta.url);
 const { PublicKey, Transaction, TransactionInstruction } = require('@solana/web3.js');
@@ -63,18 +65,31 @@ export function payboxClientId(configDir) {
   }
 }
 
-/** The command line: one JSON line, exit 0 only when the wallet signed and the signature verified. */
+/**
+ * The command line: one JSON line, exit 0 only when the wallet signed and the
+ * signature verified. The wallet mode is resolved like the wallet tool's
+ * (`--wallet <x>`, WEAVR_WALLET, inference) and `makeSigner(mode, env)` builds
+ * the signer for it. In link mode there is nothing to sign with: the answer is
+ * NO_WALLET (exit 9). Every line carries `signer: <kind>` once a signer exists
+ * and `wallet: <mode>` once the mode is known.
+ */
 export async function runSignCheck(argv, makeSigner, env = process.env, { fetchRecentHash } = {}) {
-  const out = (obj, code) => { process.stdout.write(JSON.stringify(obj) + '\n'); process.exit(code); };
+  let mode;
+  let signer;
+  const out = (obj, code) => { process.stdout.write(JSON.stringify(mode ? { ...obj, wallet: mode } : obj) + '\n'); process.exit(code); };
   const clientId = env.PAYBOX_CONFIG_DIR ? payboxClientId(env.PAYBOX_CONFIG_DIR) : null;
   try {
-    const signer = makeSigner();
+    const resolved = resolveWalletMode({ argv, env });
+    mode = resolved.mode;
+    signer = makeSigner(mode, env);
+    if (!signer.wallet) throw noWalletError();
     let recentBlockhash = UNSENDABLE_HASH;
-    if (argv.includes('--recent') && fetchRecentHash) recentBlockhash = await fetchRecentHash();
+    if (resolved.rest.includes('--recent') && fetchRecentHash) recentBlockhash = await fetchRecentHash();
     const r = await signCheck(signer, { recentBlockhash });
     return out({ ...r, signer: signer.kind, clientId }, r.status === 'ok' ? 0 : EXIT.WALLET_DECLINED);
   } catch (e) {
     const known = e.code && EXIT[e.code] !== undefined;
-    return out({ status: 'failed', error: known ? e.code : 'FAILED', detail: String(e.message).slice(0, 200), clientId }, known ? EXIT[e.code] : EXIT.FAILED);
+    const detail = e.code === 'NO_WALLET' ? e.message : String(e.message).slice(0, 200);
+    return out({ status: 'failed', error: known ? e.code : 'FAILED', detail, ...(signer ? { signer: signer.kind } : {}), clientId }, known ? EXIT[e.code] : EXIT.FAILED);
   }
 }

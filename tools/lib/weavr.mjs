@@ -44,9 +44,13 @@ function refusal(check) {
   return { ok: false, exit: check.exit, output: { error: check.error, detail: check.detail } };
 }
 
-/** Sign a list of encoded transactions after the checks. */
+/**
+ * Sign a list of encoded transactions after the checks. A signer that signs
+ * v0 says so with `allowVersioned: true` (the local key); any other signer
+ * gets legacy transactions only, so PayBox never sees a v0 payload.
+ */
 export async function signChecked(encodedList, signer, allowed) {
-  const check = checkAll(encodedList, { wallet: signer.wallet, allowed });
+  const check = checkAll(encodedList, { wallet: signer.wallet, allowed, allowVersioned: signer.allowVersioned === true });
   if (!check.ok) return refusal(check);
   const signed = await signer.sign(encodedList);
   return { ok: true, signed };
@@ -63,14 +67,28 @@ export async function finishDeployment(client, deploymentId, signer, allowed, { 
   }
   const signedResult = await signChecked(steps.map((s) => s.tx), signer, allowed);
   if (!signedResult.ok) return signedResult;
+  const last = await watchDeployment(client, deploymentId, { signed: signedResult.signed, awaitRounds, timeoutSecs });
+  return { ok: !last.isError, exit: last.isError ? 7 : 0, output: { step: 'await_portfolio', ...scrub(last.payload) } };
+}
+
+/** Statuses await_portfolio cannot move past on its own; polling stops there. */
+export const SETTLED_STATUSES = Object.freeze(['live', 'sign_again', 'expired']);
+
+/**
+ * Poll await_portfolio until the deployment settles or the rounds run out.
+ * `signed` rides along on the first round only; without it (the sign link:
+ * the owner signs in a browser) the poll carries the deploymentId alone and
+ * awaiting_wallet, finishing, live and expired pass through as weavr reports
+ * them. Returns the last MCP result, unscrubbed.
+ */
+export async function watchDeployment(client, deploymentId, { signed, awaitRounds = 6, timeoutSecs = 50 } = {}) {
   let last;
   for (let i = 0; i < awaitRounds; i += 1) {
-    const args = i === 0 ? { deploymentId, signed: signedResult.signed, timeoutSecs } : { deploymentId, timeoutSecs };
+    const args = i === 0 && signed ? { deploymentId, signed, timeoutSecs } : { deploymentId, timeoutSecs };
     last = await client.mcpCall('await_portfolio', args);
-    const st = last.payload?.status;
-    if (last.isError || st === 'live' || st === 'sign_again') break;
+    if (last.isError || SETTLED_STATUSES.includes(last.payload?.status)) break;
   }
-  return { ok: !last.isError, exit: last.isError ? 7 : 0, output: { step: 'await_portfolio', ...scrub(last.payload) } };
+  return last;
 }
 
 /** Build, sign and send a deposit. */
