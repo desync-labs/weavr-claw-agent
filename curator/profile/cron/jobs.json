@@ -1,0 +1,200 @@
+{
+  "jobs": [
+    {
+      "id": "curator-health",
+      "name": "curator-health",
+      "prompt": "",
+      "skills": null,
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": null,
+      "model_snapshot": null,
+      "base_url": null,
+      "script": "curator-health.sh",
+      "no_agent": true,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "*/15 * * * *",
+        "display": "*/15 * * * *"
+      },
+      "schedule_display": "*/15 * * * *",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-11T00:00:00+00:00",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "failure_streak": 0,
+      "deliver": "telegram",
+      "origin": null,
+      "enabled_toolsets": null,
+      "workdir": null
+    },
+    {
+      "id": "curator-review",
+      "name": "curator-review",
+      "prompt": "Daily review of the portfolio. The script output above is the signer's brief, its triggers and the wake gate; the notepad holds the last gate's watermarks (watermark, hold_reason, hold_streak, drift_streak, pending). Follow the weavr-curator skill: read the live policy with weavr_curator policy, review, decide, simulate_rebalance, then propose, deposit or hold. HOLD is the default; a proposal needs a why a holder would accept and lands after the book's own notice. Reply exactly [SILENT] when the decision is HOLD and hold_reason is unchanged. Report in the BRIEF.md format, at most 1,200 chars. Never print transaction bytes.",
+      "skills": [
+        "weavr-curator"
+      ],
+      "skill": "weavr-curator",
+      "model": "gpt-5.4",
+      "provider": "openai-api",
+      "provider_snapshot": null,
+      "model_snapshot": null,
+      "base_url": null,
+      "script": "curator-review-gate.sh",
+      "no_agent": false,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 9 * * *",
+        "display": "0 9 * * *"
+      },
+      "schedule_display": "0 9 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-11T00:00:00+00:00",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "failure_streak": 0,
+      "deliver": "telegram",
+      "origin": null,
+      "enabled_toolsets": [
+        "mcp-weavr",
+        "weavr-curator",
+        "memory"
+      ],
+      "workdir": null,
+      "reasoning_effort": "medium"
+    },
+    {
+      "id": "curator-universe",
+      "name": "curator-universe",
+      "prompt": "The universe changed; the MONITOR CHANGE DETECTED block above is the diff of pool,status,tier,maxWeight,chain. Read the live policy with weavr_curator policy, then reassess the held set against references/MANDATE.md: a held pool that left the universe (inactive, tier raised, cap lowered) is a risk exit to simulate and, where the policy's window and cadence allow, propose; a new pool on the shelf is a note for the monthly review, not a trade. Otherwise HOLD and say why in a few short lines, shorter than a daily brief. Never print transaction bytes.",
+      "skills": [
+        "weavr-curator"
+      ],
+      "skill": "weavr-curator",
+      "model": "gpt-5.4",
+      "provider": "openai-api",
+      "provider_snapshot": null,
+      "model_snapshot": null,
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "monitor_script": "curator-universe.sh",
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 */6 * * *",
+        "display": "0 */6 * * *"
+      },
+      "schedule_display": "0 */6 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-11T00:00:00+00:00",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "failure_streak": 0,
+      "deliver": "telegram",
+      "origin": null,
+      "enabled_toolsets": [
+        "mcp-weavr",
+        "weavr-curator",
+        "memory"
+      ],
+      "workdir": null,
+      "reasoning_effort": "medium"
+    },
+    {
+      "id": "curator-weekly",
+      "name": "curator-weekly",
+      "prompt": "Weekly report on the portfolio. The script output above is the signer's weekly body; the context from curator-review is this week's daily briefs. Compare NAV/share with the no-trade counterfactual for every change applied this week (get_portfolio_history, get_asset_history) and realised cost against the bounded estimate. Write the weekly block from BRIEF.md, at most 1,200 chars, with at most one lesson, and record that lesson with weavr_curator note. Never propose from this job. Never print transaction bytes.",
+      "skills": [
+        "weavr-curator"
+      ],
+      "skill": "weavr-curator",
+      "model": "gpt-5.4",
+      "provider": "openai-api",
+      "provider_snapshot": null,
+      "model_snapshot": null,
+      "base_url": null,
+      "script": "curator-weekly.sh",
+      "no_agent": false,
+      "monitor_script": null,
+      "monitor_url": null,
+      "monitor_state": null,
+      "context_from": [
+        "curator-review"
+      ],
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 10 * * 1",
+        "display": "0 10 * * 1"
+      },
+      "schedule_display": "0 10 * * 1",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-11T00:00:00+00:00",
+      "next_run_at": null,
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "failure_streak": 0,
+      "deliver": "telegram",
+      "origin": null,
+      "enabled_toolsets": [
+        "mcp-weavr",
+        "weavr-curator",
+        "memory"
+      ],
+      "workdir": null,
+      "reasoning_effort": "medium"
+    }
+  ],
+  "updated_at": "2026-09-11T00:00:00+00:00"
+}

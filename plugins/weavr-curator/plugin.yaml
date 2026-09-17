@@ -1,0 +1,6 @@
+name: weavr-curator
+version: 0.2.0
+description: "The Hermes side of the weavr curator: one tool (weavr_curator) that talks to the curator signer over HTTP and reads its live policy, a pre_tool_call gate that lets cron run the allowlisted verbs, blocks withdraw in cron and escalates every write in chat to the human approval gate, and a /weavr-curator slash command for the owner."
+author: weavr
+hooks:
+  - pre_tool_call

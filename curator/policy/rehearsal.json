@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "_comment": "The rehearsal curator policy preset, for a dust portfolio you use to watch the machine work before running the standard preset. Differences from standard.json: a smaller allowlist, minLegs 2 and no stable floor, a one-minute notice invariant (the portfolio's onchain delay must match), requirePythFeedId off, no cadence gate, an all-day propose window, and deposit and withdraw moved out of the agent's verbs into `denied`: the agent makes no deposits or withdrawals here. Every number is still a refusal threshold; the signer refuses to boot on an unknown or missing key.",
+  "universe": {
+    "chains": [
+      "solana"
+    ],
+    "requireStatus": "active",
+    "requirePythFeedId": false,
+    "maxRiskTier": 4,
+    "maxExecutionLossBps": 100,
+    "allowlist": [
+      "pSOL",
+      "pCBBTC",
+      "pJITOSOL",
+      "pUSDS"
+    ],
+    "categories": {
+      "sol": [
+        "pSOL"
+      ],
+      "lst": [
+        "pJITOSOL"
+      ],
+      "btc": [
+        "pCBBTC"
+      ],
+      "stable": [
+        "pUSDS"
+      ]
+    }
+  },
+  "shape": {
+    "minLegs": 2,
+    "maxLegs": 8,
+    "pageLimit": 8,
+    "minLegWeightBps": 500,
+    "maxLegWeightBps": 7000,
+    "stableCategory": "stable",
+    "stableMinBps": 0,
+    "stableMaxBps": 4000,
+    "categoryMaxBps": 7000,
+    "sumBps": 10000
+  },
+  "turnover": {
+    "maxTurnoverBps": 3000
+  },
+  "cost": {
+    "maxEstimatedCostBps": 25
+  },
+  "cadence": {
+    "minSecsSinceLastRebalance": 0,
+    "maxProposalsPer30d": 10,
+    "quotaWindowSecs": 2592000,
+    "requireInputsComplete": false,
+    "riskExitExemptFromInputs": true,
+    "proposeWindowUtc": {
+      "fromHour": 0,
+      "toHour": 24
+    }
+  },
+  "reason": {
+    "required": true,
+    "maxChars": 500
+  },
+  "deposit": {
+    "dailyCapUsd": 0,
+    "launchDayCapUsd": 0,
+    "launchDay": null,
+    "requireBookFresh": true
+  },
+  "withdraw": {
+    "chatOnly": true,
+    "dailyCapUsd": 0,
+    "toSignerAtaOnly": true
+  },
+  "verbs": {
+    "agent": [
+      "status",
+      "review",
+      "policy",
+      "alerts",
+      "simulate",
+      "propose",
+      "apply",
+      "cancel",
+      "refresh-nav",
+      "pause",
+      "note",
+      "journal",
+      "hermes-heartbeat"
+    ],
+    "ops": [
+      "resume",
+      "unlock",
+      "rotate-curator",
+      "set-delay",
+      "set-metadata"
+    ],
+    "denied": [
+      "deposit",
+      "withdraw",
+      "transfer-curator",
+      "accept-curator",
+      "cancel-curator",
+      "propose-fee-recipient",
+      "accept-fee-recipient",
+      "revive",
+      "create"
+    ],
+    "cronDenied": []
+  },
+  "rate": {
+    "maxWriteAttemptsPerHour": 20,
+    "minSignerLamports": 20000000
+  },
+  "invariants": {
+    "rebalanceDelaySecs": 60,
+    "compositionLocked": false,
+    "pendingCuratorMustBeNone": true
+  },
+  "apply": {
+    "tickSecs": 30,
+    "armBeforeEffectiveSecs": 120,
+    "windowAfterEffectiveSecs": 21600,
+    "maxSendsPerTick": 3,
+    "sendFailedTicksBeforeEscalate": 3,
+    "refreshNavWhenBookStaleSecs": 900,
+    "applyInFlightWaitSlots": 320,
+    "applyInFlightMaxAttempts": 3,
+    "missingCustodyRetries": 1,
+    "escalateAfterSecs": {
+      "BOOK_NOT_FRESH": 1800,
+      "BOOK_PENDING_PRICE": 1200,
+      "LEG_PENDING_PRICE_PYTH": 600,
+      "LEG_PENDING_PRICE_PUBLISHER": 0,
+      "LEG_STALE": 1800,
+      "WITHDRAWALS_PENDING": 3600,
+      "LEG_NOT_ACTIVE": 0,
+      "VAULT_PAUSED": 0,
+      "WINDOW_CLOSED": 0
+    }
+  },
+  "review": {
+    "monthlyReviewWeekday": 1,
+    "legNeedsInflowGates": 3,
+    "legNoInflowDays": 7,
+    "publisherParkHours": 6,
+    "drawdown30dPct": -35,
+    "briefMaxChars": 4096
+  }
+}
