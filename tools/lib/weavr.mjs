@@ -5,7 +5,9 @@
  * checks run here, before any signer sees a transaction.
  */
 import { readFileSync } from 'node:fs';
-import { checkAll } from './tx-checks.mjs';
+import { checkAll, EXIT } from './tx-checks.mjs';
+import { readShareBalance } from './balance.mjs';
+import { assertPartialExit, parseSpokenShares, sizeUsdWithdraw } from './shares.mjs';
 
 export const DEFAULT_MCP = 'https://api.weavr.sh/mcp';
 export const DEFAULT_API = 'https://api.weavr.sh';
@@ -91,16 +93,101 @@ export async function watchDeployment(client, deploymentId, { signed, awaitRound
   return last;
 }
 
-/** Build, sign and send a deposit. */
-export async function makeDeposit(client, portfolio, amountUsd, signer, allowed) {
-  const built = await client.mcpCall('build_deposit', { portfolio, user: signer.wallet, amountUsd });
-  if (built.isError) return { ok: false, exit: 7, output: { step: 'build_deposit', ...scrub(built.payload) } };
+/**
+ * The one-signature user flows share a shape: a `build_*` tool answers a
+ * walletPayload, the checks run, the signer signs, `send_signed` sends.
+ * `report` is what the JSON line carries besides weavr's answer.
+ */
+async function buildSignSend(client, buildTool, buildArgs, signer, allowed, report) {
+  const built = await client.mcpCall(buildTool, buildArgs);
+  if (built.isError) return { ok: false, exit: 7, output: { step: buildTool, ...scrub(built.payload) } };
   const txs = built.payload.walletPayload?.transactions ?? [];
-  if (!txs.length) return { ok: false, exit: 7, output: { step: 'build_deposit', ...scrub(built.payload) } };
+  if (!txs.length) return { ok: false, exit: 7, output: { step: buildTool, ...scrub(built.payload) } };
   const signedResult = await signChecked(txs, signer, allowed);
   if (!signedResult.ok) return signedResult;
   const sent = await client.mcpCall('send_signed', { signed: signedResult.signed });
-  return { ok: !sent.isError, exit: sent.isError ? 7 : 0, output: { step: 'send_signed', portfolio, amountUsd, ...scrub(sent.payload) } };
+  return { ok: !sent.isError, exit: sent.isError ? 7 : 0, output: { step: 'send_signed', ...report, ...scrub(sent.payload) } };
+}
+
+/** Build, sign and send a deposit. */
+export function makeDeposit(client, portfolio, amountUsd, signer, allowed) {
+  return buildSignSend(client, 'build_deposit', { portfolio, user: signer.wallet, amountUsd }, signer, allowed, { portfolio, amountUsd });
+}
+
+/**
+ * Build, sign and send a withdrawal request. Prefer `amountUsd` (what the
+ * user said in dollars). `shares` is "all" or a count for the rare case
+ * they named shares. Either way we send the 6-decimal integer the program
+ * expects, and we take the whole position when a dollar request would
+ * leave dust.
+ */
+export async function makeWithdraw(client, portfolio, shares, signer, allowed, { minAmountOut, connection, amountUsd } = {}) {
+  const held = (amountUsd != null || (shares != null && /^all$/i.test(String(shares).trim())) || connection)
+    ? await resolveHeldShares(client, portfolio, signer.wallet, connection)
+    : null;
+  if (held && !held.ok && (amountUsd != null || (shares != null && /^all$/i.test(String(shares).trim())))) {
+    return held;
+  }
+
+  let sharesBase;
+  let report = { portfolio };
+  if (amountUsd != null && String(amountUsd) !== '') {
+    if (!held?.ok) return held ?? { ok: false, exit: EXIT.FAILED, output: { error: 'RPC_UNAVAILABLE', detail: 'a dollar withdrawal needs the portfolio price and the wallet\'s shares' } };
+    const sized = sizeUsdWithdraw(amountUsd, { held: held.sharesBase, price: held.price });
+    if (!sized.ok) return { ok: false, exit: EXIT.USAGE, output: { error: sized.error, detail: sized.detail, minUsd: sized.minUsd } };
+    sharesBase = sized.sharesBase;
+    report = { ...report, amountUsd: sized.amountUsd, fullExit: sized.fullExit, sharesBase };
+  } else {
+    let parsed;
+    try { parsed = parseSpokenShares(shares); }
+    catch (e) { return { ok: false, exit: EXIT.USAGE, output: { error: 'USAGE', detail: e.message } }; }
+    if (parsed.kind === 'all') {
+      if (!held?.ok) return held ?? { ok: false, exit: EXIT.FAILED, output: { error: 'RPC_UNAVAILABLE', detail: '--shares all needs the wallet\'s shares' } };
+      sharesBase = held.sharesBase;
+      report = { ...report, shares: 'all', sharesBase, fullExit: true };
+    } else {
+      sharesBase = parsed.sharesBase;
+      if (held?.ok) {
+        const gate = assertPartialExit(held.sharesBase, sharesBase);
+        if (!gate.ok) return { ok: false, exit: EXIT.USAGE, output: { error: gate.error, detail: gate.detail } };
+      }
+      report = { ...report, shares: String(shares), sharesBase };
+    }
+  }
+
+  const args = { portfolio, user: signer.wallet, shares: sharesBase };
+  if (minAmountOut !== undefined) args.minAmountOut = String(minAmountOut);
+  return buildSignSend(client, 'build_withdraw', args, signer, allowed, report);
+}
+
+async function resolveHeldShares(client, portfolio, wallet, connection) {
+  let book;
+  try {
+    const r = await client.rest('GET', `/v1/portfolios/${encodeURIComponent(portfolio)}`);
+    if (r.status >= 400 || r.json?.mint == null || r.json?.price == null) {
+      return { ok: false, exit: EXIT.WEAVR_ERROR, output: { error: 'WEAVR_ERROR', detail: `could not read ${portfolio}`, status: r.status, ...scrub(r.json) } };
+    }
+    book = r.json;
+  } catch (e) {
+    return { ok: false, exit: EXIT.WEAVR_ERROR, output: { error: 'WEAVR_ERROR', detail: String(e.message).slice(0, 160) } };
+  }
+  if (!connection) {
+    return { ok: false, exit: EXIT.FAILED, output: { error: 'RPC_UNAVAILABLE', detail: 'an RPC is needed to read the wallet\'s shares' } };
+  }
+  try {
+    const held = await readShareBalance(wallet, book.mint, connection);
+    if (held <= 0n) {
+      return { ok: false, exit: EXIT.USAGE, output: { error: 'NO_SHARES', detail: 'this wallet holds nothing in that portfolio' } };
+    }
+    return { ok: true, sharesBase: String(held), price: String(book.price), mint: book.mint };
+  } catch (e) {
+    return { ok: false, exit: EXIT.FAILED, output: { error: 'RPC_UNAVAILABLE', detail: `could not read shares: ${String(e.message).slice(0, 160)}` } };
+  }
+}
+
+/** Build, sign and send a valuation refresh: the user-side crank, paid by the wallet. */
+export function makeRefreshNav(client, portfolio, signer, allowed) {
+  return buildSignSend(client, 'build_refresh_nav', { portfolio, payer: signer.wallet }, signer, allowed, { portfolio });
 }
 
 /** Read the transactions out of a saved walletPayload (or a bare list). */

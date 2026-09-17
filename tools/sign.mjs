@@ -19,10 +19,17 @@
  *           tool only watches the deployment (--deployment); everything else
  *           answers NO_WALLET (exit 9)
  *
+ *   --wallet status                        -> {"configured": true|false, "signer": "...", "address": "..."}   (read-only)
+ *   --wallet create                        -> {"created": true, "address": "..."}   (local: a new key at SIGN_LOCAL_KEYPAIR_FILE, never overwrites)
+ *   --wallet import <keypair.json>         -> {"imported": true, "address": "..."}  (local: copies a 64-byte JSON keypair into place)
  *   --address                              -> {"address": "...", "wallet": "..."}
+ *   --balance                              -> {"address", "sol", "usdc", "minSol", "ok"}   (read-only, over SOLANA_RPC_URL)
  *   --deployment <deploymentId>            -> rebuild -> check -> sign -> await_portfolio -> {"status": "live", ...}
  *                                             (link: await_portfolio only, nothing rebuilt or signed)
  *   --deposit <ticker> --amount <usd>      -> build_deposit -> check -> sign -> send_signed -> {"status": "confirmed", ...}
+ *   --withdraw <ticker> --amount <usd>     -> build_withdraw -> check -> sign -> send_signed -> {"status": "confirmed", ...}
+ *                                             (or --shares all; a dollar request is sized at the live price)
+ *   --refresh-nav <ticker>                 -> build_refresh_nav -> check -> sign -> send_signed (the wallet pays the fee)
  *   --file <walletPayload.json> [--send | --await <deploymentId>]
  *   --tx <encoded> [--tx ...]              -> {"signed": [...]}   (fallback; prints signed bytes)
  *
@@ -32,7 +39,8 @@
  * instruction outside the weavr programs of manifest.json plus the core
  * programs (exit 4), a PayBox status without a signature (exit 3
  * WALLET_DECLINED), a missing or unknown setting (exit 5 CONFIG), a concurrent
- * run (exit 6 BUSY), no wallet on this host (exit 9 NO_WALLET).
+ * run (exit 6 BUSY), no wallet on this host (exit 9 NO_WALLET). The lifecycle
+ * verbs and --balance move no money and are not gated by the approval plugin.
  *
  * Environment: WEAVR_WALLET; for paybox PAYBOX_CONFIG_DIR, PAYBOX_CREDENTIAL_ID,
  * PAYBOX_CLI (path to the SDK's dist/cli.js) and optional

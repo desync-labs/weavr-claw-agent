@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { EXIT, LEGACY_ONLY_DETAIL } from '../tools/lib/tx-checks.mjs';
 import { PAYBOX_VARIABLES, WALLET_MODES, resolveWalletMode } from '../tools/lib/wallet-mode.mjs';
 import { NO_WALLET_DETAIL, linkSigner } from '../tools/lib/link-signer.mjs';
-import { KEYPAIR_NOT_ARRAY, KEYPAIR_TOO_OPEN, KEYPAIR_UNREADABLE, localSigner, readKeypairFile } from '../tools/lib/local-signer.mjs';
+import { KEYPAIR_NOT_ARRAY, KEYPAIR_TOO_OPEN, KEYPAIR_UNREADABLE, localSigner, readKeypairFile, KEYPAIR_MISSING_REMEDY } from '../tools/lib/local-signer.mjs';
 import { SETTLED_STATUSES, finishDeployment, makeDeposit, watchDeployment } from '../tools/lib/weavr.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -446,7 +446,8 @@ test('planted: a keypair file in the wrong format, unreadable, or readable by ot
       { name: 'a public key mismatch', content: JSON.stringify([...Array.from(Keypair.generate().secretKey.slice(0, 32)), ...Array.from(Keypair.generate().secretKey.slice(32))]), detail: KEYPAIR_NOT_ARRAY },
       { name: 'readable by others', content: JSON.stringify(Array.from(Keypair.generate().secretKey)), mode: 0o644, detail: KEYPAIR_TOO_OPEN },
       { name: 'readable by the group', content: JSON.stringify(Array.from(Keypair.generate().secretKey)), mode: 0o640, detail: KEYPAIR_TOO_OPEN },
-      { name: 'missing', content: null, detail: `${KEYPAIR_UNREADABLE} (ENOENT)` },
+      // a file that is not there yet also names the remedy, the wallet's lifecycle
+      { name: 'missing', content: null, detail: `${KEYPAIR_UNREADABLE} (ENOENT): ${KEYPAIR_MISSING_REMEDY}` },
     ];
     for (const c of cases) {
       const file = join(dir, `${c.name.replace(/\W+/g, '-')}.json`);

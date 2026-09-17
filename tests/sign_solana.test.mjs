@@ -14,6 +14,7 @@ const OPS_ROOT = fileURLToPath(new URL('..', import.meta.url));
 import { createPublicKey, verify as verifyEd25519 } from 'node:crypto';
 import { CORE_PROGRAMS, EXIT, LEGACY_ONLY_DETAIL, PROGRAM_FROM_LOOKUP_TABLE, allowedPrograms, checkAll, checkTransaction, isVersioned, programsFromManifest } from '../tools/lib/tx-checks.mjs';
 import { localSigner } from '../tools/lib/local-signer.mjs';
+import { makeRefreshNav, makeWithdraw, weavrClient } from '../tools/lib/weavr.mjs';
 
 const require = createRequire(import.meta.url);
 const { AddressLookupTableAccount, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction } = require('@solana/web3.js');
@@ -367,6 +368,124 @@ test('the local signer signs legacy and v0 (the bisecting control), from a keypa
     assert.deepEqual(JSON.parse(r.stdout), { address: wallet.publicKey.toBase58(), wallet: 'local' });
     rmSync(dir, { recursive: true, force: true });
   });
+});
+
+// The one-signature user flows (deposit, withdraw, refresh valuation) run
+// against a stub weavr: build_* answers a walletPayload for this wallet,
+// send_signed records what it was handed. The local signer signs; nothing
+// leaves the process.
+function stubWeavr(buildTool, txs, { buildError = false, book = { mint: 'Gh5onqzay9n33wshnBoD52vxM4cdUQEXRvNfhk2jTP1W', price: '1000000' } } = {}) {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    if (!init?.body) {
+      calls.push({ name: 'REST', url: String(url) });
+      return { status: 200, text: async () => JSON.stringify(book) };
+    }
+    const body = JSON.parse(init.body);
+    const name = body.params.name;
+    calls.push({ name, args: body.params.arguments });
+    let payload;
+    let isError = false;
+    if (name === buildTool) {
+      if (buildError) { payload = { error: 'NO_SUCH_PORTFOLIO' }; isError = true; }
+      else payload = { walletPayload: { signer: 'user', transactions: txs }, portfolio: 'MAJB' };
+    } else if (name === 'send_signed') {
+      payload = { status: 'confirmed', signatures: body.params.arguments.signed.map((s, i) => `sig${i}`) };
+    } else {
+      payload = { error: `unexpected ${name}` }; isError = true;
+    }
+    return { json: async () => ({ jsonrpc: '2.0', id: 1, result: { isError, structuredContent: payload } }) };
+  };
+  return { client: weavrClient({ fetchImpl }), calls };
+}
+
+function localSignerFor(kp) {
+  const dir = mkdtempSync(join(tmpdir(), 'sign-local-flow-'));
+  const file = join(dir, 'kp.json');
+  writeFileSync(file, JSON.stringify(Array.from(kp.secretKey)), { mode: 0o600 });
+  return { signer: localSigner({ keypairFile: file }), dir };
+}
+
+test('makeWithdraw builds with the wallet as user, signs after the checks, sends, and never leaks walletPayload', async () => {
+  const { signer, dir } = localSignerFor(wallet);
+  const { client, calls } = stubWeavr('build_withdraw', [legacy(wallet.publicKey, new PublicKey(FACTORY))]);
+  const r = await makeWithdraw(client, 'MAJB', '12', signer, allowed, { minAmountOut: '5' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(calls[0], { name: 'build_withdraw', args: { portfolio: 'MAJB', user: wallet.publicKey.toBase58(), shares: '12000000', minAmountOut: '5' } });
+  assert.equal(calls[1].name, 'send_signed');
+  assert.equal(calls[1].args.signed.length, 1);
+  assert.ok(Transaction.from(Buffer.from(calls[1].args.signed[0], 'base64')).signatures[0].signature, 'sent bytes carry the wallet signature');
+  assert.equal(r.output.step, 'send_signed');
+  assert.equal(r.output.shares, '12');
+  assert.equal(r.output.status, 'confirmed');
+  assert.equal('walletPayload' in r.output, false);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('makeRefreshNav builds with the wallet as payer and sends what it signed', async () => {
+  const { signer, dir } = localSignerFor(wallet);
+  const { client, calls } = stubWeavr('build_refresh_nav', [legacy(wallet.publicKey, new PublicKey(FACTORY))]);
+  const r = await makeRefreshNav(client, 'MAJB', signer, allowed);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(calls[0], { name: 'build_refresh_nav', args: { portfolio: 'MAJB', payer: wallet.publicKey.toBase58() } });
+  assert.equal(calls[1].name, 'send_signed');
+  assert.equal(r.output.portfolio, 'MAJB');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the user flows refuse a payload for another wallet before signing, and surface a weavr build error without walletPayload', async () => {
+  const { signer, dir } = localSignerFor(wallet);
+  const foreign = stubWeavr('build_withdraw', [legacy(other.publicKey, new PublicKey(FACTORY))]);
+  const a = await makeWithdraw(foreign.client, 'MAJB', '1', signer, allowed);
+  assert.equal(a.ok, false);
+  assert.equal(a.output.error, 'WRONG_PAYER');
+  assert.equal(foreign.calls.some((c) => c.name === 'send_signed'), false, 'nothing sent');
+  const failing = stubWeavr('build_refresh_nav', [], { buildError: true });
+  const b = await makeRefreshNav(failing.client, 'NOPE', signer, allowed);
+  assert.equal(b.ok, false);
+  assert.equal(b.exit, EXIT.WEAVR_ERROR);
+  assert.equal(b.output.step, 'build_refresh_nav');
+  assert.equal(b.output.error, 'NO_SUCH_PORTFOLIO');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('makeWithdraw sizes a dollar request at the live price and snaps leftover dust to a full exit', async () => {
+  const { signer, dir } = localSignerFor(wallet);
+  const mint = Keypair.generate().publicKey.toBase58();
+  const { client, calls } = stubWeavr('build_withdraw', [legacy(wallet.publicKey, new PublicKey(FACTORY))], { book: { mint, price: '1000000' } });
+  const connection = {
+    getParsedTokenAccountsByOwner: async () => ({
+      value: [{ account: { data: { parsed: { info: { tokenAmount: { amount: '4990000' } } } } } }],
+    }),
+  };
+  const partial = await makeWithdraw(client, 'BTCMAXI', null, signer, allowed, { amountUsd: '4', connection });
+  assert.equal(partial.ok, true, JSON.stringify(partial));
+  assert.equal(calls.find((c) => c.name === 'build_withdraw').args.shares, '4000000');
+  assert.equal(partial.output.fullExit, false);
+  assert.equal(partial.output.amountUsd, 4);
+
+  const exit = await makeWithdraw(client, 'BTCMAXI', null, signer, allowed, { amountUsd: '5', connection });
+  assert.equal(exit.ok, true, JSON.stringify(exit));
+  assert.equal(calls.filter((c) => c.name === 'build_withdraw').at(-1).args.shares, '4990000');
+  assert.equal(exit.output.fullExit, true);
+
+  const tiny = await makeWithdraw(client, 'BTCMAXI', null, signer, allowed, { amountUsd: '0.0001', connection });
+  assert.equal(tiny.ok, false);
+  assert.equal(tiny.output.error, 'BELOW_MINIMUM');
+  assert.match(tiny.output.detail, /\$0\.001/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('sign-local.mjs --withdraw and --refresh-nav check their arguments before any network call (exit 1 USAGE)', () => {
+  const { dir } = localSignerFor(wallet);
+  const env = { ...process.env, SIGN_LOCAL_KEYPAIR_FILE: join(dir, 'kp.json'), WEAVR_MANIFEST: MANIFEST, WEAVR_MCP_URL: 'http://127.0.0.1:9/mcp', WEAVR_API_URL: 'http://127.0.0.1:9' };
+  const run = (args) => { const r = spawnSync(process.execPath, [LOCAL_TOOL, ...args], { env, encoding: 'utf8' }); return { code: r.status, json: JSON.parse(r.stdout) }; };
+  for (const args of [['--withdraw', 'MAJB'], ['--withdraw', 'MAJB', '--amount', '0'], ['--withdraw', 'MAJB', '--amount', 'abc'], ['--withdraw', 'MAJB', '--shares', '2', '--amount', '4'], ['--withdraw', 'MAJB', '--shares', '0'], ['--withdraw', 'MAJB', '--shares', '1.5000001'], ['--withdraw', 'MAJB', '--shares', '2', '--min-out', 'abc'], ['--refresh-nav']]) {
+    const r = run(args);
+    assert.equal(r.code, EXIT.USAGE, args.join(' '));
+    assert.equal(r.json.error, 'USAGE');
+  }
+  rmSync(dir, { recursive: true, force: true });
 });
 
 // The money gate is a Hermes plugin (Python). Its planted cases run here too,

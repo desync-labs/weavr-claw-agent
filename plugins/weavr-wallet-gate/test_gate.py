@@ -15,6 +15,12 @@ def test_ignores_other_tools_and_plain_commands():
     assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --address"}) is None
     assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --wallet paybox --address"}) is None
     assert gate(tool_name="terminal", args={"command": "node /x/sign.mjs --wallet local --address"}) is None
+    # the wallet's lifecycle and balances move no money: no approval
+    assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --wallet status"}) is None
+    assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --wallet create"}) is None
+    assert gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --wallet import /x/keypair.json"}) is None
+    assert gate(tool_name="terminal", args={"command": "node /x/sign.mjs --wallet local --wallet create"}) is None
+    assert gate(tool_name="terminal", args={"command": 'node "${WEAVR_SIGN_TOOL}" --balance'}) is None
     # an unrelated tool whose name merely ends in sign.mjs is not a wallet run
     assert gate(tool_name="terminal", args={"command": "node /x/design.mjs --tx AAAA"}) is None
 
@@ -36,6 +42,16 @@ def test_escalates_signing_runs_with_a_named_action():
     assert r["rule_key"] == "weavr-wallet:local"
     r = gate(tool_name="terminal", args={"command": "node /x/sign-solana.mjs --file p.json --send"})
     assert "sign a saved payload and send it" in r["message"] and "signer paybox" in r["message"]
+    r = gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --withdraw MAJB --amount 4"})
+    assert r["action"] == "approve" and "withdraw $4 from MAJB" in r["message"]
+    r = gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --withdraw MAJB --shares 12"})
+    assert r["action"] == "approve" and "withdraw 12 shares from MAJB" in r["message"]
+    r = gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --withdraw MAJB --shares all"})
+    assert r["action"] == "approve" and "withdraw everything from MAJB" in r["message"]
+    r = gate(tool_name="terminal", args={"command": "node $WEAVR_SIGN_TOOL --shares 3 --withdraw MAJB --min-out 5"})
+    assert "withdraw 3 shares from MAJB" in r["message"]
+    r = gate(tool_name="terminal", args={"command": 'node "${WEAVR_SIGN_TOOL}" --refresh-nav MAJB'})
+    assert r["action"] == "approve" and "refresh the valuation of MAJB" in r["message"]
 
 
 def test_sign_mjs_and_the_wallet_flag():
@@ -55,6 +71,9 @@ def test_sign_mjs_and_the_wallet_flag():
     # the flag beats the alias's file name for the label (the tool itself refuses this conflict)
     r = gate(tool_name="terminal", args={"command": "node /x/sign-local.mjs --wallet paybox --tx AAAA"})
     assert "signer paybox" in r["message"]
+    # a lifecycle verb after --wallet is not a signer name: the alias's file name still labels it
+    r = gate(tool_name="terminal", args={"command": "node /x/sign-local.mjs --wallet status --deposit MAJB --amount 1"})
+    assert "signer local" in r["message"] and r["rule_key"] == "weavr-wallet:local"
 
 
 if __name__ == "__main__":

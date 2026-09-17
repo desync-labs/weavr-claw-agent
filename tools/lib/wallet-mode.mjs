@@ -10,8 +10,17 @@
  * missing variable as CONFIG, instead of link telling the agent to send the
  * owner a sign link. Link is inferred only when nothing at all is configured.
  * An empty variable counts as unset, so a sourced env.example changes nothing.
+ *
+ * The same flag also carries the wallet's lifecycle: `--wallet status`,
+ * `--wallet create` and `--wallet import <keypair.json>` are verbs, not modes.
+ * They are left in `rest` for the command line to act on, so a mode and a verb
+ * can share one command (`--wallet local --wallet create`), and an alias that
+ * prepends its mode still takes a verb after it.
  */
 export const WALLET_MODES = Object.freeze(['paybox', 'local', 'link']);
+
+/** The lifecycle verbs `--wallet` also takes; they stay in `rest`. */
+export const WALLET_VERBS = Object.freeze(['status', 'create', 'import']);
 
 /** The PayBox variables; any one of them set means this host meant to use PayBox. */
 export const PAYBOX_VARIABLES = Object.freeze(['PAYBOX_CLI', 'PAYBOX_CONFIG_DIR', 'PAYBOX_CREDENTIAL_ID', 'PAYBOX_SIGNING_KEY_FILE']);
@@ -24,24 +33,27 @@ function config(message) {
 
 function accept(value, where) {
   if (!WALLET_MODES.includes(value)) {
-    throw config(`unknown wallet ${JSON.stringify(value ?? null)} from ${where}: accepted values are ${WALLET_MODES.join(', ')}`);
+    const verbs = where === '--wallet' ? `, or a verb: ${WALLET_VERBS.join(', ')}` : '';
+    throw config(`unknown wallet ${JSON.stringify(value ?? null)} from ${where}: accepted values are ${WALLET_MODES.join(', ')}${verbs}`);
   }
   return value;
 }
 
 /**
  * Resolve the wallet mode. Returns `{ mode, source, rest }` where `source` is
- * 'flag', 'env' or 'inferred' and `rest` is argv with every `--wallet <x>`
- * pair removed. Throws a CONFIG error on an unknown value, a `--wallet` with
- * no value, or two `--wallet` flags that disagree (an alias prepends its own,
- * so a contrary flag on its command line is refused rather than ignored).
+ * 'flag', 'env' or 'inferred' and `rest` is argv with every `--wallet <mode>`
+ * pair removed (a `--wallet <verb>` pair stays). Throws a CONFIG error on an
+ * unknown value, a `--wallet` with no value, or two mode flags that disagree
+ * (an alias prepends its own, so a contrary flag on its command line is
+ * refused rather than ignored).
  */
 export function resolveWalletMode({ argv = [], env = {} } = {}) {
   const rest = [];
   const flagged = [];
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] !== '--wallet') { rest.push(argv[i]); continue; }
-    if (i + 1 >= argv.length) throw config(`--wallet needs a value: ${WALLET_MODES.join(', ')}`);
+    if (i + 1 >= argv.length) throw config(`--wallet needs a value: ${WALLET_MODES.join(', ')}, or a verb: ${WALLET_VERBS.join(', ')}`);
+    if (WALLET_VERBS.includes(argv[i + 1])) { rest.push(argv[i], argv[i + 1]); i += 1; continue; }
     flagged.push(accept(argv[i + 1], '--wallet'));
     i += 1;
   }

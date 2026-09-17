@@ -6,11 +6,12 @@ weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulatio
 
 | Path | What |
 |---|---|
-| `tools/sign.mjs` | the wallet tool: `--wallet paybox\|local\|link` picks the wallet (else `WEAVR_WALLET`, else what is configured), then `--address`, `--deployment <id>`, `--deposit <ticker> --amount <usd>`; signs weavr transactions with PayBox or a local key, or in link mode only watches a deployment the owner signs in a browser |
+| `tools/sign.mjs` | the wallet tool: `--wallet paybox\|local\|link` picks the wallet (else `WEAVR_WALLET`, else what is configured); `--wallet status\|create\|import <keypair.json>` is the local wallet's lifecycle, so the agent can offer the user a new wallet or take an existing one; then `--address`, `--balance`, `--deployment <id>`, `--deposit <ticker> --amount <usd>`, `--withdraw <ticker> --amount <usd>`, `--refresh-nav <ticker>`; signs weavr transactions with PayBox or a local key, or in link mode only watches a deployment the owner signs in a browser |
 | `tools/sign-solana.mjs` | an alias of `sign.mjs` that forces `--wallet paybox` |
-| `tools/sign-local.mjs` | an alias of `sign.mjs` that forces `--wallet local` |
+| `tools/sign-local.mjs` | an alias of `sign.mjs` that forces `--wallet local` (small amounts only: the key is a plain file on this machine) |
 | `tools/sign-check.mjs` | a zero-cost check that the wallet can sign, `--wallet` as above; with PayBox it also proves the key, the grant and the client agree and prints the PayBox client id |
-| `tools/lib/` | the checks (fee payer must be your wallet, every instruction inside weavr's programs), the weavr flows, the signers |
+| `tools/lib/` | the checks (fee payer must be your wallet, every instruction inside weavr's programs), the weavr flows, the signers, the local wallet's lifecycle, balances |
+| `skills/weavr/SKILL.md` | the skill for this host: wallet first (choose or create), balance and funding rules before every money step, then the flows; a superset of `https://api.weavr.sh/hosts/hermes/SKILL.md` |
 | `plugins/weavr-wallet-gate/` | a Hermes plugin: every signing run becomes an approval you answer, with a message naming the action and the amount |
 | `plugins/weavr-curator/` | a Hermes plugin for the curator: the `weavr_curator` tool, its approval gate and the `/weavr-curator` command; an HTTP client of the signer that never sees a key |
 | `curator/` | the autonomous curator: the Hermes profile, the policy presets and the compose stack; `curator/README.md` is its page |
@@ -32,7 +33,7 @@ In `~/.hermes/config.yaml`, make the weavr entry match the one in `config.yaml` 
 
 ```bash
 mkdir -p ~/.hermes/skills/weavr
-curl -s https://api.weavr.sh/hosts/hermes/SKILL.md -o ~/.hermes/skills/weavr/SKILL.md
+cp skills/weavr/SKILL.md ~/.hermes/skills/weavr/SKILL.md   # this repo's copy: wallet choice + funding rules (the served one lacks them)
 claw mcp test weavr                                     # Connected, 30 tools
 ```
 
@@ -54,15 +55,14 @@ In the PayBox app, on the **Clients** screen, give this client **Full Access** t
 
 **A local key**
 
-A dedicated keypair file, generated here, in a `0600` file under a directory outside the repo. Only the public key is printed; the path, never the key, goes in the environment. Keep on that wallet only what it needs. Refuses if the file already exists; move the old key first. The tool refuses a key file readable by group or others, or one that is not a 64-byte JSON array (a base58 export from a browser wallet is not accepted).
+A dedicated keypair file that lives on this machine, in a `0600` file under a `0700` directory outside the repo. The tool makes it: only the public key is printed, the path (never the key) goes in the environment, and an existing file is never overwritten. Or leave the file for the agent: with `SIGN_LOCAL_KEYPAIR_FILE` set and no file there, the agent asks in chat whether you want a new wallet or your own, runs `--wallet create` for you, and tells you the address, that a create needs about 0.15 SOL there, and that deposits need USDC. The key is a plain file the agent's shell can read, so keep on that wallet only what you would accept losing; the portfolio it creates can be any size (a local key signs v0 as well as legacy transactions). The tool refuses a key file readable by group or others, or one that is not a 64-byte JSON array (a base58 export from a browser wallet is not accepted; `--wallet import <keypair.json>` takes a Solana CLI keypair file you already have here).
 
 ```bash
 mkdir -p -m 700 ~/weavr-wallet/keys
 cd ~/weavr-wallet/tools && npm i @solana/web3.js
-node -e 'const { Keypair } = require("@solana/web3.js"); const kp = Keypair.generate();
-require("fs").writeFileSync(process.env.HOME + "/weavr-wallet/keys/agent.json", JSON.stringify(Array.from(kp.secretKey)), { flag: "wx", mode: 0o600 });
-console.log(kp.publicKey.toBase58())'                  # prints the public key, nothing else; EEXIST if a key is already there
 export SIGN_LOCAL_KEYPAIR_FILE=~/weavr-wallet/keys/agent.json WEAVR_WALLET=local
+node claw-agent/tools/sign.mjs --wallet create            # prints the address, nothing else; refuses if a key is already there
+node claw-agent/tools/sign.mjs --balance                  # what it holds, and the SOL a create or an action needs
 ```
 
 **The sign link**
