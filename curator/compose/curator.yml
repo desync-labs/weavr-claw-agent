@@ -8,11 +8,10 @@
 #
 # Images
 #   signer  ${CURATOR_SIGNER_IMAGE:-weavr-backend:curator-local}
-#           No published signer image yet. Build it from the weavr backend
-#           dest branch (main and demo do not carry packages/curator):
-#             git clone -b dest <backend> && docker build -t weavr-backend:curator-local <backend>
-#           A published image is pending; until then the doctor checks that the
-#           image exists locally.
+#           A Docker image. You do not clone the weavr backend. Set
+#           CURATOR_SIGNER_IMAGE to the image weavr published and pull it.
+#           The running stack is the demo environment: CURATOR_API_URL
+#           defaults to https://api.weavr.sh and WEAVR_PROGRAM_IDS=demo.
 #   agent   ${HERMES_IMAGE:-hermes-agent}
 #           The Claw Agent fork's docker workflow builds a :test tag for its
 #           own tests and publishes nothing: its publish job is gated on the
