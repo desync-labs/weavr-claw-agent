@@ -16,6 +16,7 @@ weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulatio
 | `plugins/weavr-curator/` | a Hermes plugin for the curator: the `weavr_curator` tool, its approval gate and the `/weavr-curator` command; an HTTP client of the signer that never sees a key |
 | `curator/` | the autonomous curator: the Hermes profile, the policy presets and the compose stack; `curator/README.md` is its page |
 | `signer/` | the curator signer itself: the process that holds the curator key, refuses under the policy document, verifies what the api built, signs and journals; `signer/README.md` is its page and `intothefathom/curator-public` its published image |
+| `WALKTHROUGH.md` | the whole path on one page, from a clean machine to a portfolio created in chat, a deposit, a curator reviewing it on a schedule and a withdrawal, with the waits and the checks between the steps |
 | `patches/` | a one-line fix for Claw Agent releases whose trust gate asks before read-only tools too |
 | `manifest.json` | weavr's onchain programs, the allowlist the wallet tool signs for |
 | `config.yaml`, `env.example` | the Hermes config block and the environment names |
