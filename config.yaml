@@ -1,8 +1,11 @@
 # Hermes (Claw Agent fork) config for a weavr agent. Copy into $HERMES_HOME/config.yaml
 # and replace the absolute paths. Proven 6 Sep 2026 (see README.md).
+# The model is the OpenAI API, the same provider the curator profile runs on, so
+# one key serves both agents; any provider Hermes supports works (change these
+# two lines and the key line in .env; `claw model` opens the picker).
 model:
-  default: "anthropic/claude-sonnet-5"
-  provider: "anthropic"
+  default: "gpt-5.4"
+  provider: "openai-api"
 
 terminal:
   backend: "local"
