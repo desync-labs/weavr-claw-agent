@@ -263,7 +263,7 @@ test('planted: without allowVersioned a good v0 is still LEGACY_ONLY, and the de
     assert.equal(r.detail, LEGACY_ONLY_DETAIL);
   }
   assert.match(LEGACY_ONLY_DETAIL, /the PayBox signer decodes legacy transactions only/);
-  assert.match(LEGACY_ONLY_DETAIL, /a local key or the sign link signs any size/);
+  assert.match(LEGACY_ONLY_DETAIL, /a local key or the sign link can sign it/);
   assert.equal(checkAll([legacy(wallet.publicKey, new PublicKey(FACTORY)), encoded], opts).error, 'LEGACY_ONLY');
 });
 

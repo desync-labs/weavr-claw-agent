@@ -64,7 +64,7 @@ export function isVersioned(raw) {
 }
 
 /** The refusal a legacy-only signer gives a v0 transaction. */
-export const LEGACY_ONLY_DETAIL = 'this transaction is versioned (v0); the PayBox signer decodes legacy transactions only, a local key or the sign link signs any size. weavr signs up to 3 assets in one legacy transaction, or up to 4 as two when its legacy-only create mode (MCP_LEGACY_SIGNER) is on; suggest fewer assets.';
+export const LEGACY_ONLY_DETAIL = 'this transaction is versioned (v0); the PayBox signer decodes legacy transactions only, a local key or the sign link can sign it. weavr signs up to 3 assets in one legacy transaction, or up to 4 as two when its legacy-only create mode (MCP_LEGACY_SIGNER) is on; suggest fewer assets.';
 
 /** The refusal a v0 instruction gets when its program id is not a static key. */
 export const PROGRAM_FROM_LOOKUP_TABLE = 'program loaded from a lookup table';
