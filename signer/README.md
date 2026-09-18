@@ -63,7 +63,7 @@ once at boot and refuses with a reason that never quotes it.
 
 ```bash
 cd signer && npm ci && npm test     # both packages
-node --test 'test/*.test.js'        # inside a package (Node 24: quote the glob)
+npm test                            # inside one package
 ```
 
 Three of the signer's suites are not in this repository. `decode`, `create`

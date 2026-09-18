@@ -818,9 +818,9 @@ export const CORE_PROGRAMS, DEFAULT_PORT (8091), DEFAULT_TICK_MS (30000), DEFAUL
 
 ## 8. Tests
 
-`test/<module>.test.js`, `node --test 'test/*.test.js'` (Node 24: quote the
-glob), or `npm test` from `signer/` for this package and the chain subset
-together. Per plan §7.1: one test per refusal code on a planted violation;
+`test/<module>.test.js`, `npm test` here (the shell expands `test/*.test.js`,
+which every Node from 20 up accepts as file arguments), or `npm test` from
+`signer/` for this package and the chain subset together. Per plan §7.1: one test per refusal code on a planted violation;
 pre-flight fakes per blocker row; token unset ⇒ exit 1; ops verb with the
 agent token ⇒ `OPS_ONLY`; ledger rebuilt after restart. A test that only
 proves the happy path is not finished.

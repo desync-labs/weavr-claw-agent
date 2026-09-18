@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node --check src/chain.js && node --check src/confirm.js && node --check src/rateLimit.js && node --check src/metrics.js && node --check src/prometheus.js && node --check src/spl.js && node --check src/subset.js && node --check src/index.js",
-    "test": "node --test 'test/*.test.js'"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",

@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "node --check src/index.js && node --check src/server.js && node --check src/loop.js && node --check src/verbs.js && node --check src/policy.js && node --check src/decode.js && node --check src/preflight.js && node --check src/metrics.js && node --check src/errors.js && node --check src/keys.js && node --check src/journal.js && node --check src/weavr.js && node --check scripts/create_portfolio.mjs && node --check bin/start.mjs",
-    "test": "node --test 'test/*.test.js'",
+    "test": "node --test test/*.test.js",
     "start": "node src/index.js"
   },
   "dependencies": {
