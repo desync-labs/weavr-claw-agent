@@ -90,7 +90,7 @@ async function setup({ legs, preset } = {}) {
   return { key, pk, guardian, treasury, mint, home, paths, row, rpc, state, server, agentToken, opsToken, policy };
 }
 
-async function runDoctor(ctx, { json = false, exec = dockerAbsent, now = () => NOW_SECS * 1000 } = {}) {
+async function runDoctor(ctx, { json = false, exec = dockerAbsent, now = () => NOW_SECS * 1000, env = {} } = {}) {
   const lines = [];
   const r = await doctor({ home: ctx.home, signerUrl: ctx.server.url, json }, {
     rpc: ctx.rpc,
@@ -99,6 +99,7 @@ async function runDoctor(ctx, { json = false, exec = dockerAbsent, now = () => N
     now,
     telegramApi: ctx.server.url,
     providerBases: { 'openai-api': `${ctx.server.url}/provider` },
+    env,
   });
   return { ...r, lines, text: lines.join('\n') };
 }
@@ -754,6 +755,17 @@ test('doctor: the job ids it requires are the ones the profile ships, the path v
   assert.equal(check(r, 'agent heartbeat').kind, 'skip', r.text);
   assert.match(r.text, /· agent heartbeat: skipped, the signer has not ticked yet/);
   assert.equal(check(r, 'signer health').kind, 'ok');
+});
+
+test('doctor: a leftover CURATOR_KEY_FILE in the shell overrides compose.env', async (t) => {
+  const ctx = await setup();
+  t.after(() => ctx.server.close());
+  const same = await runDoctor(ctx, { env: { CURATOR_KEY_FILE: ctx.paths.keyFile } });
+  assert.equal(check(same, 'compose env').kind, 'ok', same.text);
+  const r = await runDoctor(ctx, { env: { CURATOR_KEY_FILE: '/tmp/other-book.json' } });
+  assert.equal(check(r, 'compose env').kind, 'cross', r.text);
+  assert.match(check(r, 'compose env').text, /the shell CURATOR_KEY_FILE is \/tmp\/other-book\.json, which overrides compose\.env/);
+  assert.match(check(r, 'compose env').fix, /unset CURATOR_KEY_FILE CURATOR_POLICY_FILE CURATOR_SIGNER_ENV HERMES_HOME before docker compose --env-file .*compose\.env -f curator\/compose\/curator\.yml up -d/);
 });
 
 test('doctor: a missing home is one cross and nothing else runs', async (t) => {

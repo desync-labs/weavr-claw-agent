@@ -16,6 +16,11 @@
 # TELEGRAM_ALLOWED_USERS, TELEGRAM_HOME_CHANNEL, CURATOR_SIGNER_TOKEN,
 # CURATOR_SIGNER_URL and WEAVR_MCP_URL come from $HERMES_HOME/.env (0600);
 # curator/compose/agent.env.example lists the names.
+#
+# Hermes v2026.8.27 migrates from this marker (12 → current). Without it the
+# image treats the file as predating version 12 and warns on every boot.
+
+_config_version: 12
 
 model:
   # The template runs on the OpenAI API: provider "openai-api" reads

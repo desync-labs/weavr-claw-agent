@@ -30,7 +30,8 @@ non-interactive commands, the checks, and the steps only you can do.
   `@userinfobot`); a private Solana RPC URL (the public endpoint is fine for
   the chat agent, not for the signer's polling).
 - **Money:** about 0.15 SOL and the USDC you will deposit for the creator
-  wallet; 0.1 SOL for the curator key. Deposit at least $60 and withdraw no
+  wallet; the curator key needs the amount `weavr-curator init` prints
+  (often 0.02 SOL; 0.1 is plenty). Deposit at least $60 and withdraw no
   more than $2 in the first pass: the keeper pays exits from the book's idle
   cash, which is 5% of the book, and an exit larger than idle waits for a
   slower path.
@@ -90,7 +91,7 @@ the gate:
 set -a; . ~/.hermes/.env; set +a
 node tools/sign.mjs --balance                           # ok.create true
 node tools/sign-check.mjs                               # {"status":"ok", ..., "signer":"local"}
-claw chat -q "Deposit 5 dollars into my MAJ portfolio."   # must end: BLOCKED ... (Wallet action: deposit ...)
+claw chat -q "Deposit 5 dollars into my MAJ portfolio."   # no send: BLOCKED ... (Wallet action: deposit ...) or a single-query / no-approval refusal
 ```
 
 ## 2. Create the portfolio in chat
@@ -127,7 +128,7 @@ Two images and the CLI. The signer image is public and compose pulls it
 on `up`; the agent image is the one you built or pulled for the chat agent:
 
 ```bash
-docker pull intothefathom/curator-public:0.1.0            # the tag curator/compose/curator.yml pins
+docker pull --platform linux/amd64 intothefathom/curator-public:0.1.0   # no linux/arm64 manifest; compose pins this platform
 docker pull nousresearch/hermes-agent:v2026.8.27
 cd ~/weavr-wallet/tools/claw-agent && npm link          # `weavr-curator`; or node bin/weavr-curator.mjs
 docker image ls intothefathom/curator-public nousresearch/hermes-agent  # both tags listed
@@ -148,7 +149,7 @@ weavr-curator init --portfolio <TICKER> --transfer-wallet local --wait
 ```
 
 Expect, in order: the book read from chain; the curator key generated and its
-address printed with the SOL to send (send 0.1; `--wait` polls); the transfer
+address printed with the SOL to send (send the amount the fix names; `--wait` polls); the transfer
 announced and signed by the creator key after your `y`, the accept by the new
 key after your `y`; the guardian, treasury and notice derived from chain,
 `y`; then the policy step. With a book like the one above the **standard
@@ -164,17 +165,21 @@ weavr-curator init --portfolio <TICKER> --transfer-wallet local
 ```
 
 The document for a book of Nvidia, Anthropic, OpenAI via Tessera, JupSOL and
-BTC in any subset. It is the standard preset with the universe opened, and
-every difference is on purpose: the allowlist and categories name the legs
+BTC in any subset — and for a two-leg 85/15 book. It is the standard preset
+with the universe opened and `shape` wide enough for that mix, and every
+difference is on purpose: the allowlist and categories name the legs
 (plus pUSDS so a stable category exists with a zero floor); the Pyth
 requirement is off because pJUPSOL has no feed; the route cost ceiling is 200
 bps because the pre-IPO legs are catalogued at that; the proposal cost cap is
 100 bps because a 25 bps cap admits almost no move touching a 200 bps leg;
-cadence is open so a review can propose on the first day. For another book:
-put each of your legs' pool symbols (`p` plus the asset) on the allowlist and
-in exactly one category, raise `universe.maxExecutionLossBps` to the highest
-catalogue cost among them, and leave `stableMinBps` at 0 unless you hold a
-stablecoin. Tighten `cadence` and `cost` again before leaving it unattended.
+`shape.minLegs` is 2 and the per-leg / category caps are 9000 so an 85/15
+book attaches; cadence is open so a review can propose on the first day.
+Turnover stays at the standard cap. For another book: put each of your legs'
+pool symbols (`p` plus the asset) on the allowlist and in exactly one
+category, raise `universe.maxExecutionLossBps` to the highest catalogue cost
+among them, set `shape` so the live mix fits, and leave `stableMinBps` at 0
+unless you hold a stablecoin. Tighten `cadence` and `cost` again before
+leaving it unattended. Do not loosen turnover or cost to pass `policy vs book`.
 
 ```json
 {
@@ -185,8 +190,8 @@ stablecoin. Tighten `cadence` and `cost` again before leaving it unattended.
     "allowlist": ["pNVDA", "pANTHROPIC", "pTOPENAI", "pJUPSOL", "pCBBTC", "pUSDS"],
     "categories": { "equity": ["pNVDA"], "preipo": ["pANTHROPIC", "pTOPENAI"], "lst": ["pJUPSOL"], "btc": ["pCBBTC"], "stable": ["pUSDS"] }
   },
-  "shape": { "minLegs": 3, "maxLegs": 8, "pageLimit": 8, "minLegWeightBps": 500, "maxLegWeightBps": 4000,
-             "stableCategory": "stable", "stableMinBps": 0, "stableMaxBps": 4000, "categoryMaxBps": 6000, "sumBps": 10000 },
+  "shape": { "minLegs": 2, "maxLegs": 8, "pageLimit": 8, "minLegWeightBps": 500, "maxLegWeightBps": 9000,
+             "stableCategory": "stable", "stableMinBps": 0, "stableMaxBps": 4000, "categoryMaxBps": 9000, "sumBps": 10000 },
   "turnover": { "maxTurnoverBps": 3000 },
   "cost": { "maxEstimatedCostBps": 100 },
   "cadence": { "minSecsSinceLastRebalance": 0, "maxProposalsPer30d": 10, "quotaWindowSecs": 2592000,
@@ -231,6 +236,7 @@ Start, check, resume, check:
 
 ```bash
 cd ~/weavr-wallet/tools/claw-agent
+unset CURATOR_KEY_FILE CURATOR_POLICY_FILE CURATOR_SIGNER_ENV HERMES_HOME
 docker compose --env-file ~/.config/weavr-curator/<TICKER>/compose.env -f curator/compose/curator.yml up -d
 weavr-curator doctor --home ~/.config/weavr-curator/<TICKER>    # green except "signer paused"
 weavr-curator ops resume --home ~/.config/weavr-curator/<TICKER>
@@ -289,3 +295,14 @@ legs, which can take long; give it time or leave the float.
   "agent heartbeat" until the first quarter-hour health run.
 - A quiet day is silent: without a request or a manual run there is nothing to
   see from the cron.
+- Pull the signer with `--platform linux/amd64`. The published tag has no
+  arm64 manifest; `init` writes that platform into `compose.env`.
+- Unset `CURATOR_KEY_FILE`, `CURATOR_POLICY_FILE`, `CURATOR_SIGNER_ENV` and
+  `HERMES_HOME` before `docker compose --env-file … up`. Compose interpolates
+  the shell over the env file; a leftover path from another book mounts the
+  wrong key.
+- `init` writes `COMPOSE_PROJECT_NAME=weavr-<symbol>` so two homes from the
+  same checkout do not share a journal volume.
+- Hermes `v2026.8.27` migrates the rendered profile from `_config_version` 12
+  and may warn about the unknown toolset `weavr-curator`. The plugin still
+  runs.
