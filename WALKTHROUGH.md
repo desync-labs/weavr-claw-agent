@@ -15,6 +15,9 @@ against the signer image `intothefathom/curator-public:0.1.0` and Hermes
 
 Real money on Solana mainnet throughout, small amounts.
 
+Handing this to an agent? `AGENT-WALKTHROUGH.md` is the same path with the
+non-interactive commands, the checks, and the steps only you can do.
+
 ## 0. Before you start
 
 - **Machine:** Linux or macOS, Node 20 or newer, Python 3, Docker with compose
