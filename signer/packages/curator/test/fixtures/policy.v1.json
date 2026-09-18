@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "_comment": "WEAVR curator policy v1 (plan 11-09-2026 §4.4). The chart renders this file into CURATOR_POLICY_JSON; packages/curator/src/policy.js loadPolicy() validates it and refuses to boot on an unknown or missing key. Every number is a refusal threshold: the signer refuses, it never clamps. Numbers are the owner defaults from plan §9.2; change by PR only. The portfolio mint, treasury, guardian and expected curator are env (CURATOR_PORTFOLIO_MINT, CURATOR_TREASURY, CURATOR_EXPECTED_GUARDIAN, the keypair), not policy.",
+  "universe": {
+    "_comment": "A pool may be targeted only when every row here passes. `allowlist` is by catalogue symbol; pETH and pLBTC stay out by product decision (hidden on the shelf); pSYRUPUSDC, pJUPSOL, pHSOL, pPST, pHYUSD have no pythFeedId; every Ethereum pool is out by chain. Refusals: CHAIN_DENIED, POOL_DENIED (allowlist, riskTier, pythFeedId), POOL_NOT_ACTIVE, POOL_COST_TOO_HIGH.",
+    "chains": ["solana"],
+    "requireStatus": "active",
+    "requirePythFeedId": true,
+    "maxRiskTier": 4,
+    "maxExecutionLossBps": 100,
+    "allowlist": [
+      "pSOL", "pCBBTC", "pJITOSOL", "pMSOL", "pBSOL", "pINF", "pHYPE",
+      "pUSDT", "pUSDS", "pUSD1", "pUSDE", "pJUPUSD"
+    ],
+    "categories": {
+      "_comment": "The catalogue rows carry no category, so it lives here. Every allowlisted pool must be in exactly one category (loadPolicy checks). `stable` is the band-limited one.",
+      "sol": ["pSOL"],
+      "lst": ["pJITOSOL", "pMSOL", "pBSOL", "pINF"],
+      "btc": ["pCBBTC"],
+      "alt": ["pHYPE"],
+      "stable": ["pUSDT", "pUSDS", "pUSD1", "pUSDE", "pJUPUSD"]
+    }
+  },
+  "shape": {
+    "_comment": "3–8 legs and |held ∪ new| ≤ 8 (one apply page; curator.js pages over held ∪ new); per leg 5 %–min(40 %, pool maxWeightBps); stablecoins 10–40 % combined; any category ≤ 60 %; weights sum to 10000. Refusals: MIN_LEGS, MAX_LEGS, PAGE_LIMIT, LEG_WEIGHT_CAP, STABLE_BAND, CATEGORY_CAP, WEIGHTS_SUM.",
+    "minLegs": 3,
+    "maxLegs": 8,
+    "pageLimit": 8,
+    "minLegWeightBps": 500,
+    "maxLegWeightBps": 4000,
+    "stableCategory": "stable",
+    "stableMinBps": 1000,
+    "stableMaxBps": 4000,
+    "categoryMaxBps": 6000,
+    "sumBps": 10000
+  },
+  "turnover": {
+    "_comment": "Σ|Δw|/2 per proposal, against the current target weights. Refusal: TURNOVER_CAP.",
+    "maxTurnoverBps": 3000
+  },
+  "cost": {
+    "_comment": "Σ|Δw_i| × maxExecutionLossBps_i / 10000, in bps of NAV. Refusal: COST_CAP.",
+    "maxEstimatedCostBps": 25
+  },
+  "cadence": {
+    "_comment": "Since on-chain last_rebalance_at; quota over the journal ledger; none while pending_targets; none unless inputs (trailingYieldBps, tvlUsdc, riskTier per targeted pool) are present unless the proposal is a risk exit; propose only inside the UTC window so effectiveAt lands in the owner's day. Refusals: PROPOSAL_TOO_SOON, PROPOSAL_QUOTA, TARGETS_PENDING, INPUTS_INCOMPLETE, OUTSIDE_WINDOW.",
+    "minSecsSinceLastRebalance": 604800,
+    "maxProposalsPer30d": 2,
+    "quotaWindowSecs": 2592000,
+    "requireInputsComplete": true,
+    "riskExitExemptFromInputs": true,
+    "proposeWindowUtc": { "fromHour": 8, "toHour": 12 }
+  },
+  "reason": {
+    "_comment": "`why` on propose and cancel, journaled. Refusal: WHY_REQUIRED.",
+    "required": true,
+    "maxChars": 500
+  },
+  "deposit": {
+    "_comment": "USD per UTC day; launch-day cap applies when `launchDay` (YYYY-MM-DD) is today; book priceState must be fresh; amount/price ≤ min(cap headroom, max_total_idle − total_idle, per-user headroom) read from VaultConfig. Refusals: DEPOSIT_DAILY_CAP, BOOK_NOT_FRESH, CAP_HEADROOM.",
+    "dailyCapUsd": 1000,
+    "launchDayCapUsd": 2500,
+    "launchDay": null,
+    "requireBookFresh": true
+  },
+  "withdraw": {
+    "_comment": "Chat sessions only; USD per UTC day; always to the signer's own ATA. Refusals: WITHDRAW_CRON_BLOCKED, WITHDRAW_DAILY_CAP.",
+    "chatOnly": true,
+    "dailyCapUsd": 500,
+    "toSignerAtaOnly": true
+  },
+  "verbs": {
+    "_comment": "Route names. `agent` with the agent token; `ops` with the ops token only (OPS_ONLY); `denied` never through the signer by anyone (VERB_DENIED) — curator transfer/accept/cancel, fee recipient, revive and create are laptop-key actions; `cronDenied` refused when X-Curator-Session is cron or absent (WITHDRAW_CRON_BLOCKED). rotate-curator and set-delay are the ops-token exceptions plan §4.4 names.",
+    "agent": [
+      "status", "review", "alerts", "simulate", "propose", "apply", "cancel",
+      "deposit", "withdraw", "refresh-nav", "pause", "note", "journal", "policy", "hermes-heartbeat"
+    ],
+    "ops": ["resume", "unlock", "rotate-curator", "set-delay", "set-metadata"],
+    "denied": [
+      "transfer-curator", "accept-curator", "cancel-curator",
+      "propose-fee-recipient", "accept-fee-recipient", "revive", "create"
+    ],
+    "cronDenied": ["withdraw"]
+  },
+  "rate": {
+    "_comment": "Write attempts (ok or not) per rolling hour; the signer refuses to sign under the lamport floor (0.02 SOL). Refusals: RATE_LIMITED, LOW_SOL.",
+    "maxWriteAttemptsPerHour": 20,
+    "minSignerLamports": 20000000
+  },
+  "invariants": {
+    "_comment": "Checked every tick against chain reads: portfolio.curator == expected, pending_curator == None, rebalance_delay_secs == this, accountant.recipient1 == treasury, factory.guardian == expected, composition_locked == false. Drift ⇒ self-lock all writes + alert (SELF_LOCKED / INVARIANT_DRIFT); only POST /unlock (ops) clears it once the drift is gone.",
+    "rebalanceDelaySecs": 86400,
+    "compositionLocked": false,
+    "pendingCuratorMustBeNone": true
+  },
+  "apply": {
+    "_comment": "Plan §4.5 state machine timings, in seconds unless named otherwise. The loop ticks every `tickSecs`; the machine arms `armBeforeEffectiveSecs` before effectiveAt and gives up `windowAfterEffectiveSecs` after it. `escalateAfterSecs` per blocker; 0 = escalate immediately; null = never (blocked instead).",
+    "tickSecs": 30,
+    "armBeforeEffectiveSecs": 120,
+    "windowAfterEffectiveSecs": 21600,
+    "maxSendsPerTick": 3,
+    "sendFailedTicksBeforeEscalate": 3,
+    "refreshNavWhenBookStaleSecs": 900,
+    "applyInFlightWaitSlots": 320,
+    "applyInFlightMaxAttempts": 3,
+    "missingCustodyRetries": 1,
+    "escalateAfterSecs": {
+      "BOOK_NOT_FRESH": 1800,
+      "BOOK_PENDING_PRICE": 1200,
+      "LEG_PENDING_PRICE_PYTH": 600,
+      "LEG_PENDING_PRICE_PUBLISHER": 0,
+      "LEG_STALE": 1800,
+      "WITHDRAWALS_PENDING": 3600,
+      "LEG_NOT_ACTIVE": 0,
+      "VAULT_PAUSED": 0,
+      "WINDOW_CLOSED": 0
+    }
+  },
+  "review": {
+    "_comment": "Wake triggers for the curator-review cron (plan §4.6): monthly thesis review on the first Monday; a leg under target for `legNeedsInflowGates` consecutive gates with no inflow for `legNoInflowDays` and the top-up budget spent; a publisher park older than `publisherParkHours`; a 30 d return under `drawdown30dPct`.",
+    "monthlyReviewWeekday": 1,
+    "legNeedsInflowGates": 3,
+    "legNoInflowDays": 7,
+    "publisherParkHours": 6,
+    "drawdown30dPct": -35,
+    "briefMaxChars": 4096
+  }
+}

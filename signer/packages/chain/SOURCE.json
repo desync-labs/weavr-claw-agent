@@ -1,0 +1,6 @@
+{
+  "repo": "desync-labs/composable-portfolios-backend",
+  "commit": "61b53a3f01e9e0b7a748ec0393e9ea8b1dc4de23",
+  "note": "the backend commit that last touched the mirrored files when scripts/dev/sync_signer_chain.mjs (composable-portfolios-ops) ran; the six chain files, the manifest and the IDLs are byte for byte the backend's, subset.js is compared by value",
+  "syncedAt": "2026-09-18"
+}

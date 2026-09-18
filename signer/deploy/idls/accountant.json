@@ -1,0 +1,2503 @@
+{
+  "address": "GaJ8eAA2sDsUjU9Cy2di1vbTfc676o5McC48w1uAHorR",
+  "metadata": {
+    "name": "accountant",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "docs": [
+    "Accountant program: Automated fee distribution with configurable splits"
+  ],
+  "instructions": [
+    {
+      "name": "accept_admin",
+      "docs": [
+        "Accept pending admin change after cooldown"
+      ],
+      "discriminator": [
+        112,
+        42,
+        45,
+        90,
+        116,
+        181,
+        13,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "new_admin",
+          "docs": [
+            "New admin (must sign to prove they control the address)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_admin_cooldown",
+      "docs": [
+        "Accept pending admin cooldown change after cooldown"
+      ],
+      "discriminator": [
+        137,
+        200,
+        176,
+        208,
+        2,
+        224,
+        247,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_manager",
+      "docs": [
+        "Accept pending manager change after cooldown (new manager must sign)"
+      ],
+      "discriminator": [
+        212,
+        23,
+        254,
+        58,
+        51,
+        238,
+        232,
+        67
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "new_manager",
+          "docs": [
+            "New manager (must sign to prove they control the address)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_manager_cooldown",
+      "docs": [
+        "Accept pending manager cooldown change after cooldown"
+      ],
+      "discriminator": [
+        83,
+        158,
+        137,
+        50,
+        186,
+        138,
+        158,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "accountant_index",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "accept_recipients",
+      "discriminator": [
+        115,
+        209,
+        182,
+        215,
+        221,
+        95,
+        164,
+        213
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_split_ratio",
+      "discriminator": [
+        109,
+        42,
+        183,
+        183,
+        230,
+        72,
+        205,
+        215
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_vault_role",
+      "docs": [
+        "Consent to holding a vault role (CPI to stoken accept_role_assignment)"
+      ],
+      "discriminator": [
+        47,
+        35,
+        8,
+        240,
+        19,
+        127,
+        167,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "accountant"
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "Accountant manager (must sign)"
+          ],
+          "signer": true
+        },
+        {
+          "name": "vault_config",
+          "docs": [
+            "Vault config that proposed this accountant PDA for a role"
+          ],
+          "writable": true
+        },
+        {
+          "name": "stoken_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "role",
+          "type": {
+            "defined": {
+              "name": "RoleKind"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel_admin",
+      "docs": [
+        "Cancel pending admin change"
+      ],
+      "discriminator": [
+        169,
+        143,
+        43,
+        87,
+        189,
+        134,
+        146,
+        216
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Current admin (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_admin_cooldown",
+      "docs": [
+        "Cancel pending admin cooldown change"
+      ],
+      "discriminator": [
+        190,
+        97,
+        168,
+        154,
+        108,
+        11,
+        65,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_manager",
+      "docs": [
+        "Cancel pending manager change"
+      ],
+      "discriminator": [
+        209,
+        114,
+        48,
+        188,
+        197,
+        58,
+        132,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "Current manager (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_manager_cooldown",
+      "docs": [
+        "Cancel pending manager cooldown change"
+      ],
+      "discriminator": [
+        55,
+        19,
+        190,
+        223,
+        38,
+        52,
+        196,
+        207
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "accountant_index",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "cancel_recipients",
+      "discriminator": [
+        46,
+        192,
+        140,
+        140,
+        11,
+        113,
+        243,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_split_ratio",
+      "discriminator": [
+        124,
+        13,
+        175,
+        82,
+        181,
+        215,
+        168,
+        243
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "distribute_sol",
+      "docs": [
+        "Distribute SOL from accountant's lamports - PROCESSOR GATED"
+      ],
+      "discriminator": [
+        234,
+        85,
+        98,
+        176,
+        165,
+        8,
+        133,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "recipient1",
+          "writable": true
+        },
+        {
+          "name": "recipient2",
+          "writable": true
+        },
+        {
+          "name": "processor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "distribute_tokens",
+      "docs": [
+        "Generic token distribution - works for any SPL token including S-tokens - PROCESSOR GATED"
+      ],
+      "discriminator": [
+        105,
+        69,
+        130,
+        52,
+        196,
+        28,
+        176,
+        120
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "processor",
+          "docs": [
+            "The processor - authorized to trigger distributions"
+          ],
+          "signer": true
+        },
+        {
+          "name": "accountant_token_account",
+          "docs": [
+            "Accountant's token account (owned by accountant PDA)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "recipient1_token_account",
+          "docs": [
+            "Recipient 1 token account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "recipient2_token_account",
+          "docs": [
+            "Recipient 2 token account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "recipient1"
+        },
+        {
+          "name": "recipient2"
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The mint of the token being distributed"
+          ]
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Initialize global config (admin-only)",
+        "Optional admin_change_cooldown_secs parameter (defaults to 48 hours if None)"
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "The program's executable data account containing the upgrade authority"
+          ]
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "admin_change_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_accountant",
+      "docs": [
+        "Initialize the accountant program (admin-only)",
+        "Optional manager_change_cooldown_secs parameter (defaults to 48 hours if None)"
+      ],
+      "discriminator": [
+        82,
+        134,
+        120,
+        52,
+        191,
+        212,
+        93,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "recipient1",
+          "type": "pubkey"
+        },
+        {
+          "name": "recipient2",
+          "type": "pubkey"
+        },
+        {
+          "name": "weight1",
+          "type": "u64"
+        },
+        {
+          "name": "weight2",
+          "type": "u64"
+        },
+        {
+          "name": "manager",
+          "type": "pubkey"
+        },
+        {
+          "name": "processor",
+          "type": "pubkey"
+        },
+        {
+          "name": "accountant_index",
+          "type": "u64"
+        },
+        {
+          "name": "manager_change_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_accountant_ata",
+      "docs": [
+        "Initialize the accountant's ATA"
+      ],
+      "discriminator": [
+        57,
+        32,
+        249,
+        130,
+        31,
+        239,
+        182,
+        159
+      ],
+      "accounts": [
+        {
+          "name": "accountant"
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "accountant_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "migrate_accountant",
+      "docs": [
+        "Migrate Accountant instance account to new schema (idempotent)"
+      ],
+      "discriminator": [
+        210,
+        118,
+        123,
+        93,
+        216,
+        35,
+        121,
+        162
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "migrate_config",
+      "docs": [
+        "Migrate global Config account to new schema (idempotent)"
+      ],
+      "discriminator": [
+        92,
+        131,
+        58,
+        105,
+        210,
+        154,
+        224,
+        193
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose_admin",
+      "docs": [
+        "Propose a new global admin authority (starts cooldown period)"
+      ],
+      "discriminator": [
+        121,
+        214,
+        199,
+        212,
+        87,
+        39,
+        117,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Current admin (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_admin_cooldown",
+      "docs": [
+        "Propose a new admin change cooldown (starts cooldown period)"
+      ],
+      "discriminator": [
+        102,
+        226,
+        189,
+        140,
+        150,
+        100,
+        123,
+        107
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_cooldown_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_manager",
+      "docs": [
+        "Propose a new manager for an accountant instance (starts cooldown period)"
+      ],
+      "discriminator": [
+        182,
+        178,
+        222,
+        226,
+        6,
+        122,
+        251,
+        116
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "Current manager (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_manager",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_manager_cooldown",
+      "docs": [
+        "Propose a new manager change cooldown (starts cooldown period)"
+      ],
+      "discriminator": [
+        214,
+        106,
+        114,
+        86,
+        84,
+        21,
+        14,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "accountant_index",
+          "type": "u64"
+        },
+        {
+          "name": "new_cooldown_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "update_processor",
+      "docs": [
+        "Update processor - MANAGER GATED"
+      ],
+      "discriminator": [
+        167,
+        167,
+        162,
+        219,
+        120,
+        92,
+        194,
+        86
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "The manager - authorized to update processor"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_processor",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "update_recipients",
+      "docs": [
+        "Update recipients - MANAGER GATED"
+      ],
+      "discriminator": [
+        92,
+        134,
+        20,
+        47,
+        48,
+        34,
+        175,
+        112
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "The manager - authorized to update recipients"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_recipient1",
+          "type": "pubkey"
+        },
+        {
+          "name": "new_recipient2",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "update_split_ratio",
+      "docs": [
+        "Update split ratio (weights)"
+      ],
+      "discriminator": [
+        126,
+        72,
+        186,
+        123,
+        71,
+        235,
+        51,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_weight1",
+          "type": "u64"
+        },
+        {
+          "name": "new_weight2",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Accountant",
+      "discriminator": [
+        117,
+        155,
+        13,
+        152,
+        52,
+        246,
+        212,
+        31
+      ]
+    },
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AccountantAdminChangeCancelled",
+      "discriminator": [
+        91,
+        62,
+        62,
+        187,
+        155,
+        150,
+        83,
+        173
+      ]
+    },
+    {
+      "name": "AccountantAdminChangePending",
+      "discriminator": [
+        56,
+        239,
+        27,
+        170,
+        181,
+        71,
+        67,
+        155
+      ]
+    },
+    {
+      "name": "AccountantAdminCooldownChangeCancelled",
+      "discriminator": [
+        70,
+        145,
+        196,
+        111,
+        63,
+        73,
+        249,
+        191
+      ]
+    },
+    {
+      "name": "AccountantAdminCooldownChangePending",
+      "discriminator": [
+        198,
+        49,
+        150,
+        172,
+        124,
+        245,
+        206,
+        231
+      ]
+    },
+    {
+      "name": "AccountantAdminCooldownUpdated",
+      "discriminator": [
+        67,
+        63,
+        253,
+        98,
+        14,
+        68,
+        9,
+        254
+      ]
+    },
+    {
+      "name": "AccountantAdminUpdated",
+      "discriminator": [
+        206,
+        68,
+        96,
+        198,
+        118,
+        192,
+        161,
+        18
+      ]
+    },
+    {
+      "name": "AccountantAtaInitialized",
+      "discriminator": [
+        4,
+        26,
+        85,
+        234,
+        254,
+        211,
+        133,
+        131
+      ]
+    },
+    {
+      "name": "AccountantInitialized",
+      "discriminator": [
+        218,
+        46,
+        214,
+        43,
+        252,
+        129,
+        254,
+        185
+      ]
+    },
+    {
+      "name": "AccountantManagerChangeCancelled",
+      "discriminator": [
+        140,
+        33,
+        85,
+        242,
+        218,
+        168,
+        59,
+        220
+      ]
+    },
+    {
+      "name": "AccountantManagerChangePending",
+      "discriminator": [
+        51,
+        96,
+        119,
+        184,
+        89,
+        229,
+        43,
+        161
+      ]
+    },
+    {
+      "name": "AccountantManagerCooldownChangeCancelled",
+      "discriminator": [
+        243,
+        59,
+        104,
+        164,
+        225,
+        180,
+        205,
+        241
+      ]
+    },
+    {
+      "name": "AccountantManagerCooldownChangePending",
+      "discriminator": [
+        55,
+        174,
+        6,
+        83,
+        166,
+        17,
+        240,
+        106
+      ]
+    },
+    {
+      "name": "AccountantManagerCooldownUpdated",
+      "discriminator": [
+        171,
+        191,
+        190,
+        164,
+        110,
+        245,
+        141,
+        164
+      ]
+    },
+    {
+      "name": "AccountantManagerUpdated",
+      "discriminator": [
+        175,
+        174,
+        253,
+        11,
+        180,
+        175,
+        158,
+        12
+      ]
+    },
+    {
+      "name": "AccountantProcessorUpdated",
+      "discriminator": [
+        25,
+        250,
+        90,
+        60,
+        195,
+        69,
+        159,
+        13
+      ]
+    },
+    {
+      "name": "AccountantRecipientsChangeCancelled",
+      "discriminator": [
+        106,
+        239,
+        6,
+        175,
+        20,
+        11,
+        86,
+        116
+      ]
+    },
+    {
+      "name": "AccountantRecipientsChangePending",
+      "discriminator": [
+        103,
+        44,
+        94,
+        89,
+        26,
+        174,
+        200,
+        245
+      ]
+    },
+    {
+      "name": "AccountantRecipientsUpdated",
+      "discriminator": [
+        247,
+        229,
+        222,
+        87,
+        144,
+        97,
+        100,
+        213
+      ]
+    },
+    {
+      "name": "AccountantSolDistributed",
+      "discriminator": [
+        242,
+        218,
+        237,
+        79,
+        140,
+        8,
+        86,
+        117
+      ]
+    },
+    {
+      "name": "AccountantSplitRatioChangeCancelled",
+      "discriminator": [
+        80,
+        181,
+        107,
+        180,
+        105,
+        132,
+        3,
+        178
+      ]
+    },
+    {
+      "name": "AccountantSplitRatioChangePending",
+      "discriminator": [
+        180,
+        94,
+        178,
+        48,
+        101,
+        86,
+        11,
+        173
+      ]
+    },
+    {
+      "name": "AccountantSplitRatioUpdated",
+      "discriminator": [
+        161,
+        223,
+        163,
+        206,
+        45,
+        97,
+        31,
+        22
+      ]
+    },
+    {
+      "name": "AccountantTokenDistributed",
+      "discriminator": [
+        47,
+        117,
+        63,
+        145,
+        7,
+        26,
+        245,
+        126
+      ]
+    },
+    {
+      "name": "ConfigInitialized",
+      "discriminator": [
+        181,
+        49,
+        200,
+        156,
+        19,
+        167,
+        178,
+        91
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidWeights",
+      "msg": "Invalid weights: Both weights must be greater than 0"
+    },
+    {
+      "code": 6001,
+      "name": "DuplicateRecipients",
+      "msg": "Duplicate recipients: Recipients must be different"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount: Amount must be greater than 0"
+    },
+    {
+      "code": 6003,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
+    },
+    {
+      "code": 6004,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: Only manager can perform this action"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidAccountOwner",
+      "msg": "Invalid account owner: Account must be owned by the accountant PDA"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidRecipient",
+      "msg": "Invalid recipient: Recipient does not match accountant configuration"
+    },
+    {
+      "code": 6007,
+      "name": "MintMismatch",
+      "msg": "Mint mismatch: Token accounts must have the same mint"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidProcessor",
+      "msg": "Invalid processor: Only authorized processor can trigger distributions"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidManager",
+      "msg": "Invalid manager: Only authorized manager can perform this action"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidRecipients",
+      "msg": "Invalid recipients: Recipients must be different"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidIndex",
+      "msg": "Invalid index: Index mismatch"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidArgument",
+      "msg": "Invalid argument: Provided argument is invalid"
+    },
+    {
+      "code": 6013,
+      "name": "NoOp",
+      "msg": "No operation: Operation would result in no change"
+    },
+    {
+      "code": 6014,
+      "name": "NoPendingRecipientsChange",
+      "msg": "No pending recipients change"
+    },
+    {
+      "code": 6015,
+      "name": "RecipientsChangeTimelockActive",
+      "msg": "Recipients change timelock is active"
+    },
+    {
+      "code": 6016,
+      "name": "NoPendingSplitRatioChange",
+      "msg": "No pending split ratio change"
+    },
+    {
+      "code": 6017,
+      "name": "SplitRatioChangeTimelockActive",
+      "msg": "Split ratio change timelock is active"
+    },
+    {
+      "code": 6018,
+      "name": "AdminChangeTimelockActive",
+      "msg": "Admin change timelock is still active"
+    },
+    {
+      "code": 6019,
+      "name": "NoPendingAdminChange",
+      "msg": "No pending admin change to accept"
+    },
+    {
+      "code": 6020,
+      "name": "AdminChangeCooldownNotExpired",
+      "msg": "Admin change cooldown not expired: Cannot accept admin change before cooldown"
+    },
+    {
+      "code": 6021,
+      "name": "ManagerChangeTimelockActive",
+      "msg": "Manager change timelock is still active"
+    },
+    {
+      "code": 6022,
+      "name": "NoPendingManagerChange",
+      "msg": "No pending manager change to accept"
+    },
+    {
+      "code": 6023,
+      "name": "ManagerChangeCooldownNotExpired",
+      "msg": "Manager change cooldown not expired: Cannot accept manager change before cooldown"
+    },
+    {
+      "code": 6024,
+      "name": "AdminCooldownChangePending",
+      "msg": "Admin cooldown change pending: A cooldown change is already pending"
+    },
+    {
+      "code": 6025,
+      "name": "NoPendingAdminCooldownChange",
+      "msg": "No pending admin cooldown change: No admin cooldown change is currently pending"
+    },
+    {
+      "code": 6026,
+      "name": "AdminCooldownChangeTimelockActive",
+      "msg": "Admin cooldown change timelock active: Cannot accept cooldown change before timelock expires"
+    },
+    {
+      "code": 6027,
+      "name": "ManagerCooldownChangePending",
+      "msg": "Manager cooldown change pending: A cooldown change is already pending"
+    },
+    {
+      "code": 6028,
+      "name": "NoPendingManagerCooldownChange",
+      "msg": "No pending manager cooldown change: No manager cooldown change is currently pending"
+    },
+    {
+      "code": 6029,
+      "name": "ManagerCooldownChangeTimelockActive",
+      "msg": "Manager cooldown change timelock active: Cannot accept cooldown change before timelock expires"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidProgramData",
+      "msg": "Invalid program data: Program data account does not match expected address"
+    }
+  ],
+  "types": [
+    {
+      "name": "Accountant",
+      "docs": [
+        "Accountant program state - THIS IS THE MAIN PDA"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "weight1",
+            "type": "u64"
+          },
+          {
+            "name": "weight2",
+            "type": "u64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "pending_manager",
+            "docs": [
+              "Pending manager change awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingManager"
+                }
+              }
+            }
+          },
+          {
+            "name": "manager_change_cooldown_secs",
+            "docs": [
+              "Manager change cooldown period in seconds (default 48 hours)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_manager_change_cooldown",
+            "docs": [
+              "Pending manager change cooldown awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingManagerChangeCooldown"
+                }
+              }
+            }
+          },
+          {
+            "name": "pending_recipients",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingRecipients"
+                }
+              }
+            }
+          },
+          {
+            "name": "pending_split_ratio",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingSplitRatio"
+                }
+              }
+            }
+          },
+          {
+            "name": "schema_version",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAdminChangeCancelled",
+      "docs": [
+        "Event emitted when a pending admin change is cancelled"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAdminChangePending",
+      "docs": [
+        "Event emitted when an admin change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAdminCooldownChangeCancelled",
+      "docs": [
+        "Event emitted when admin cooldown change is cancelled"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAdminCooldownChangePending",
+      "docs": [
+        "Event emitted when admin cooldown change is proposed"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "old_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAdminCooldownUpdated",
+      "docs": [
+        "Event emitted when admin cooldown is updated"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAdminUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAtaInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "weight1",
+            "type": "u64"
+          },
+          {
+            "name": "weight2",
+            "type": "u64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantManagerChangeCancelled",
+      "docs": [
+        "Event emitted when a pending manager change is cancelled"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_new_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantManagerChangePending",
+      "docs": [
+        "Event emitted when a manager change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantManagerCooldownChangeCancelled",
+      "docs": [
+        "Event emitted when manager cooldown change is cancelled"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantManagerCooldownChangePending",
+      "docs": [
+        "Event emitted when manager cooldown change is proposed"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "old_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantManagerCooldownUpdated",
+      "docs": [
+        "Event emitted when manager cooldown is updated"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantManagerUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantProcessorUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantRecipientsChangeCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantRecipientsChangePending",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "eligible_at",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantRecipientsUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantSolDistributed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_amount",
+            "type": "u64"
+          },
+          {
+            "name": "amount1",
+            "type": "u64"
+          },
+          {
+            "name": "amount2",
+            "type": "u64"
+          },
+          {
+            "name": "recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantSplitRatioChangeCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantSplitRatioChangePending",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "weight1",
+            "type": "u64"
+          },
+          {
+            "name": "weight2",
+            "type": "u64"
+          },
+          {
+            "name": "eligible_at",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantSplitRatioUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_weight1",
+            "type": "u64"
+          },
+          {
+            "name": "old_weight2",
+            "type": "u64"
+          },
+          {
+            "name": "new_weight1",
+            "type": "u64"
+          },
+          {
+            "name": "new_weight2",
+            "type": "u64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantTokenDistributed",
+      "docs": [
+        "Unified event for token distribution (replaces StokenDistributed and UnderlyingDistributed)"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_amount",
+            "type": "u64"
+          },
+          {
+            "name": "amount1",
+            "type": "u64"
+          },
+          {
+            "name": "amount2",
+            "type": "u64"
+          },
+          {
+            "name": "recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "docs": [
+        "Global configuration for Accountant program"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Admin who can initialize accountants and update configuration"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "next_accountant_index",
+            "docs": [
+              "Global accountant counter for unique indexing"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin",
+            "docs": [
+              "Pending admin change awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdmin"
+                }
+              }
+            }
+          },
+          {
+            "name": "admin_change_cooldown_secs",
+            "docs": [
+              "Admin change cooldown period in seconds (default 48 hours)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin_change_cooldown",
+            "docs": [
+              "Pending admin change cooldown awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdminChangeCooldown"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigInitialized",
+      "docs": [
+        "Events emitted by the Accountant program",
+        "Emitted when the global config is initialized"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdmin",
+      "docs": [
+        "Pending admin change waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdminChangeCooldown",
+      "docs": [
+        "Pending admin change cooldown waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingManager",
+      "docs": [
+        "Pending manager change waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingManagerChangeCooldown",
+      "docs": [
+        "Pending manager change cooldown waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingRecipients",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipient1",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient2",
+            "type": "pubkey"
+          },
+          {
+            "name": "eligible_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingSplitRatio",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "weight1",
+            "type": "u64"
+          },
+          {
+            "name": "weight2",
+            "type": "u64"
+          },
+          {
+            "name": "eligible_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoleKind",
+      "docs": [
+        "Vault role kind for per-role claim (`accept_role_assignment`)"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Manager"
+          },
+          {
+            "name": "Processor"
+          },
+          {
+            "name": "Accountant"
+          },
+          {
+            "name": "Oracle"
+          },
+          {
+            "name": "AssetManager"
+          },
+          {
+            "name": "Guardian"
+          }
+        ]
+      }
+    }
+  ]
+}

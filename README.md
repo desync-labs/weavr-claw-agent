@@ -15,6 +15,7 @@ weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulatio
 | `plugins/weavr-wallet-gate/` | a Hermes plugin: every signing run becomes an approval you answer, with a message naming the action and the amount |
 | `plugins/weavr-curator/` | a Hermes plugin for the curator: the `weavr_curator` tool, its approval gate and the `/weavr-curator` command; an HTTP client of the signer that never sees a key |
 | `curator/` | the autonomous curator: the Hermes profile, the policy presets and the compose stack; `curator/README.md` is its page |
+| `signer/` | the curator signer itself: the process that holds the curator key, refuses under the policy document, verifies what the api built, signs and journals; `signer/README.md` is its page and `intothefathom/curator-public` its published image |
 | `patches/` | a one-line fix for Claw Agent releases whose trust gate asks before read-only tools too |
 | `manifest.json` | weavr's onchain programs, the allowlist the wallet tool signs for |
 | `config.yaml`, `env.example` | the Hermes config block and the environment names |
@@ -134,6 +135,7 @@ Everything above is the creator's side: a wallet, a thesis, a portfolio. `curato
 npm test                     # the checks on planted violations, the tool through a fake PayBox CLI and a throwaway local key, the sign check, the three wallet modes, the curator profile and its no-thresholds-in-prose gate
 npm run gate-test            # the approval plugin
 npm run curator-test         # the curator suites alone
+cd signer && npm ci && npm test   # the signer and its chain subset (Node 20 or newer)
 python3 plugins/weavr-curator/test_plugin.py   # the curator plugin
 ```
 

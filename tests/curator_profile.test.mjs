@@ -12,6 +12,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, readdirSync, mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { composeVariables } from '../lib/curator/render.mjs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { load as yamlLoad } from 'js-yaml';
@@ -431,6 +432,9 @@ test('the two policy presets parse, share a schema, and differ exactly where the
 // ---------------------------------------------------------------- compose and env examples
 
 const COMPOSE = join(ROOT, 'curator/compose/curator.yml');
+/** The published signer tag curator.yml pins, and the version signer/package.json declares. */
+const SIGNER_IMAGE = composeVariables(readFileSync(COMPOSE, 'utf8')).find((v) => v.name === 'CURATOR_SIGNER_IMAGE').fallback;
+const SIGNER_VERSION = JSON.parse(readFileSync(join(ROOT, 'signer/package.json'), 'utf8')).version;
 const dockerOk = have('docker') && spawnSync('docker', ['compose', 'version'], { encoding: 'utf8', timeout: 30_000 }).status === 0;
 
 test('the compose file publishes the signer on loopback only and takes every secret from an env file', () => {
@@ -451,7 +455,9 @@ test('the compose file publishes the signer on loopback only and takes every sec
   assert.match(env, /^CURATOR_START_PAUSED=\$\{CURATOR_START_PAUSED:-1\}$/m, 'the signer boots paused by default');
   assert.ok(doc.services.signer.volumes.some((v) => v.endsWith(':/keys/curator.json:ro')), 'the key is bind-mounted read-only');
   assert.ok(doc.services.signer.volumes.some((v) => v.endsWith(':/policy/policy.json:ro')), 'the policy is bind-mounted read-only');
-  assert.match(text, /CURATOR_SIGNER_IMAGE:-weavr-backend:curator-local/);
+  assert.equal(SIGNER_IMAGE, `intothefathom/curator-public:${SIGNER_VERSION}`, 'the compose default is the published image at the version signer/package.json declares');
+  assert.match(text, /docker build -t curator-public:local signer/, 'the header tells the self-hoster how to run their own build');
+  assert.doesNotMatch(text, /weavr-backend:curator-local|pending|checkout of the weavr backend/, 'the private build is gone from the header');
   assert.match(text, /HERMES_IMAGE:-hermes-agent/);
   assert.match(text, /http:\/\/signer:8091/, 'the header tells the self-hoster what CURATOR_SIGNER_URL must be');
   assert.doesNotMatch(text, /\b[0-9a-f]{64}\b|Bearer\s+\S{20,}/);
@@ -495,7 +501,7 @@ test('docker compose config accepts the file with placeholder values', { skip: !
     const r = spawnSync('docker', ['compose', '-f', COMPOSE, 'config'], { encoding: 'utf8', env, timeout: 90_000 });
     assert.equal(r.status, 0, r.stderr);
     const rendered = yamlLoad(r.stdout);
-    assert.equal(rendered.services.signer.image, 'weavr-backend:curator-local');
+    assert.equal(rendered.services.signer.image, SIGNER_IMAGE);
     assert.equal(rendered.services.agent.image, 'hermes-agent');
     assert.equal(rendered.services.signer.ports[0].host_ip, '127.0.0.1');
     assert.equal(rendered.services.signer.environment.CURATOR_START_PAUSED, '1');

@@ -28,6 +28,8 @@ import { startFakeServer } from './fixtures/curator/fake-server.mjs';
 const require = createRequire(import.meta.url);
 const { Keypair } = require('@solana/web3.js');
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
+/** The published signer tag curator.yml pins; init writes it into compose.env. */
+const SIGNER_IMAGE = composeVariables(readFileSync(join(ROOT, 'curator/compose/curator.yml'), 'utf8')).find((v) => v.name === 'CURATOR_SIGNER_IMAGE').fallback;
 const BIN = join(ROOT, 'bin/weavr-curator.mjs');
 const STANDARD = JSON.parse(readFileSync(join(ROOT, 'curator/policy/standard.json'), 'utf8'));
 const REHEARSAL = JSON.parse(readFileSync(join(ROOT, 'curator/policy/rehearsal.json'), 'utf8'));
@@ -177,7 +179,7 @@ test('init: a funded key that already curates renders the whole home with the ri
   assert.equal(composeEnv.values.CURATOR_POLICY_FILE, paths.policyFile);
   assert.equal(composeEnv.values.CURATOR_SIGNER_ENV, paths.signerEnv);
   assert.equal(composeEnv.values.HERMES_HOME, paths.hermesHome);
-  assert.equal(composeEnv.values.CURATOR_SIGNER_IMAGE, 'weavr-backend:curator-local');
+  assert.equal(composeEnv.values.CURATOR_SIGNER_IMAGE, SIGNER_IMAGE, 'init writes the published tag curator.yml names');
   assert.equal(composeEnv.values.HERMES_IMAGE, 'hermes-agent');
   assert.equal(composeEnv.values.CURATOR_START_PAUSED, '1');
   assert.doesNotMatch(readFileSync(paths.composeEnv, 'utf8'), /[0-9a-f]{64}/, 'compose.env carries no token');

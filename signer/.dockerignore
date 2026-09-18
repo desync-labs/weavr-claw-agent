@@ -1,0 +1,5 @@
+node_modules
+**/node_modules
+**/test
+README.md
+packages/*/README.md

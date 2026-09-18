@@ -17,7 +17,7 @@ import { COMPOSE_HOME_PATHS, COMPOSE_HOME_PATH_OF, PROFILE_JOB_IDS, doctor, pars
 import { homePaths } from '../lib/curator/home.mjs';
 import { factoryConfigAddress } from '../lib/curator/chain.mjs';
 import { policyDigest } from '../lib/curator/policy-check.mjs';
-import { readConfigModel, readPluginsEnabled } from '../lib/curator/render.mjs';
+import { composeVariables, readConfigModel, readPluginsEnabled } from '../lib/curator/render.mjs';
 import { catalogue, portfolioRow } from './fixtures/curator/book.mjs';
 import { fakeRpc, factoryConfigBytes } from './fixtures/curator/fake-rpc.mjs';
 import { startFakeServer } from './fixtures/curator/fake-server.mjs';
@@ -25,6 +25,8 @@ import { startFakeServer } from './fixtures/curator/fake-server.mjs';
 const require = createRequire(import.meta.url);
 const { Keypair } = require('@solana/web3.js');
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
+/** The published signer tag curator.yml pins; init writes it into compose.env. */
+const SIGNER_IMAGE = composeVariables(readFileSync(join(ROOT, 'curator/compose/curator.yml'), 'utf8')).find((v) => v.name === 'CURATOR_SIGNER_IMAGE').fallback;
 const BIN = join(ROOT, 'bin/weavr-curator.mjs');
 const STANDARD = JSON.parse(readFileSync(join(ROOT, 'curator/policy/standard.json'), 'utf8'));
 const FLOOR = Number(STANDARD.rate.minSignerLamports);
@@ -150,21 +152,29 @@ test('doctor: with docker present it inspects both images and reads compose ps',
   };
   const r = await runDoctor(ctx, { exec });
   assert.equal(r.exit, 0, r.text);
-  assert.match(r.text, /✓ signer image: weavr-backend:curator-local/);
+  assert.match(r.text, new RegExp(`✓ signer image: ${SIGNER_IMAGE.replace(/[./]/g, '\\$&')}$`, 'm'));
   assert.match(r.text, /✓ agent image: hermes-agent/);
   assert.match(r.text, /✓ containers: signer and agent running/);
-  assert.ok(calls.some((c) => c[1] === 'image' && c[2] === 'inspect' && c[3] === 'weavr-backend:curator-local'));
+  assert.ok(calls.some((c) => c[1] === 'image' && c[2] === 'inspect' && c[3] === SIGNER_IMAGE));
+  assert.ok(!calls.some((c) => c[1] === 'manifest'), 'a local image is not looked up in the registry');
   assert.ok(calls.some((c) => c[1] === 'compose' && c.includes('--env-file') && c.includes(ctx.paths.composeEnv) && c.includes('ps')));
 
   const stopped = (cmd, args) => (args[0] === 'compose' ? { status: 0, stdout: '{"Service":"signer","State":"running"}\n{"Service":"agent","State":"exited"}\n', stderr: '' } : exec(cmd, args));
   const r2 = await runDoctor(ctx, { exec: stopped });
   assert.equal(r2.exit, 1);
   assert.match(crossLine(r2, 'containers'), /agent not running/);
-  const noImage = (cmd, args) => (args[0] === 'image' ? { status: 1, stdout: '', stderr: 'No such image' } : exec(cmd, args));
-  const r3 = await runDoctor(ctx, { exec: noImage });
-  assert.equal(r3.exit, 1);
-  assert.match(crossLine(r3, 'signer image'), /weavr-backend:curator-local is not a local image/);
-  assert.match(r3.text, /fix: docker pull the signer image weavr published/);
+  // Not local, but the registry serves the tag: compose pulls it on up.
+  const served = (cmd, args) => (args[0] === 'image' ? { status: 1, stdout: '', stderr: 'No such image' } : args[0] === 'manifest' ? { status: 0, stdout: '{}', stderr: '' } : exec(cmd, args));
+  const r3 = await runDoctor(ctx, { exec: served });
+  assert.equal(r3.exit, 1, 'the agent image is still missing');
+  assert.match(r3.text, new RegExp(`✓ signer image: ${SIGNER_IMAGE.replace(/[./]/g, '\\$&')}, not pulled yet \\(compose pulls it on up\\)`));
+  assert.match(crossLine(r3, 'agent image'), /hermes-agent is not a local image/);
+  // Neither local nor served: the fix is a pull or a tag of your own.
+  const noImage = (cmd, args) => (args[0] === 'image' || args[0] === 'manifest' ? { status: 1, stdout: '', stderr: 'No such image' } : exec(cmd, args));
+  const r4 = await runDoctor(ctx, { exec: noImage });
+  assert.equal(r4.exit, 1);
+  assert.match(crossLine(r4, 'signer image'), new RegExp(`${SIGNER_IMAGE.replace(/[./]/g, '\\$&')} is not a local image and the registry does not serve it`));
+  assert.match(r4.text, new RegExp(`fix: docker pull ${SIGNER_IMAGE.replace(/[./]/g, '\\$&')}, or set CURATOR_SIGNER_IMAGE`));
 });
 
 // ---------------------------------------------------------------- planted failures
@@ -415,14 +425,14 @@ const CASES = [
     check: 'agent heartbeat',
     plant: (ctx) => { ctx.state.signer.metrics = '# HELP process_cpu_seconds_total Total user and system CPU time.\n# TYPE process_cpu_seconds_total counter\nprocess_cpu_seconds_total 1.5\n'; },
     line: /\/metrics answered but carries no curator gauges: not this signer, or an older image$/,
-    fix: /pass --signer-url for the curator signer, or pull the current signer image weavr published/,
+    fix: /pass --signer-url for the curator signer, or pull a current signer image/,
   },
   {
     name: '/metrics with curator gauges but no last tick',
     check: 'agent heartbeat',
     plant: (ctx) => { ctx.state.signer.metrics = { curator_paused: 0, curator_self_locked: 0 }; },
     line: /\/metrics answered but carries no curator_last_tick_ts gauge \(2 other curator gauges\): an older signer image/,
-    fix: /pull the current signer image weavr published/,
+    fix: /pull a current signer image/,
   },
   {
     name: 'compose.env lacks HERMES_UID',

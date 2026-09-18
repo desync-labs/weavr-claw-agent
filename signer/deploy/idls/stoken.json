@@ -1,0 +1,6739 @@
+{
+  "address": "84iktrtfvLZm5zD5puEPhVdYRWg8G7sJjqsLqnufDhAk",
+  "metadata": {
+    "name": "stoken",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "S-Token Vault: External price-driven liquidity proxy vault"
+  },
+  "docs": [
+    "S-Token vault program: External price-driven liquidity proxy vault"
+  ],
+  "instructions": [
+    {
+      "name": "accept_admin",
+      "docs": [
+        "Accept pending admin change after cooldown"
+      ],
+      "discriminator": [
+        112,
+        42,
+        45,
+        90,
+        116,
+        181,
+        13,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "new_admin",
+          "docs": [
+            "New admin (must sign to prove they control the address)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_admin_cooldown",
+      "docs": [
+        "Accept pending admin cooldown change after cooldown"
+      ],
+      "discriminator": [
+        137,
+        200,
+        176,
+        208,
+        2,
+        224,
+        247,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Current admin (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_allowlist_swap",
+      "docs": [
+        "Allowlist a destination vault for swaps from the source vault"
+      ],
+      "discriminator": [
+        11,
+        237,
+        137,
+        84,
+        93,
+        3,
+        201,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "source_vault"
+        },
+        {
+          "name": "destination_vault"
+        },
+        {
+          "name": "allowed_swap_vault",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_cooldowns",
+      "docs": [
+        "Accept pending cooldown changes after cooldown"
+      ],
+      "discriminator": [
+        180,
+        170,
+        242,
+        95,
+        130,
+        193,
+        20,
+        81
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_fees",
+      "docs": [
+        "Accept pending fee changes after cooldown"
+      ],
+      "discriminator": [
+        35,
+        135,
+        194,
+        92,
+        3,
+        161,
+        26,
+        251
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_limits",
+      "docs": [
+        "Accept pending limits changes after cooldown"
+      ],
+      "discriminator": [
+        153,
+        120,
+        229,
+        237,
+        123,
+        28,
+        73,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_price",
+      "docs": [
+        "Accept a pending price update"
+      ],
+      "discriminator": [
+        110,
+        25,
+        28,
+        175,
+        22,
+        221,
+        155,
+        107
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "acceptor",
+          "docs": [
+            "Only specific roles can accept: processor, oracle, or manager"
+          ],
+          "signer": true
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_role_assignment",
+      "docs": [
+        "Claim a single pending role after cooldown (incoming holder must sign /",
+        "PDA satellites CPI via `accept_vault_role`)"
+      ],
+      "discriminator": [
+        141,
+        222,
+        252,
+        189,
+        8,
+        207,
+        197,
+        62
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "claimer",
+          "docs": [
+            "Incoming role holder (must equal the proposed pubkey for `role`)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "role",
+          "type": {
+            "defined": {
+              "name": "RoleKind"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "accept_sunset",
+      "discriminator": [
+        155,
+        178,
+        177,
+        33,
+        11,
+        181,
+        67,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_whitelist",
+      "docs": [
+        "Accept pending whitelist changes after cooldown"
+      ],
+      "discriminator": [
+        216,
+        70,
+        17,
+        83,
+        216,
+        225,
+        53,
+        136
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_withdrawal_params",
+      "docs": [
+        "Accept pending withdrawal parameter changes after cooldown"
+      ],
+      "discriminator": [
+        96,
+        63,
+        87,
+        255,
+        236,
+        79,
+        35,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accrue_management_fee",
+      "docs": [
+        "Accrue management fee (anyone can call)"
+      ],
+      "discriminator": [
+        91,
+        57,
+        239,
+        81,
+        27,
+        216,
+        220,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "processor",
+          "docs": [
+            "Any signer may settle deterministic fee accrual."
+          ],
+          "signer": true
+        },
+        {
+          "name": "accountant"
+        },
+        {
+          "name": "accountant_s_token_account",
+          "writable": true
+        },
+        {
+          "name": "shares_mint",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "add_user_to_deposit_whitelist",
+      "docs": [
+        "Add a user to the vault deposit whitelist"
+      ],
+      "discriminator": [
+        60,
+        115,
+        133,
+        140,
+        25,
+        92,
+        185,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "user_deposit_whitelist",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "user_to_add",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "add_user_to_withdrawal_whitelist",
+      "docs": [
+        "Add a user to the vault withdrawal whitelist"
+      ],
+      "discriminator": [
+        14,
+        93,
+        124,
+        195,
+        25,
+        222,
+        6,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "user_withdrawal_whitelist",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "user_to_add",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "cancel_admin",
+      "docs": [
+        "Cancel pending admin change"
+      ],
+      "discriminator": [
+        169,
+        143,
+        43,
+        87,
+        189,
+        134,
+        146,
+        216
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Current admin (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_admin_cooldown",
+      "docs": [
+        "Cancel pending admin cooldown change"
+      ],
+      "discriminator": [
+        190,
+        97,
+        168,
+        154,
+        108,
+        11,
+        65,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Current admin (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_allowlist_swap",
+      "docs": [
+        "Remove a destination vault from the source vault swap allowlist"
+      ],
+      "discriminator": [
+        131,
+        234,
+        181,
+        52,
+        211,
+        77,
+        57,
+        80
+      ],
+      "accounts": [
+        {
+          "name": "source_vault"
+        },
+        {
+          "name": "destination_vault"
+        },
+        {
+          "name": "allowed_swap_vault",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_pending_roles",
+      "docs": [
+        "Cancel a pending roles proposal (manager only)"
+      ],
+      "discriminator": [
+        158,
+        146,
+        95,
+        217,
+        165,
+        119,
+        198,
+        120
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_sunset",
+      "discriminator": [
+        145,
+        135,
+        11,
+        73,
+        179,
+        144,
+        64,
+        129
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_withdrawal",
+      "docs": [
+        "Cancel a withdrawal request"
+      ],
+      "discriminator": [
+        183,
+        104,
+        181,
+        250,
+        28,
+        128,
+        210,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "withdrawal_request",
+          "writable": true
+        },
+        {
+          "name": "request_user",
+          "docs": [
+            "The user who created the withdrawal request (non-signer, used for PDA derivation)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "actor",
+          "docs": [
+            "The actor performing the cancellation (either request_user or processor)"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "shares_mint",
+          "writable": true
+        },
+        {
+          "name": "user_shares_account",
+          "writable": true
+        },
+        {
+          "name": "accountant_shares_account",
+          "writable": true
+        },
+        {
+          "name": "vault_shares_account",
+          "docs": [
+            "Vault's shares token account (holding fees in custody)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "request_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "close_asset_manager_migration",
+      "discriminator": [
+        113,
+        62,
+        21,
+        243,
+        43,
+        104,
+        112,
+        232
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "deposit",
+      "docs": [
+        "Deposit underlying tokens to receive S-Tokens"
+      ],
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "user_underlying_account",
+          "docs": [
+            "User's underlying token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_s_token_account",
+          "docs": [
+            "User's s-token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "beneficiary_s_token_account",
+          "docs": [
+            "Beneficiary s-token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault_underlying_account",
+          "docs": [
+            "Vault's underlying token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "accountant_s_token_account",
+          "docs": [
+            "Accountant's s-token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "Underlying token mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "shares_mint",
+          "docs": [
+            "Shares token mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_shares",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "emergency_withdraw",
+      "docs": [
+        "Emergency withdrawal when vault is paused"
+      ],
+      "discriminator": [
+        239,
+        45,
+        203,
+        64,
+        150,
+        73,
+        218,
+        92
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "token_mint",
+          "docs": [
+            "The token mint to withdraw (can be any token)"
+          ]
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "manager_token_account",
+          "writable": true
+        },
+        {
+          "name": "shares_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "fulfill_withdrawal",
+      "docs": [
+        "Fulfill a withdrawal request by request ID"
+      ],
+      "discriminator": [
+        57,
+        37,
+        123,
+        221,
+        103,
+        93,
+        162,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "withdrawal_request",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "docs": [
+            "The user who made the withdrawal request"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_underlying_account",
+          "writable": true
+        },
+        {
+          "name": "processor",
+          "signer": true
+        },
+        {
+          "name": "vault_underlying_account",
+          "writable": true
+        },
+        {
+          "name": "vault_shares_account",
+          "docs": [
+            "Vault's shares token account (holding fees in custody)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "accountant_shares_account",
+          "docs": [
+            "Accountant's shares token account (fee destination)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "shares_mint",
+          "docs": [
+            "Shares mint for burning withdrawal shares"
+          ],
+          "writable": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "Underlying mint for decimal-aware calculations"
+          ]
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "request_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "init_vault_shares",
+      "docs": [
+        "Initialize vault shares mint (step 2)"
+      ],
+      "discriminator": [
+        130,
+        72,
+        70,
+        251,
+        17,
+        251,
+        201,
+        124
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "underlying_mint"
+        },
+        {
+          "name": "shares_mint",
+          "writable": true
+        },
+        {
+          "name": "metadata",
+          "writable": true
+        },
+        {
+          "name": "global_config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        },
+        {
+          "name": "metadata_program"
+        },
+        {
+          "name": "rent"
+        }
+      ],
+      "args": [
+        {
+          "name": "config",
+          "type": {
+            "defined": {
+              "name": "SharesConfig"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Initialize the global S-Token config account",
+        "Optional admin_change_cooldown_secs parameter (defaults to 48 hours if None)"
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "The program's executable data account containing the upgrade authority"
+          ]
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "admin_change_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_vault",
+      "docs": [
+        "Initialize a new S-Token vault (step 1)"
+      ],
+      "discriminator": [
+        48,
+        191,
+        163,
+        44,
+        71,
+        129,
+        63,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "underlying_mint"
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "config",
+          "type": {
+            "defined": {
+              "name": "VaultInitConfig"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_vault_ata",
+      "docs": [
+        "Initialize the vault's ATA for shares or underlying tokens"
+      ],
+      "discriminator": [
+        98,
+        11,
+        110,
+        122,
+        27,
+        240,
+        52,
+        131
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "token_type",
+          "type": {
+            "defined": {
+              "name": "TokenType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "migrate_config",
+      "docs": [
+        "Migrate global Config account to new schema (idempotent)"
+      ],
+      "discriminator": [
+        92,
+        131,
+        58,
+        105,
+        210,
+        154,
+        224,
+        193
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "migrate_vault",
+      "docs": [
+        "Migrate VaultConfig account to new schema (idempotent)"
+      ],
+      "discriminator": [
+        139,
+        151,
+        25,
+        211,
+        120,
+        164,
+        24,
+        215
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "Global config account (for admin validation)"
+          ]
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Admin authority who pays for any additional rent"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "pause_vault",
+      "docs": [
+        "Pause the vault (emergency mode)"
+      ],
+      "discriminator": [
+        250,
+        6,
+        228,
+        57,
+        6,
+        104,
+        19,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "The authority pausing the vault (manager or guardian)"
+          ],
+          "signer": true
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "process_deposits",
+      "docs": [
+        "Process queued deposits (processor only)"
+      ],
+      "discriminator": [
+        108,
+        227,
+        198,
+        4,
+        216,
+        112,
+        79,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "processor",
+          "signer": true
+        },
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "vault_underlying_account",
+          "writable": true
+        },
+        {
+          "name": "asset_manager_underlying_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_admin",
+      "docs": [
+        "Propose a new global admin authority (starts cooldown period)"
+      ],
+      "discriminator": [
+        121,
+        214,
+        199,
+        212,
+        87,
+        39,
+        117,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Current admin (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_admin_cooldown",
+      "docs": [
+        "Propose a new admin change cooldown (starts cooldown period)"
+      ],
+      "discriminator": [
+        102,
+        226,
+        189,
+        140,
+        150,
+        100,
+        123,
+        107
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Current admin (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_cooldown_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_cooldowns",
+      "docs": [
+        "Propose cooldown parameter changes (starts cooldown period)"
+      ],
+      "discriminator": [
+        199,
+        13,
+        29,
+        142,
+        151,
+        242,
+        98,
+        150
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_price_update_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "new_price_acceptance_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "new_config_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "new_emergency_withdrawal_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "new_role_change_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "new_fee_change_cooldown_secs",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "new_max_price_staleness_secs",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "propose_fees",
+      "docs": [
+        "Propose fee parameter changes (starts cooldown period)"
+      ],
+      "discriminator": [
+        70,
+        58,
+        218,
+        219,
+        33,
+        84,
+        215,
+        198
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "deposit_fee_bps",
+          "type": "u16"
+        },
+        {
+          "name": "withdraw_fee_bps",
+          "type": "u16"
+        },
+        {
+          "name": "management_fee_bps_per_year",
+          "type": "u16"
+        },
+        {
+          "name": "swap_fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "propose_limits",
+      "docs": [
+        "Propose limits parameter changes (starts cooldown period)"
+      ],
+      "discriminator": [
+        132,
+        125,
+        46,
+        103,
+        247,
+        74,
+        74,
+        57
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "max_total_shares",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "max_shares_per_user",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "max_total_idle",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "max_deviation_bps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "min_shares_to_mint",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "propose_roles",
+      "docs": [
+        "Propose vault role changes"
+      ],
+      "discriminator": [
+        175,
+        43,
+        80,
+        85,
+        231,
+        56,
+        200,
+        39
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "manager",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "processor",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "accountant",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "oracle",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "asset_manager",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "guardian",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "propose_sunset",
+      "discriminator": [
+        126,
+        167,
+        220,
+        54,
+        92,
+        197,
+        131,
+        228
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose_whitelist",
+      "docs": [
+        "Propose whitelist changes (starts cooldown period)"
+      ],
+      "discriminator": [
+        208,
+        231,
+        247,
+        34,
+        16,
+        138,
+        226,
+        245
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_deposit_enabled",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "new_withdrawal_enabled",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "propose_withdrawal_params",
+      "docs": [
+        "Propose withdrawal parameter changes (starts cooldown period)"
+      ],
+      "discriminator": [
+        53,
+        127,
+        160,
+        152,
+        100,
+        119,
+        32,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_downside_cap_bps",
+          "type": {
+            "option": "u16"
+          }
+        },
+        {
+          "name": "new_withdrawal_ttl_secs",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "new_system_penalty_bps",
+          "type": {
+            "option": "u16"
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_price",
+      "docs": [
+        "Reject a pending price update (manager only)"
+      ],
+      "discriminator": [
+        72,
+        155,
+        47,
+        161,
+        181,
+        84,
+        254,
+        139
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "remove_user_from_deposit_whitelist",
+      "docs": [
+        "Remove a user from the vault deposit whitelist"
+      ],
+      "discriminator": [
+        99,
+        63,
+        41,
+        18,
+        169,
+        23,
+        206,
+        48
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "user_deposit_whitelist",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "user_to_remove",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "remove_user_from_withdrawal_whitelist",
+      "docs": [
+        "Remove a user from the vault withdrawal whitelist"
+      ],
+      "discriminator": [
+        124,
+        27,
+        246,
+        117,
+        245,
+        246,
+        188,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "user_withdrawal_whitelist",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "user_to_remove",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "return_funds",
+      "docs": [
+        "Return funds from asset manager to vault"
+      ],
+      "discriminator": [
+        220,
+        104,
+        119,
+        202,
+        186,
+        1,
+        45,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "asset_manager",
+          "signer": true
+        },
+        {
+          "name": "vault_underlying_account",
+          "writable": true
+        },
+        {
+          "name": "asset_manager_underlying_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "swap_tokens",
+      "docs": [
+        "Swap tokens between two s-token vaults with the same underlying token and asset manager"
+      ],
+      "discriminator": [
+        201,
+        226,
+        234,
+        16,
+        70,
+        155,
+        131,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "source_vault",
+          "docs": [
+            "Source vault configuration (tokens burned from)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "destination_vault",
+          "docs": [
+            "Destination vault configuration (tokens minted to) - used as mint authority via PDA seeds"
+          ],
+          "writable": true
+        },
+        {
+          "name": "allowed_swap_vault",
+          "docs": [
+            "User performing the swap"
+          ]
+        },
+        {
+          "name": "user",
+          "docs": [
+            "User performing the swap"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_source_account",
+          "docs": [
+            "User's source s-token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_destination_account",
+          "docs": [
+            "User's destination s-token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "source_accountant_account",
+          "docs": [
+            "Source accountant s-token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "destination_accountant_account",
+          "docs": [
+            "Destination accountant s-token account - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "source_shares_mint",
+          "docs": [
+            "Source vault shares mint - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "destination_shares_mint",
+          "docs": [
+            "Destination vault shares mint - validated in instruction"
+          ],
+          "writable": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "Underlying token mint (must be same for both vaults) - validated in instruction"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Token program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "source_amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_destination_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "unpause_vault",
+      "docs": [
+        "Unpause the vault"
+      ],
+      "discriminator": [
+        125,
+        29,
+        213,
+        213,
+        114,
+        155,
+        125,
+        63
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "vault_underlying_account"
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_price",
+      "docs": [
+        "Update S-Token price (with secure price flow for v2)"
+      ],
+      "discriminator": [
+        61,
+        34,
+        117,
+        155,
+        75,
+        34,
+        123,
+        208
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "oracle",
+          "signer": true
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_price",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "update_withdrawal_minimum",
+      "docs": [
+        "Update minimum acceptable payout for a pending withdrawal request"
+      ],
+      "discriminator": [
+        240,
+        180,
+        233,
+        220,
+        132,
+        113,
+        196,
+        205
+      ],
+      "accounts": [
+        {
+          "name": "vault_config"
+        },
+        {
+          "name": "withdrawal_request",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "request_id",
+          "type": "u64"
+        },
+        {
+          "name": "new_minimum",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_request",
+      "docs": [
+        "Request withdrawal of S-Tokens"
+      ],
+      "discriminator": [
+        5,
+        77,
+        120,
+        32,
+        2,
+        143,
+        214,
+        16
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "withdrawal_request",
+          "writable": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "Underlying mint - validated manually for stack optimization"
+          ]
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_s_token_account",
+          "docs": [
+            "User's s-token account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault_shares_account",
+          "docs": [
+            "Vault's shares token account for temporary fee custody"
+          ],
+          "writable": true
+        },
+        {
+          "name": "shares_mint",
+          "docs": [
+            "Shares mint - validated manually for stack optimization"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "shares",
+          "type": "u64"
+        },
+        {
+          "name": "min_amount_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_unexpected_deposits",
+      "docs": [
+        "Withdraw unexpected deposits immediately"
+      ],
+      "discriminator": [
+        202,
+        160,
+        145,
+        74,
+        17,
+        142,
+        32,
+        71
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "token_mint",
+          "docs": [
+            "Token mint of the unexpected deposits to withdraw"
+          ]
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "manager_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AllowedSwapVault",
+      "discriminator": [
+        0,
+        70,
+        223,
+        112,
+        235,
+        138,
+        118,
+        133
+      ]
+    },
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "UserDepositWhitelist",
+      "discriminator": [
+        237,
+        214,
+        168,
+        142,
+        221,
+        226,
+        245,
+        221
+      ]
+    },
+    {
+      "name": "UserWithdrawalWhitelist",
+      "discriminator": [
+        248,
+        92,
+        115,
+        69,
+        247,
+        93,
+        45,
+        225
+      ]
+    },
+    {
+      "name": "VaultConfig",
+      "discriminator": [
+        99,
+        86,
+        43,
+        216,
+        184,
+        102,
+        119,
+        77
+      ]
+    },
+    {
+      "name": "WithdrawalRequest",
+      "discriminator": [
+        242,
+        88,
+        147,
+        173,
+        182,
+        62,
+        229,
+        193
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "STokenAddressAddedToDepositWhitelist",
+      "discriminator": [
+        19,
+        222,
+        53,
+        96,
+        213,
+        234,
+        207,
+        119
+      ]
+    },
+    {
+      "name": "STokenAddressAddedToWithdrawalWhitelist",
+      "discriminator": [
+        180,
+        88,
+        73,
+        3,
+        18,
+        143,
+        148,
+        86
+      ]
+    },
+    {
+      "name": "STokenAddressRemovedFromDepositWhitelist",
+      "discriminator": [
+        214,
+        239,
+        98,
+        144,
+        168,
+        240,
+        113,
+        124
+      ]
+    },
+    {
+      "name": "STokenAddressRemovedFromWithdrawalWhitelist",
+      "discriminator": [
+        171,
+        60,
+        251,
+        30,
+        193,
+        58,
+        210,
+        204
+      ]
+    },
+    {
+      "name": "STokenAdminChangeCancelled",
+      "discriminator": [
+        218,
+        108,
+        191,
+        29,
+        33,
+        115,
+        197,
+        22
+      ]
+    },
+    {
+      "name": "STokenAdminChangePending",
+      "discriminator": [
+        205,
+        211,
+        166,
+        173,
+        62,
+        68,
+        137,
+        0
+      ]
+    },
+    {
+      "name": "STokenAdminCooldownChangeCancelled",
+      "discriminator": [
+        50,
+        208,
+        16,
+        251,
+        222,
+        238,
+        199,
+        239
+      ]
+    },
+    {
+      "name": "STokenAdminCooldownChangePending",
+      "discriminator": [
+        157,
+        85,
+        27,
+        3,
+        29,
+        255,
+        143,
+        14
+      ]
+    },
+    {
+      "name": "STokenAdminCooldownUpdated",
+      "discriminator": [
+        1,
+        8,
+        226,
+        234,
+        133,
+        152,
+        30,
+        67
+      ]
+    },
+    {
+      "name": "STokenAdminUpdated",
+      "discriminator": [
+        195,
+        120,
+        237,
+        84,
+        206,
+        133,
+        240,
+        102
+      ]
+    },
+    {
+      "name": "STokenConfigChangeApplied",
+      "discriminator": [
+        239,
+        179,
+        216,
+        33,
+        193,
+        69,
+        44,
+        105
+      ]
+    },
+    {
+      "name": "STokenConfigChangeProposed",
+      "discriminator": [
+        142,
+        50,
+        204,
+        20,
+        101,
+        176,
+        247,
+        32
+      ]
+    },
+    {
+      "name": "STokenCooldownsChangePending",
+      "discriminator": [
+        134,
+        16,
+        2,
+        158,
+        50,
+        190,
+        50,
+        56
+      ]
+    },
+    {
+      "name": "STokenCooldownsUpdated",
+      "discriminator": [
+        233,
+        105,
+        130,
+        68,
+        148,
+        229,
+        76,
+        63
+      ]
+    },
+    {
+      "name": "STokenDeposit",
+      "discriminator": [
+        211,
+        75,
+        23,
+        133,
+        27,
+        143,
+        3,
+        243
+      ]
+    },
+    {
+      "name": "STokenDepositsProcessed",
+      "discriminator": [
+        14,
+        76,
+        223,
+        34,
+        199,
+        22,
+        204,
+        235
+      ]
+    },
+    {
+      "name": "STokenEmergencyWithdraw",
+      "discriminator": [
+        103,
+        179,
+        87,
+        33,
+        78,
+        229,
+        242,
+        199
+      ]
+    },
+    {
+      "name": "STokenEmergencyWithdrawTimelockActivated",
+      "discriminator": [
+        102,
+        27,
+        220,
+        64,
+        15,
+        108,
+        106,
+        201
+      ]
+    },
+    {
+      "name": "STokenFeesChangePending",
+      "discriminator": [
+        113,
+        21,
+        68,
+        207,
+        62,
+        73,
+        22,
+        112
+      ]
+    },
+    {
+      "name": "STokenFeesUpdated",
+      "discriminator": [
+        18,
+        63,
+        108,
+        204,
+        60,
+        126,
+        11,
+        242
+      ]
+    },
+    {
+      "name": "STokenFundsReturned",
+      "discriminator": [
+        49,
+        54,
+        33,
+        68,
+        172,
+        238,
+        123,
+        196
+      ]
+    },
+    {
+      "name": "STokenGlobalConfigInitialized",
+      "discriminator": [
+        86,
+        185,
+        89,
+        127,
+        235,
+        175,
+        116,
+        146
+      ]
+    },
+    {
+      "name": "STokenLimitsChangePending",
+      "discriminator": [
+        234,
+        190,
+        143,
+        60,
+        157,
+        254,
+        114,
+        50
+      ]
+    },
+    {
+      "name": "STokenLimitsUpdated",
+      "discriminator": [
+        22,
+        211,
+        212,
+        35,
+        241,
+        30,
+        71,
+        14
+      ]
+    },
+    {
+      "name": "STokenManagementFeeAccrued",
+      "discriminator": [
+        5,
+        82,
+        159,
+        255,
+        18,
+        67,
+        82,
+        103
+      ]
+    },
+    {
+      "name": "STokenPriceAccepted",
+      "discriminator": [
+        37,
+        223,
+        179,
+        31,
+        129,
+        150,
+        160,
+        103
+      ]
+    },
+    {
+      "name": "STokenPricePending",
+      "discriminator": [
+        55,
+        126,
+        14,
+        232,
+        86,
+        237,
+        116,
+        157
+      ]
+    },
+    {
+      "name": "STokenPriceRejected",
+      "discriminator": [
+        174,
+        87,
+        233,
+        4,
+        0,
+        218,
+        28,
+        12
+      ]
+    },
+    {
+      "name": "STokenPriceUpdated",
+      "discriminator": [
+        173,
+        65,
+        204,
+        249,
+        130,
+        76,
+        49,
+        220
+      ]
+    },
+    {
+      "name": "STokenRoleAssignmentAccepted",
+      "discriminator": [
+        54,
+        16,
+        4,
+        30,
+        3,
+        9,
+        204,
+        42
+      ]
+    },
+    {
+      "name": "STokenRolesChangeCancelled",
+      "discriminator": [
+        197,
+        65,
+        37,
+        255,
+        165,
+        191,
+        154,
+        117
+      ]
+    },
+    {
+      "name": "STokenRolesChangePending",
+      "discriminator": [
+        187,
+        157,
+        67,
+        130,
+        233,
+        50,
+        83,
+        216
+      ]
+    },
+    {
+      "name": "STokenSharesMintInitialized",
+      "discriminator": [
+        87,
+        109,
+        248,
+        58,
+        220,
+        195,
+        130,
+        113
+      ]
+    },
+    {
+      "name": "STokenSunsetAccepted",
+      "discriminator": [
+        192,
+        158,
+        176,
+        34,
+        149,
+        88,
+        124,
+        84
+      ]
+    },
+    {
+      "name": "STokenSunsetCancelled",
+      "discriminator": [
+        134,
+        66,
+        227,
+        20,
+        80,
+        134,
+        106,
+        108
+      ]
+    },
+    {
+      "name": "STokenSunsetProposed",
+      "discriminator": [
+        137,
+        164,
+        36,
+        0,
+        223,
+        18,
+        167,
+        248
+      ]
+    },
+    {
+      "name": "STokenSwapVaultAllowlistCancelled",
+      "discriminator": [
+        173,
+        6,
+        50,
+        249,
+        139,
+        102,
+        52,
+        43
+      ]
+    },
+    {
+      "name": "STokenSwapVaultAllowlisted",
+      "discriminator": [
+        187,
+        7,
+        197,
+        171,
+        90,
+        196,
+        41,
+        57
+      ]
+    },
+    {
+      "name": "STokenTokenSwap",
+      "discriminator": [
+        181,
+        151,
+        101,
+        212,
+        229,
+        81,
+        143,
+        89
+      ]
+    },
+    {
+      "name": "STokenUnexpectedDeposit",
+      "discriminator": [
+        208,
+        183,
+        67,
+        109,
+        31,
+        220,
+        183,
+        5
+      ]
+    },
+    {
+      "name": "STokenUnexpectedDepositWithdrawn",
+      "discriminator": [
+        151,
+        134,
+        172,
+        101,
+        43,
+        170,
+        197,
+        237
+      ]
+    },
+    {
+      "name": "STokenVaultInitialized",
+      "discriminator": [
+        239,
+        3,
+        21,
+        143,
+        161,
+        175,
+        20,
+        215
+      ]
+    },
+    {
+      "name": "STokenVaultPaused",
+      "discriminator": [
+        69,
+        137,
+        38,
+        209,
+        130,
+        73,
+        228,
+        92
+      ]
+    },
+    {
+      "name": "STokenVaultUnpaused",
+      "discriminator": [
+        39,
+        245,
+        134,
+        139,
+        103,
+        17,
+        112,
+        220
+      ]
+    },
+    {
+      "name": "STokenWhitelistChangePending",
+      "discriminator": [
+        25,
+        85,
+        10,
+        82,
+        37,
+        53,
+        41,
+        176
+      ]
+    },
+    {
+      "name": "STokenWhitelistInitialized",
+      "discriminator": [
+        58,
+        173,
+        15,
+        64,
+        187,
+        138,
+        86,
+        15
+      ]
+    },
+    {
+      "name": "STokenWhitelistToggled",
+      "discriminator": [
+        217,
+        182,
+        52,
+        211,
+        77,
+        174,
+        89,
+        75
+      ]
+    },
+    {
+      "name": "STokenWithdrawRequest",
+      "discriminator": [
+        2,
+        76,
+        189,
+        109,
+        139,
+        35,
+        113,
+        1
+      ]
+    },
+    {
+      "name": "STokenWithdrawalCancelled",
+      "discriminator": [
+        100,
+        203,
+        211,
+        144,
+        40,
+        226,
+        186,
+        237
+      ]
+    },
+    {
+      "name": "STokenWithdrawalFulfilled",
+      "discriminator": [
+        136,
+        23,
+        63,
+        16,
+        80,
+        97,
+        129,
+        191
+      ]
+    },
+    {
+      "name": "STokenWithdrawalMinimumUpdated",
+      "discriminator": [
+        188,
+        209,
+        92,
+        80,
+        0,
+        165,
+        236,
+        239
+      ]
+    },
+    {
+      "name": "STokenWithdrawalParamsChangePending",
+      "discriminator": [
+        38,
+        141,
+        189,
+        36,
+        228,
+        102,
+        31,
+        160
+      ]
+    },
+    {
+      "name": "STokenWithdrawalParamsUpdated",
+      "discriminator": [
+        10,
+        86,
+        62,
+        137,
+        205,
+        166,
+        216,
+        38
+      ]
+    },
+    {
+      "name": "VaultAtaInitialized",
+      "discriminator": [
+        206,
+        229,
+        105,
+        127,
+        53,
+        73,
+        69,
+        32
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: Only the specified authority can perform this action"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidFee",
+      "msg": "Invalid fee: Fee exceeds maximum allowed value"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidPrice",
+      "msg": "Invalid price: Price must be greater than zero"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount: Amount must be greater than zero"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidArgument",
+      "msg": "Invalid argument: Argument is invalid"
+    },
+    {
+      "code": 6005,
+      "name": "InsufficientBalance",
+      "msg": "Insufficient balance: Not enough tokens available"
+    },
+    {
+      "code": 6006,
+      "name": "InsufficientShares",
+      "msg": "Insufficient shares: Not enough S-Tokens to burn"
+    },
+    {
+      "code": 6007,
+      "name": "MathOverflow",
+      "msg": "Math overflow: Calculation resulted in overflow"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidUnderlyingMint",
+      "msg": "Invalid underlying mint: Underlying mint does not match vault configuration"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidSharesMint",
+      "msg": "Invalid shares mint: Shares mint does not match vault configuration"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidTokenAccountMint",
+      "msg": "Invalid token account mint: Token account mint does not match expected mint"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidTokenAccountOwner",
+      "msg": "Invalid token account owner: Token account owner does not match expected owner"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidAtaAddress",
+      "msg": "Invalid ATA address: Associated token account address does not match expected address"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidTokenProgram",
+      "msg": "Invalid token program: Token mint is not owned by SPL Token program"
+    },
+    {
+      "code": 6014,
+      "name": "VaultNotInitialized",
+      "msg": "Vault not initialized: Vault must be initialized before use"
+    },
+    {
+      "code": 6015,
+      "name": "WithdrawalRequestNotFound",
+      "msg": "Withdrawal request not found: No pending withdrawal request for this user"
+    },
+    {
+      "code": 6016,
+      "name": "WithdrawalQueueFull",
+      "msg": "Withdrawal queue full: Maximum number of withdrawal requests reached"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidTimestamp",
+      "msg": "Invalid timestamp: Timestamp cannot be in the future"
+    },
+    {
+      "code": 6018,
+      "name": "FeeCalculationError",
+      "msg": "Fee calculation error: Unable to calculate fee amount"
+    },
+    {
+      "code": 6019,
+      "name": "PriceTooOld",
+      "msg": "Price too old: Oracle price is outdated"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidOracle",
+      "msg": "Invalid oracle: Oracle authority does not match"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidManager",
+      "msg": "Invalid manager: Manager authority does not match"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidProcessor",
+      "msg": "Invalid processor: Processor authority does not match"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidAccountant",
+      "msg": "Invalid accountant: Accountant authority does not match"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidAssetManager",
+      "msg": "Invalid asset manager: Asset manager authority does not match"
+    },
+    {
+      "code": 6025,
+      "name": "ZeroSharesCalculated",
+      "msg": "Zero shares calculated: Deposit amount too small or price too high"
+    },
+    {
+      "code": 6026,
+      "name": "ZeroAmountCalculated",
+      "msg": "Zero amount calculated: Share amount too small or price too low"
+    },
+    {
+      "code": 6027,
+      "name": "UserNotWhitelisted",
+      "msg": "User not whitelisted: Address is not authorized for this operation"
+    },
+    {
+      "code": 6028,
+      "name": "WhitelistNotEnabled",
+      "msg": "Whitelist not enabled: Whitelist functionality is disabled for this vault"
+    },
+    {
+      "code": 6029,
+      "name": "WhitelistAlreadyExists",
+      "msg": "Whitelist already exists: Cannot initialize whitelist twice"
+    },
+    {
+      "code": 6030,
+      "name": "WhitelistFull",
+      "msg": "Whitelist full: Cannot add more addresses to whitelist"
+    },
+    {
+      "code": 6031,
+      "name": "AddressAlreadyWhitelisted",
+      "msg": "Address already whitelisted: Address is already in the whitelist"
+    },
+    {
+      "code": 6032,
+      "name": "AddressNotWhitelisted",
+      "msg": "Address not whitelisted: Address is not in the whitelist"
+    },
+    {
+      "code": 6033,
+      "name": "InvalidWhitelist",
+      "msg": "Invalid whitelist: Whitelist account does not match vault"
+    },
+    {
+      "code": 6034,
+      "name": "InvalidUserWhitelist",
+      "msg": "Invalid user whitelist: User whitelist PDA does not match expected vault or user"
+    },
+    {
+      "code": 6035,
+      "name": "MaxTotalSharesExceeded",
+      "msg": "Max total shares exceeded: This operation would exceed the vault's maximum total shares"
+    },
+    {
+      "code": 6036,
+      "name": "MaxSharesPerUserExceeded",
+      "msg": "Max shares per user exceeded: This operation would exceed the user's maximum share limit"
+    },
+    {
+      "code": 6037,
+      "name": "MaxTotalIdleExceeded",
+      "msg": "Max total idle exceeded: This deposit would exceed the vault's maximum idle funds limit"
+    },
+    {
+      "code": 6038,
+      "name": "SlippageNotMet",
+      "msg": "Slippage constraint not met: Expected amount/shares not satisfied"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidLimit",
+      "msg": "Invalid limit: Limit value is invalid"
+    },
+    {
+      "code": 6040,
+      "name": "LimitExceedsMaximum",
+      "msg": "Limit exceeds maximum: Limit value exceeds the maximum allowed value"
+    },
+    {
+      "code": 6041,
+      "name": "MinimumSharesNotMet",
+      "msg": "Minimum shares not met: Deposit does not meet minimum shares requirement"
+    },
+    {
+      "code": 6042,
+      "name": "PricePending",
+      "msg": "Price pending: A price update is already pending approval"
+    },
+    {
+      "code": 6043,
+      "name": "NoPendingPrice",
+      "msg": "No pending price: No price update is currently pending"
+    },
+    {
+      "code": 6044,
+      "name": "PriceDeviationTooHigh",
+      "msg": "Price deviation too high: Price change exceeds maximum allowed deviation"
+    },
+    {
+      "code": 6045,
+      "name": "PriceCooldownNotExpired",
+      "msg": "Price cooldown not expired: Cannot accept price before cooldown period"
+    },
+    {
+      "code": 6046,
+      "name": "PriceUpdateTooFrequent",
+      "msg": "Price update too frequent: Must wait for deviation cooldown before next update"
+    },
+    {
+      "code": 6047,
+      "name": "InvalidDeviationThreshold",
+      "msg": "Invalid deviation threshold: Deviation threshold is invalid"
+    },
+    {
+      "code": 6048,
+      "name": "InvalidWithdrawalIndex",
+      "msg": "Invalid withdrawal index: Withdrawal request index not found"
+    },
+    {
+      "code": 6049,
+      "name": "WithdrawalAlreadyFulfilled",
+      "msg": "Withdrawal already fulfilled: Cannot cancel already fulfilled withdrawal"
+    },
+    {
+      "code": 6050,
+      "name": "WithdrawalAlreadyCancelled",
+      "msg": "Withdrawal already cancelled: Withdrawal request was already cancelled"
+    },
+    {
+      "code": 6051,
+      "name": "InvalidWithdrawalRequestStatus",
+      "msg": "Invalid withdrawal request status: Operation not allowed for current request status"
+    },
+    {
+      "code": 6052,
+      "name": "WithdrawalQueueEmpty",
+      "msg": "Withdrawal queue empty: No withdrawal requests pending"
+    },
+    {
+      "code": 6053,
+      "name": "InvalidBatchSize",
+      "msg": "Invalid batch size: Batch size must be greater than zero"
+    },
+    {
+      "code": 6054,
+      "name": "NoUnexpectedDeposits",
+      "msg": "No unexpected deposits: No unexpected deposits available to withdraw"
+    },
+    {
+      "code": 6055,
+      "name": "UnexpectedDepositsCooldown",
+      "msg": "Unexpected deposits cooldown: Cannot withdraw unexpected deposits before cooldown"
+    },
+    {
+      "code": 6056,
+      "name": "VaultPaused",
+      "msg": "Vault paused: Vault is currently paused, only emergency operations allowed"
+    },
+    {
+      "code": 6057,
+      "name": "VaultNotPaused",
+      "msg": "Vault not paused: Vault is not currently paused"
+    },
+    {
+      "code": 6058,
+      "name": "EmergencyOnly",
+      "msg": "Emergency only: Only emergency withdrawals are allowed when paused"
+    },
+    {
+      "code": 6059,
+      "name": "ConfigChangePending",
+      "msg": "Config change pending: Configuration change is pending cooldown"
+    },
+    {
+      "code": 6060,
+      "name": "ConfigCooldownNotExpired",
+      "msg": "Config cooldown not expired: Cannot apply configuration change before cooldown"
+    },
+    {
+      "code": 6061,
+      "name": "NoConfigChangesPending",
+      "msg": "No config changes pending: No configuration changes are pending"
+    },
+    {
+      "code": 6062,
+      "name": "NoConfigChanges",
+      "msg": "No config changes: No configuration changes provided"
+    },
+    {
+      "code": 6063,
+      "name": "TooManyPendingChanges",
+      "msg": "Too many pending changes: Maximum number of pending configuration changes exceeded"
+    },
+    {
+      "code": 6064,
+      "name": "InvalidConfigChange",
+      "msg": "Invalid config change: Configuration change value is invalid"
+    },
+    {
+      "code": 6065,
+      "name": "InvalidWithdrawalRequest",
+      "msg": "Invalid withdrawal request: Withdrawal request does not belong to this vault"
+    },
+    {
+      "code": 6066,
+      "name": "InvalidUserTokenAccount",
+      "msg": "Invalid user token account: Token account does not belong to the withdrawal request user"
+    },
+    {
+      "code": 6067,
+      "name": "InsufficientVaultFunds",
+      "msg": "Insufficient vault funds: Not enough funds in vault to fulfill withdrawal requests"
+    },
+    {
+      "code": 6068,
+      "name": "EmergencyWithdrawalTimelockActive",
+      "msg": "Emergency withdrawal timelock active: Cannot withdraw before timelock expires"
+    },
+    {
+      "code": 6069,
+      "name": "EmergencyWithdrawalTokenMismatch",
+      "msg": "Emergency withdrawal token mint mismatch"
+    },
+    {
+      "code": 6070,
+      "name": "EmergencyWithdrawalAmountMismatch",
+      "msg": "Emergency withdrawal amount mismatch"
+    },
+    {
+      "code": 6071,
+      "name": "RoleChangeTimelockActive",
+      "msg": "Role change timelock active: Cannot change roles before timelock expires"
+    },
+    {
+      "code": 6072,
+      "name": "InvalidRole",
+      "msg": "Invalid role: Role address cannot be zero"
+    },
+    {
+      "code": 6073,
+      "name": "NoPendingRolesChange",
+      "msg": "No pending roles change: No roles change is currently pending"
+    },
+    {
+      "code": 6074,
+      "name": "NoRoleChangeProvided",
+      "msg": "No role change provided: At least one role change must be specified"
+    },
+    {
+      "code": 6075,
+      "name": "RoleNotPending",
+      "msg": "Role not pending: No proposal exists for the requested role"
+    },
+    {
+      "code": 6076,
+      "name": "NotProposedHolder",
+      "msg": "Not proposed holder: Caller is not the address proposed for this role"
+    },
+    {
+      "code": 6077,
+      "name": "FeeChangeTimelockActive",
+      "msg": "Fee change timelock is still active"
+    },
+    {
+      "code": 6078,
+      "name": "NoPendingFeesChange",
+      "msg": "No pending fee changes to accept"
+    },
+    {
+      "code": 6079,
+      "name": "NoFeeChanges",
+      "msg": "No fee changes specified"
+    },
+    {
+      "code": 6080,
+      "name": "LimitsChangeTimelockActive",
+      "msg": "Limits change timelock is still active"
+    },
+    {
+      "code": 6081,
+      "name": "NoPendingLimitsChange",
+      "msg": "No pending limits changes to accept"
+    },
+    {
+      "code": 6082,
+      "name": "NoLimitsChanges",
+      "msg": "No limits changes specified"
+    },
+    {
+      "code": 6083,
+      "name": "WhitelistChangeTimelockActive",
+      "msg": "Whitelist change timelock is still active"
+    },
+    {
+      "code": 6084,
+      "name": "NoPendingWhitelistChange",
+      "msg": "No pending whitelist changes to accept"
+    },
+    {
+      "code": 6085,
+      "name": "NoWhitelistChanges",
+      "msg": "No whitelist changes specified"
+    },
+    {
+      "code": 6086,
+      "name": "CooldownChangeTimelockActive",
+      "msg": "Cooldown change timelock is still active"
+    },
+    {
+      "code": 6087,
+      "name": "NoPendingCooldownChange",
+      "msg": "No pending cooldown changes to accept"
+    },
+    {
+      "code": 6088,
+      "name": "NoCooldownChanges",
+      "msg": "No cooldown changes specified"
+    },
+    {
+      "code": 6089,
+      "name": "CooldownUpdateBlockedByPendingChanges",
+      "msg": "Cannot update cooldowns while other changes are pending"
+    },
+    {
+      "code": 6090,
+      "name": "InvalidCooldownDuration",
+      "msg": "Invalid cooldown duration"
+    },
+    {
+      "code": 6091,
+      "name": "InvalidOracleData",
+      "msg": "Invalid oracle data: Oracle data type does not match oracle module"
+    },
+    {
+      "code": 6092,
+      "name": "InvalidRecipient",
+      "msg": "Invalid recipient: Recipient address does not match fee splitter configuration"
+    },
+    {
+      "code": 6093,
+      "name": "InvalidSwapSameVault",
+      "msg": "Invalid swap: Source and destination vaults must be different"
+    },
+    {
+      "code": 6094,
+      "name": "IncompatibleUnderlyingTokens",
+      "msg": "Incompatible vaults: Vaults must use the same underlying token for swapping"
+    },
+    {
+      "code": 6095,
+      "name": "MissingAssetManager",
+      "msg": "Missing asset manager: Both vaults must have asset managers for swapping"
+    },
+    {
+      "code": 6096,
+      "name": "InvalidSwapFee",
+      "msg": "Invalid swap fee: Swap fee exceeds maximum allowed value"
+    },
+    {
+      "code": 6097,
+      "name": "ZeroSwapAmount",
+      "msg": "Zero swap amount: Calculated swap amount is zero"
+    },
+    {
+      "code": 6098,
+      "name": "SwapAmountTooSmall",
+      "msg": "Swap amount too small: Amount too small to generate meaningful destination tokens"
+    },
+    {
+      "code": 6099,
+      "name": "UnderlyingMintMismatch",
+      "msg": "Underlying mint mismatch: Vaults must share the same underlying token"
+    },
+    {
+      "code": 6100,
+      "name": "VaultsMustHaveAssetManagers",
+      "msg": "Vaults must have asset managers for direct swaps"
+    },
+    {
+      "code": 6101,
+      "name": "AssetManagerMismatch",
+      "msg": "Asset manager mismatch: Both vaults must have the same asset manager for swapping"
+    },
+    {
+      "code": 6102,
+      "name": "VaultSunset",
+      "msg": "Vault sunset: deposits and inbound swaps are disabled"
+    },
+    {
+      "code": 6103,
+      "name": "IncompatibleSwapPolicy",
+      "msg": "Swap policy mismatch: vault staleness/deviation policies are incompatible"
+    },
+    {
+      "code": 6104,
+      "name": "DestinationNotAllowlisted",
+      "msg": "Destination vault is not allowlisted for swaps"
+    },
+    {
+      "code": 6105,
+      "name": "MigrationInProgress",
+      "msg": "Asset manager migration is already in progress"
+    },
+    {
+      "code": 6106,
+      "name": "MinimumCannotIncrease",
+      "msg": "Minimum cannot increase: New minimum amount cannot be higher than current minimum"
+    },
+    {
+      "code": 6107,
+      "name": "InsufficientLiquidity",
+      "msg": "Insufficient liquidity: Asset manager does not have enough liquidity to fulfill withdrawal"
+    },
+    {
+      "code": 6108,
+      "name": "PriceDropExceedsDownsideCap",
+      "msg": "Price drop exceeds downside cap: Price decrease is beyond configured tolerance"
+    },
+    {
+      "code": 6109,
+      "name": "WithdrawalTtlNotExpired",
+      "msg": "Withdrawal TTL not expired: Cannot cancel withdrawal request before time-to-live expires"
+    },
+    {
+      "code": 6110,
+      "name": "InvalidWithdrawalMinimum",
+      "msg": "Invalid withdrawal minimum: Minimum amount out cannot be greater than theoretical amount"
+    },
+    {
+      "code": 6111,
+      "name": "BotCancellationForbidden",
+      "msg": "Bot cancellation forbidden: Only users can cancel their own withdrawal requests before TTL"
+    },
+    {
+      "code": 6112,
+      "name": "WithdrawalAmountTooLow",
+      "msg": "Withdrawal amount too low"
+    },
+    {
+      "code": 6113,
+      "name": "MinimumTooHigh",
+      "msg": "Minimum amount out too high relative to downside tolerance"
+    },
+    {
+      "code": 6114,
+      "name": "TokenDecimalMismatch",
+      "msg": "Token decimal mismatch: Source and destination tokens must have the same decimal count"
+    },
+    {
+      "code": 6115,
+      "name": "AdminChangeTimelockActive",
+      "msg": "Admin change timelock is still active"
+    },
+    {
+      "code": 6116,
+      "name": "NoPendingAdminChange",
+      "msg": "No pending admin change to accept"
+    },
+    {
+      "code": 6117,
+      "name": "AdminChangeCooldownNotExpired",
+      "msg": "Admin change cooldown not expired: Cannot accept admin change before cooldown"
+    },
+    {
+      "code": 6118,
+      "name": "AdminCooldownChangePending",
+      "msg": "Admin cooldown change pending: A cooldown change is already pending"
+    },
+    {
+      "code": 6119,
+      "name": "NoPendingAdminCooldownChange",
+      "msg": "No pending admin cooldown change: No admin cooldown change is currently pending"
+    },
+    {
+      "code": 6120,
+      "name": "AdminCooldownChangeTimelockActive",
+      "msg": "Admin cooldown change timelock active: Cannot accept cooldown change before timelock expires"
+    },
+    {
+      "code": 6121,
+      "name": "InvalidProgramData",
+      "msg": "Invalid program data: Program data account does not match expected address"
+    }
+  ],
+  "types": [
+    {
+      "name": "AllowedSwapVault",
+      "docs": [
+        "Manager-approved swap pair from source vault to destination vault.",
+        "PDA seeds: [ALLOWED_SWAP_VAULT_SEED, source_vault, destination_vault]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "docs": [
+        "Global configuration for S-Token vaults"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "next_vault_index",
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin",
+            "docs": [
+              "Pending admin change awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdmin"
+                }
+              }
+            }
+          },
+          {
+            "name": "admin_change_cooldown_secs",
+            "docs": [
+              "Admin change cooldown period in seconds (default 48 hours)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin_change_cooldown",
+            "docs": [
+              "Pending admin change cooldown awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdminChangeCooldown"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdmin",
+      "docs": [
+        "Pending admin change waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdminChangeCooldown",
+      "docs": [
+        "Pending admin change cooldown waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingCooldowns",
+      "docs": [
+        "Pending cooldown changes waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_price_update_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_price_acceptance_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_config_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_emergency_withdrawal_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_role_change_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_fee_change_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_price_staleness_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingFees",
+      "docs": [
+        "Pending fee changes waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_deposit_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_withdraw_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_management_fee_bps_per_year",
+            "type": "u16"
+          },
+          {
+            "name": "new_swap_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingLimits",
+      "docs": [
+        "Pending limits changes waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_max_total_shares",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_shares_per_user",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_total_idle",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_deviation_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "new_min_shares_to_mint",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingPrice",
+      "docs": [
+        "Pending price update waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingRoles",
+      "docs": [
+        "Pending roles change waiting for per-role incoming-holder claims"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_manager",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_processor",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_accountant",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_oracle",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_asset_manager",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_guardian",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingSunset",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "eligible_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingWhitelist",
+      "docs": [
+        "Pending whitelist changes waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_deposit_enabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "new_withdrawal_enabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingWithdrawalParams",
+      "docs": [
+        "Pending withdrawal parameter changes waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_downside_cap_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "new_withdrawal_ttl_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_system_penalty_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoleKind",
+      "docs": [
+        "Vault role kind for per-role claim (`accept_role_assignment`)"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Manager"
+          },
+          {
+            "name": "Processor"
+          },
+          {
+            "name": "Accountant"
+          },
+          {
+            "name": "Oracle"
+          },
+          {
+            "name": "AssetManager"
+          },
+          {
+            "name": "Guardian"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAddressAddedToDepositWhitelist",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAddressAddedToWithdrawalWhitelist",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAddressRemovedFromDepositWhitelist",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAddressRemovedFromWithdrawalWhitelist",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminChangeCancelled",
+      "docs": [
+        "Event emitted when a pending admin change is cancelled"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminChangePending",
+      "docs": [
+        "Event emitted when an admin change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminCooldownChangeCancelled",
+      "docs": [
+        "Event emitted when admin cooldown change is cancelled"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminCooldownChangePending",
+      "docs": [
+        "Event emitted when admin cooldown change is proposed"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "old_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminCooldownUpdated",
+      "docs": [
+        "Event emitted when admin cooldown is updated"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenConfigChangeApplied",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "change_type",
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenConfigChangeProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "change_type",
+            "type": "string"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenCooldownsChangePending",
+      "docs": [
+        "Event emitted when cooldowns are proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_price_update_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_price_acceptance_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_config_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_emergency_withdrawal_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_role_change_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_fee_change_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_price_staleness_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenCooldownsUpdated",
+      "docs": [
+        "Event emitted when cooldowns are updated"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "price_update_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "price_acceptance_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "config_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "emergency_withdrawal_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "role_change_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "fee_change_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "max_price_staleness_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenDeposit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_underlying",
+            "type": "u64"
+          },
+          {
+            "name": "user_shares",
+            "type": "u64"
+          },
+          {
+            "name": "fee_shares",
+            "type": "u64"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenDepositsProcessed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_transferred",
+            "type": "u64"
+          },
+          {
+            "name": "vault_balance_before",
+            "type": "u64"
+          },
+          {
+            "name": "vault_balance_after",
+            "type": "u64"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenEmergencyWithdraw",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "shares_in_custody",
+            "type": "u64"
+          },
+          {
+            "name": "total_idle",
+            "type": "u64"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenEmergencyWithdrawTimelockActivated",
+      "docs": [
+        "Event emitted when emergency withdrawal timelock is activated"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "timelock_end_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "cooldown_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenFeesChangePending",
+      "docs": [
+        "Event emitted when a fee change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_deposit_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_withdraw_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_management_fee_bps_per_year",
+            "type": "u16"
+          },
+          {
+            "name": "new_swap_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "old_deposit_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "old_withdraw_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "old_management_fee_bps_per_year",
+            "type": "u16"
+          },
+          {
+            "name": "old_swap_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenFeesUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_deposit_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_deposit_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "old_withdraw_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_withdraw_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "old_management_fee_bps_per_year",
+            "type": "u16"
+          },
+          {
+            "name": "new_management_fee_bps_per_year",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "old_swap_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_swap_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenFundsReturned",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_returned",
+            "type": "u64"
+          },
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenGlobalConfigInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "next_vault_index",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenLimitsChangePending",
+      "docs": [
+        "Event emitted when a limits change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_max_total_shares",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_shares_per_user",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_total_idle",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_max_deviation_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "old_max_total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "old_max_shares_per_user",
+            "type": "u64"
+          },
+          {
+            "name": "old_max_total_idle",
+            "type": "u64"
+          },
+          {
+            "name": "old_max_deviation_bps",
+            "type": "u16"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenLimitsUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_max_total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "new_max_total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "old_max_shares_per_user",
+            "type": "u64"
+          },
+          {
+            "name": "new_max_shares_per_user",
+            "type": "u64"
+          },
+          {
+            "name": "old_max_total_idle",
+            "type": "u64"
+          },
+          {
+            "name": "new_max_total_idle",
+            "type": "u64"
+          },
+          {
+            "name": "old_max_deviation_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_max_deviation_bps",
+            "type": "u16"
+          },
+          {
+            "name": "old_min_shares_to_mint",
+            "type": "u64"
+          },
+          {
+            "name": "new_min_shares_to_mint",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenManagementFeeAccrued",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares_minted",
+            "type": "u64"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "time_elapsed",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenPriceAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_price",
+            "type": "u64"
+          },
+          {
+            "name": "new_price",
+            "type": "u64"
+          },
+          {
+            "name": "acceptor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenPricePending",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_price",
+            "type": "u64"
+          },
+          {
+            "name": "current_price",
+            "type": "u64"
+          },
+          {
+            "name": "deviation_bps",
+            "type": "u16"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenPriceRejected",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "rejected_price",
+            "type": "u64"
+          },
+          {
+            "name": "current_price",
+            "type": "u64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenPriceUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_price",
+            "type": "u64"
+          },
+          {
+            "name": "new_price",
+            "type": "u64"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenRoleAssignmentAccepted",
+      "docs": [
+        "Event emitted when a single pending role is claimed by its incoming holder"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "role",
+            "type": {
+              "defined": {
+                "name": "RoleKind"
+              }
+            }
+          },
+          {
+            "name": "old_holder",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_holder",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenRolesChangeCancelled",
+      "docs": [
+        "Event emitted when the manager cancels a pending roles proposal"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenRolesChangePending",
+      "docs": [
+        "Event emitted when a roles change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_manager",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_processor",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_accountant",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_oracle",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_asset_manager",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "new_guardian",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenSharesMintInitialized",
+      "docs": [
+        "Event emitted when shares mint is initialized (step 2)"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares_bump",
+            "type": "u8"
+          },
+          {
+            "name": "underlying_token",
+            "docs": [
+              "Details of the underlying token"
+            ],
+            "type": {
+              "defined": {
+                "name": "TokenData"
+              }
+            }
+          },
+          {
+            "name": "share_token",
+            "docs": [
+              "Details of the vault's share token"
+            ],
+            "type": {
+              "defined": {
+                "name": "TokenData"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenSunsetAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenSunsetCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenSunsetProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "eligible_at",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenSwapVaultAllowlistCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenSwapVaultAllowlisted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenTokenSwap",
+      "docs": [
+        "Event emitted when tokens are swapped between vaults"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "source_vault",
+            "docs": [
+              "Source vault (tokens burned from)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "destination_vault",
+            "docs": [
+              "Destination vault (tokens minted to)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "docs": [
+              "User performing the swap"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "source_amount_burned",
+            "docs": [
+              "Amount of source tokens burned"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "destination_amount_minted",
+            "docs": [
+              "Amount of destination tokens minted"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "source_price",
+            "docs": [
+              "Price of source token at time of swap"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "destination_price",
+            "docs": [
+              "Price of destination token at time of swap"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "underlying_value",
+            "docs": [
+              "Underlying value transferred (after fee)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "swap_fee_bps",
+            "docs": [
+              "Swap fee in basis points"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "swap_fee_amount",
+            "docs": [
+              "Fee amount collected in underlying tokens"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "fee_shares",
+            "docs": [
+              "Fee shares minted to accountant"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "Timestamp of the swap"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenUnexpectedDeposit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_unexpected",
+            "type": "u64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenUnexpectedDepositWithdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_withdrawn",
+            "type": "u64"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenVaultInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "underlying_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "deposit_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "withdraw_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "management_fee_bps_per_year",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenVaultPaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "docs": [
+              "The authority who paused the vault (manager or guardian)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenVaultUnpaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWhitelistChangePending",
+      "docs": [
+        "Event emitted when a whitelist change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_deposit_enabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "new_withdrawal_enabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "old_deposit_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "old_withdrawal_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWhitelistInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWhitelistToggled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "deposit_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "withdrawal_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWithdrawRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "shares_after_fee",
+            "type": "u64"
+          },
+          {
+            "name": "fee_shares",
+            "type": "u64"
+          },
+          {
+            "name": "amount_due",
+            "type": "u64"
+          },
+          {
+            "name": "min_amount_out",
+            "type": "u64"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWithdrawalCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "shares_refunded",
+            "type": "u64"
+          },
+          {
+            "name": "cancellation_fee_shares",
+            "type": "u64"
+          },
+          {
+            "name": "is_early_cancel",
+            "type": "bool"
+          },
+          {
+            "name": "system_penalty_shares",
+            "type": "u64"
+          },
+          {
+            "name": "cancelled_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWithdrawalFulfilled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "amount_underlying",
+            "type": "u64"
+          },
+          {
+            "name": "shares_burned",
+            "type": "u64"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWithdrawalMinimumUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "old_minimum",
+            "type": "u64"
+          },
+          {
+            "name": "new_minimum",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWithdrawalParamsChangePending",
+      "docs": [
+        "Event emitted when withdrawal params change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_downside_cap_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "new_withdrawal_ttl_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_system_penalty_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "old_downside_cap_bps",
+            "type": "u16"
+          },
+          {
+            "name": "old_withdrawal_ttl_secs",
+            "type": "u64"
+          },
+          {
+            "name": "old_system_penalty_bps",
+            "type": "u16"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenWithdrawalParamsUpdated",
+      "docs": [
+        "Event emitted when withdrawal params are updated"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_downside_cap_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_downside_cap_bps",
+            "type": "u16"
+          },
+          {
+            "name": "old_withdrawal_ttl_secs",
+            "type": "u64"
+          },
+          {
+            "name": "new_withdrawal_ttl_secs",
+            "type": "u64"
+          },
+          {
+            "name": "old_system_penalty_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_system_penalty_bps",
+            "type": "u16"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SharesConfig",
+      "docs": [
+        "Configuration parameters for the shares mint.",
+        "",
+        "Specifies metadata fields and decimals for the share token."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "type": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenData",
+      "docs": [
+        "Comprehensive token information used throughout events.",
+        "Combines the mint, token account, decimals and human-readable metadata."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "docs": [
+              "Token mint address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "docs": [
+              "Token decimal precision"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "metadata",
+            "docs": [
+              "Human-readable name and symbol"
+            ],
+            "type": {
+              "defined": {
+                "name": "TokenMetaData"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenMetaData",
+      "docs": [
+        "Token metadata containing human-readable name and symbol.",
+        "Used in event logs to provide better context for token references."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "docs": [
+              "Human-readable token name"
+            ],
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "docs": [
+              "Token symbol (e.g., \"BTC\", \"USDC\")"
+            ],
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Shares"
+          },
+          {
+            "name": "Underlying"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserDepositWhitelist",
+      "docs": [
+        "User deposit whitelist PDA - one per user per vault",
+        "PDA seeds: [USER_DEPOSIT_WHITELIST_SEED, vault_pubkey, user_pubkey]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserWithdrawalWhitelist",
+      "docs": [
+        "User withdrawal whitelist PDA - one per user per vault",
+        "PDA seeds: [USER_WITHDRAWAL_WHITELIST_SEED, vault_pubkey, user_pubkey]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultAtaInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_type",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultConfig",
+      "docs": [
+        "The main vault state that manages user deposits, withdrawals, and management fees.",
+        "",
+        "This struct represents an S-Token vault that:",
+        "- Accepts deposits in an underlying token",
+        "- Issues shares representing vault ownership",
+        "- Manages fees and profit distribution",
+        "- Enforces access controls and limits"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "shares_bump",
+            "type": "u8"
+          },
+          {
+            "name": "index_buffer",
+            "type": {
+              "array": [
+                "u8",
+                8
+              ]
+            }
+          },
+          {
+            "name": "key",
+            "type": "pubkey"
+          },
+          {
+            "name": "underlying_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          },
+          {
+            "name": "deposit_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "withdraw_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "management_fee_bps_per_year",
+            "type": "u16"
+          },
+          {
+            "name": "swap_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "last_mgmt_fee_ts",
+            "type": "i64"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "total_idle",
+            "type": "u64"
+          },
+          {
+            "name": "total_withdrawals_pending",
+            "type": "u64"
+          },
+          {
+            "name": "shares_in_custody",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "max_total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "max_shares_per_user",
+            "type": "u64"
+          },
+          {
+            "name": "max_total_idle",
+            "type": "u64"
+          },
+          {
+            "name": "min_shares_to_mint",
+            "type": "u64"
+          },
+          {
+            "name": "pending_price",
+            "docs": [
+              "Pending price update awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingPrice"
+                }
+              }
+            }
+          },
+          {
+            "name": "max_deviation_bps",
+            "docs": [
+              "Maximum allowed price deviation in basis points before manual approval required"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "last_price_update_timestamp",
+            "docs": [
+              "Last price update timestamp for deviation cooldown"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "price_update_cooldown_secs",
+            "docs": [
+              "Cooldown period between price updates for deviation checking"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "price_acceptance_cooldown_secs",
+            "docs": [
+              "Cooldown period in seconds after which anyone can accept pending price"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "next_withdrawal_id",
+            "docs": [
+              "Storage for withdrawal sequence counter"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "downside_cap_bps",
+            "docs": [
+              "Withdrawal lifecycle parameters",
+              "Maximum negative slippage bot may absorb (in basis points)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "withdrawal_ttl_secs",
+            "docs": [
+              "Time-to-live after which request can be cancelled fee-free (in seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "system_penalty_bps",
+            "docs": [
+              "Extra shares minted to user when cancel happens after TTL (in basis points)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "pending_withdrawal_params",
+            "docs": [
+              "Pending withdrawal parameter changes awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingWithdrawalParams"
+                }
+              }
+            }
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "Vault pause state"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "emergency_withdrawal_timelock_end",
+            "docs": [
+              "Emergency withdrawal timelock end timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "emergency_withdrawal_cooldown_secs",
+            "docs": [
+              "Emergency withdrawal cooldown period in seconds (default 24 hours)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "emergency_withdrawal_token_mint",
+            "docs": [
+              "Pending emergency withdrawal request token mint (None if no active request)"
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "emergency_withdrawal_amount",
+            "docs": [
+              "Pending emergency withdrawal request amount (0 if no active request)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "role_change_cooldown_secs",
+            "docs": [
+              "Role change cooldown period in seconds (default 48 hours)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "config_cooldown_secs",
+            "docs": [
+              "Default cooldown period for configuration changes in seconds"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_roles",
+            "docs": [
+              "Pending roles change awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingRoles"
+                }
+              }
+            }
+          },
+          {
+            "name": "fee_change_cooldown_secs",
+            "docs": [
+              "Fee change cooldown period in seconds (default 24 hours)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_fees",
+            "docs": [
+              "Pending fee changes awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingFees"
+                }
+              }
+            }
+          },
+          {
+            "name": "pending_limits",
+            "docs": [
+              "Pending limits changes awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingLimits"
+                }
+              }
+            }
+          },
+          {
+            "name": "pending_whitelist",
+            "docs": [
+              "Pending whitelist changes awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingWhitelist"
+                }
+              }
+            }
+          },
+          {
+            "name": "pending_cooldowns",
+            "docs": [
+              "Pending cooldown changes awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingCooldowns"
+                }
+              }
+            }
+          },
+          {
+            "name": "deposit_whitelist_enabled",
+            "docs": [
+              "Deposit whitelist enabled flag"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "withdrawal_whitelist_enabled",
+            "docs": [
+              "Withdrawal whitelist enabled flag"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "schema_version",
+            "docs": [
+              "Schema version for explicit account migrations."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "paused_at",
+            "docs": [
+              "Fee accrual cutoff recorded when emergency pause begins."
+            ],
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "max_price_staleness_secs",
+            "docs": [
+              "Maximum age of a price used by priced user operations."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "migrating_asset_manager",
+            "docs": [
+              "Previous asset manager allowed only to return funds during migration."
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "is_sunset",
+            "docs": [
+              "Permanent deposit/inbound-swap shutdown flag."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "pending_sunset",
+            "docs": [
+              "Timelocked pending sunset transition."
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingSunset"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultInitConfig",
+      "docs": [
+        "Configuration parameters for initializing a Vault.",
+        "",
+        "Defines deposit and withdrawal limits, fee settings, and access controls."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "oracle",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          },
+          {
+            "name": "deposit_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "withdraw_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "management_fee_bps_per_year",
+            "type": "u16"
+          },
+          {
+            "name": "swap_fee_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "max_total_shares",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "max_shares_per_user",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "max_total_idle",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "min_shares_to_mint",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "max_deviation_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "price_update_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "price_acceptance_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "config_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "emergency_withdrawal_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "role_change_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "fee_change_cooldown_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "initial_price",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "deposit_whitelist_enabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "withdrawal_whitelist_enabled",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "downside_cap_bps",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "withdrawal_ttl_secs",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "system_penalty_bps",
+            "type": {
+              "option": "u16"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawalRequest",
+      "docs": [
+        "Withdrawal request state - stored as individual accounts"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "shares",
+            "type": "u64"
+          },
+          {
+            "name": "amount_due",
+            "type": "u64"
+          },
+          {
+            "name": "min_amount_out",
+            "type": "u64"
+          },
+          {
+            "name": "fee_shares",
+            "type": "u64"
+          },
+          {
+            "name": "price_at_request",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "WithdrawalRequestStatus"
+              }
+            }
+          },
+          {
+            "name": "processed_at",
+            "type": {
+              "option": "i64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawalRequestStatus",
+      "docs": [
+        "Withdrawal request status"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Fulfilled"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    }
+  ]
+}

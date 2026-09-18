@@ -1,0 +1,20 @@
+{
+  "name": "@composable-portfolios/chain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The part of the weavr backend's chain package the curator signer uses: program ids from the manifest, IDL decoding, the RPC connection. Six files mirrored byte for byte from the backend plus subset.js; README.md names the gate",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./metrics": "./src/metrics.js"
+  },
+  "scripts": {
+    "build": "node --check src/chain.js && node --check src/confirm.js && node --check src/rateLimit.js && node --check src/metrics.js && node --check src/prometheus.js && node --check src/spl.js && node --check src/subset.js && node --check src/index.js",
+    "test": "node --test 'test/*.test.js'"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/web3.js": "^1.98.4"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "weavr-curator-signer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The weavr curator signer: the process that holds a curator key and refuses under a policy document. Built and published from here as intothefathom/curator-public.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm test --workspaces",
+    "start": "node packages/curator/bin/start.mjs"
+  },
+  "overrides": {
+    "rpc-websockets": {
+      "uuid": "^9.0.1"
+    }
+  }
+}

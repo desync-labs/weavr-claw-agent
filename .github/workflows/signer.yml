@@ -1,0 +1,115 @@
+# The curator signer: tests on every pull request that touches signer/, and
+# on a push to main the image is built from signer/ and pushed to the public
+# Docker Hub repository intothefathom/curator-public with three tags:
+#
+#   <version>   signer/package.json "version"; refused if the tag already
+#               exists, so a change to the signer that reaches main must
+#               bump the version (curator/compose/curator.yml pins this tag)
+#   sha-<short> the commit built
+#   latest      the newest build; pin the version tag on a real host
+#
+# Two repository secrets, the same names the backend's workflow uses:
+# DOCKER_USERNAME and DOCKER_PASSWORD (a Docker Hub access token with write
+# on the repository). Nothing else here is secret.
+name: signer
+
+on:
+  pull_request:
+    paths:
+      - 'signer/**'
+      - '.github/workflows/signer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'signer/**'
+      - '.github/workflows/signer.yml'
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: intothefathom/curator-public
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: signer
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: signer/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+      # The image must build and its layout must resolve: importing the
+      # signer's index inside the container reads the manifest and an IDL.
+      - name: Build the image and import the signer inside it
+        run: |
+          docker build -t curator-public:ci .
+          docker run --rm curator-public:ci node -e "import('/app/packages/curator/src/index.js').then((m) => { if (typeof m.boot !== 'function') throw new Error('no boot'); console.log('signer resolves'); })"
+
+  publish:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the version
+        id: version
+        run: echo "value=$(node -p "require('./signer/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Refuse to overwrite a published version
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if docker manifest inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
+            echo "::error::$IMAGE:$VERSION is already published; bump the version in signer/package.json"
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.value }}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: signer
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Image summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            echo "## Signer image published"
+            echo
+            echo "$TAGS" | sed 's/^/- `/; s/$/`/'
+          } >> "$GITHUB_STEP_SUMMARY"

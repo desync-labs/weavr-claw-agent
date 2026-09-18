@@ -1,0 +1,6735 @@
+{
+  "address": "2CwNQT3gDQ3c3iZCpofKGnC81FMwRAzbKHDEQZ3WQhjq",
+  "metadata": {
+    "name": "asset_manager_escrow",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Unified Cross-Chain Asset Manager for S-Token vaults"
+  },
+  "instructions": [
+    {
+      "name": "accept_adapter",
+      "docs": [
+        "Accept a Pending AdapterBinding after the cooldown has elapsed.",
+        "Flips to Active and increments the registry count."
+      ],
+      "discriminator": [
+        187,
+        235,
+        112,
+        65,
+        161,
+        16,
+        76,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "adapter_registry",
+          "writable": true
+        },
+        {
+          "name": "adapter_binding",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_adapter_cooldown",
+      "docs": [
+        "Accept a pending `adapter_change_cooldown` update after the current",
+        "adapter cooldown has elapsed (manager-gated)."
+      ],
+      "discriminator": [
+        14,
+        104,
+        163,
+        246,
+        215,
+        168,
+        60,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_authority",
+      "docs": [
+        "Accept a pending authority transfer after the cooldown period has elapsed.",
+        "Must be signed by the proposed new authority."
+      ],
+      "discriminator": [
+        107,
+        86,
+        198,
+        91,
+        33,
+        12,
+        107,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "new_authority",
+          "docs": [
+            "New authority (must sign to prove they control the address)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_limits",
+      "docs": [
+        "Accept pending limits after the cooldown period has elapsed."
+      ],
+      "discriminator": [
+        153,
+        120,
+        229,
+        237,
+        123,
+        28,
+        73,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_manager",
+      "docs": [
+        "Accept a pending manager transfer after the cooldown period has elapsed.",
+        "Must be signed by the proposed new manager."
+      ],
+      "discriminator": [
+        212,
+        23,
+        254,
+        58,
+        51,
+        238,
+        232,
+        67
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "new_manager",
+          "docs": [
+            "New manager (must sign to prove they control the address)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_processor",
+      "docs": [
+        "Accept a pending processor transfer after the cooldown period has elapsed.",
+        "Must be signed by the proposed new processor."
+      ],
+      "discriminator": [
+        136,
+        102,
+        185,
+        159,
+        149,
+        111,
+        101,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "new_processor",
+          "docs": [
+            "New processor (must sign to prove they control the address)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_proxy",
+      "docs": [
+        "Accept a pending proxy asset manager change after the cooldown period",
+        "has elapsed. Can only be called by the manager."
+      ],
+      "discriminator": [
+        144,
+        202,
+        93,
+        118,
+        39,
+        174,
+        232,
+        144
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_vault_role",
+      "docs": [
+        "Consent to holding a vault role (CPI to stoken accept_role_assignment)"
+      ],
+      "discriminator": [
+        47,
+        35,
+        8,
+        240,
+        19,
+        127,
+        167,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "Escrow manager (must sign)"
+          ],
+          "signer": true
+        },
+        {
+          "name": "vault_config",
+          "docs": [
+            "Vault config that proposed this escrow PDA for a role"
+          ],
+          "writable": true
+        },
+        {
+          "name": "stoken_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "role",
+          "type": {
+            "defined": {
+              "name": "RoleKind"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "add_destination",
+      "docs": [
+        "Add an authorized CCTP destination."
+      ],
+      "discriminator": [
+        183,
+        152,
+        13,
+        93,
+        44,
+        178,
+        140,
+        243
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "domain",
+          "type": "u32"
+        },
+        {
+          "name": "recipient",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel_adapter",
+      "docs": [
+        "Cancel a Pending AdapterBinding before accept (closes the PDA).",
+        "Cannot be used on Active bindings."
+      ],
+      "discriminator": [
+        33,
+        246,
+        147,
+        34,
+        249,
+        9,
+        121,
+        107
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "adapter_binding",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "Manager — authorizes the cancel and receives the reclaimed rent."
+          ],
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_adapter",
+      "docs": [
+        "Close an Active-but-disabled AdapterBinding (frees the registry slot).",
+        "Decrements the registry count and closes the PDA. The binding must be",
+        "disabled first (`active=false`) so funds are not mid-flight."
+      ],
+      "discriminator": [
+        63,
+        81,
+        230,
+        43,
+        122,
+        14,
+        96,
+        155
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "adapter_registry",
+          "writable": true
+        },
+        {
+          "name": "adapter_binding",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "disable_adapter",
+      "docs": [
+        "Disable an Active AdapterBinding without unbinding (active=false).",
+        "Cannot be used on Pending bindings."
+      ],
+      "discriminator": [
+        4,
+        58,
+        44,
+        100,
+        50,
+        56,
+        231,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "adapter_binding",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "emergency_cctp_receive",
+      "docs": [
+        "Emergency CCTP receive - force-complete a stuck CCTP transfer.",
+        "Allows receiving CCTP transfers even when paused (manager only)."
+      ],
+      "discriminator": [
+        230,
+        234,
+        141,
+        106,
+        145,
+        158,
+        31,
+        79
+      ],
+      "accounts": [
+        {
+          "name": "manager",
+          "docs": [
+            "Manager authorizes emergency CCTP receive (not processor)"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Payer for the MessageMarker account creation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "message_marker",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "usdc_custody",
+          "writable": true
+        },
+        {
+          "name": "message_transmitter_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "EmergencyCctpReceiveArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "emergency_sweep",
+      "docs": [
+        "Emergency sweep tokens from a paused asset manager.",
+        "Requires asset manager to be paused and cooldown period elapsed."
+      ],
+      "discriminator": [
+        172,
+        124,
+        148,
+        179,
+        216,
+        193,
+        206,
+        41
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "from_token_account",
+          "docs": [
+            "Source token account (asset manager's custody account)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "to_token_account",
+          "docs": [
+            "Destination token account (must be the vault's ATA for this mint)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "proxy_asset_manager",
+          "docs": [
+            "Parent proxy asset manager (vault's registered asset_manager)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "target_asset_manager",
+          "docs": [
+            "Target whitelist entry on the proxy for this escrow instance."
+          ]
+        },
+        {
+          "name": "proxy_token_account",
+          "docs": [
+            "Proxy custody account (intermediate hop before stoken::return_funds)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "proxy_config",
+          "docs": [
+            "Proxy program config (stoken_program_id)."
+          ]
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "stoken_program"
+        },
+        {
+          "name": "proxy_program"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "enable_adapter",
+      "docs": [
+        "Re-enable an Active-but-disabled AdapterBinding."
+      ],
+      "discriminator": [
+        233,
+        246,
+        201,
+        164,
+        192,
+        181,
+        194,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "adapter_binding",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "execute_kamino_deposit",
+      "docs": [
+        "Deposit USDC (or SOL) from escrow custody into a Kamino Earn vault.",
+        "Shares return to the escrow ATA. Remaining accounts are the kvault CPI."
+      ],
+      "discriminator": [
+        132,
+        17,
+        170,
+        225,
+        151,
+        67,
+        77,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "input_mint"
+        },
+        {
+          "name": "output_mint"
+        },
+        {
+          "name": "input_token_account",
+          "writable": true
+        },
+        {
+          "name": "output_token_account",
+          "writable": true
+        },
+        {
+          "name": "kamino_program"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ExecuteKaminoDepositArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute_kamino_withdraw",
+      "docs": [
+        "Redeem Kamino Earn shares from escrow custody back to the underlying."
+      ],
+      "discriminator": [
+        248,
+        91,
+        83,
+        164,
+        111,
+        99,
+        108,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "input_mint"
+        },
+        {
+          "name": "output_mint"
+        },
+        {
+          "name": "input_token_account",
+          "writable": true
+        },
+        {
+          "name": "output_token_account",
+          "writable": true
+        },
+        {
+          "name": "kamino_program"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ExecuteKaminoWithdrawArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute_native_claim",
+      "docs": [
+        "Execute a native claim via a bound pending-withdraw adapter",
+        "(processor only). Drains settled USDC into ESCROW custody and consumes",
+        "limits against the received amount."
+      ],
+      "discriminator": [
+        57,
+        244,
+        27,
+        24,
+        199,
+        93,
+        228,
+        77
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "Globally paused blocks claim outright (no drain bypass at global level)."
+          ]
+        },
+        {
+          "name": "asset_manager",
+          "docs": [
+            "AssetManager — note: per-binding `active=false` is OK (drain), and",
+            "`asset_manager.paused == true` is OK (drain). Only `force_paused` by",
+            "the authority blocks claim."
+          ],
+          "writable": true
+        },
+        {
+          "name": "adapter_binding",
+          "docs": [
+            "Bound adapter. Must be in Active status. `active=false` is allowed",
+            "(drain path). Must support pending withdrawals — claim is meaningless",
+            "for instant adapters."
+          ]
+        },
+        {
+          "name": "adapter_program",
+          "docs": [
+            "Adapter program (validated against binding)."
+          ]
+        },
+        {
+          "name": "adapter_instance",
+          "docs": [
+            "Adapter instance PDA. Must match binding."
+          ],
+          "writable": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "USDC mint (ESCROW underlying)."
+          ]
+        },
+        {
+          "name": "escrow_usdc_custody",
+          "docs": [
+            "ESCROW USDC custody — claim sweeps into this account; we snapshot",
+            "before/after."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ExecuteNativeClaimArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute_native_deposit",
+      "docs": [
+        "Execute a native deposit via a bound adapter (processor only).",
+        "Pre-transfers USDC custody to the adapter, then CPIs `adapter_deposit`."
+      ],
+      "discriminator": [
+        170,
+        35,
+        181,
+        230,
+        172,
+        58,
+        77,
+        51
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "Global config — read for pause state."
+          ]
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "adapter_binding",
+          "docs": [
+            "Bound adapter. Must be Active AND active=true."
+          ]
+        },
+        {
+          "name": "adapter_program",
+          "docs": [
+            "Adapter program (validated against binding)."
+          ]
+        },
+        {
+          "name": "adapter_instance",
+          "docs": [
+            "Adapter instance PDA. Must match binding."
+          ],
+          "writable": true
+        },
+        {
+          "name": "adapter_config",
+          "docs": [
+            "Adapter's HumaConfig (or equivalent)."
+          ]
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "USDC mint (ESCROW underlying)."
+          ]
+        },
+        {
+          "name": "source_usdc_custody",
+          "docs": [
+            "ESCROW USDC custody (source of pre-CPI transfer)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "adapter_usdc_custody",
+          "docs": [
+            "Adapter-side USDC custody (destination of pre-CPI transfer). The mint is",
+            "checked here; the handler additionally binds this to the bound instance's",
+            "custody PDA (`[TOKEN_CUSTODY_SEED, adapter_instance, underlying_mint]`",
+            "under `adapter_program`) so it equals the exact account the adapter",
+            "consumes as the Huma deposit source."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ExecuteNativeDepositArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute_native_withdraw",
+      "docs": [
+        "Execute a native withdraw via a bound adapter (processor only).",
+        "Pending-style adapters do not consume limits here; instant adapters",
+        "consume limits against the received USDC delta."
+      ],
+      "discriminator": [
+        194,
+        29,
+        109,
+        160,
+        12,
+        177,
+        149,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "adapter_binding"
+        },
+        {
+          "name": "adapter_program",
+          "docs": [
+            "Adapter program (validated against binding)."
+          ]
+        },
+        {
+          "name": "adapter_instance",
+          "docs": [
+            "Adapter instance PDA. Must match binding."
+          ],
+          "writable": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "USDC mint (ESCROW underlying)."
+          ]
+        },
+        {
+          "name": "escrow_usdc_custody",
+          "docs": [
+            "ESCROW USDC custody — used only for snapshotting the instant-redeem",
+            "branch. Validated PDA but only read here."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ExecuteNativeWithdrawArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute_swap_jupiter",
+      "docs": [
+        "Execute a swap via Jupiter aggregator (processor only).",
+        "Jupiter v6 supports CPI from other programs. The route_data is obtained",
+        "off-chain from Jupiter's Quote API and executed on-chain."
+      ],
+      "discriminator": [
+        214,
+        87,
+        81,
+        184,
+        181,
+        250,
+        229,
+        118
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "docs": [
+            "Processor executes the swap"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "input_mint",
+          "docs": [
+            "Input token mint (SPL Token or Token-2022 via TokenInterface)."
+          ]
+        },
+        {
+          "name": "output_mint",
+          "docs": [
+            "Output token mint"
+          ]
+        },
+        {
+          "name": "input_token_account",
+          "docs": [
+            "Asset manager's input token account (source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "output_token_account",
+          "docs": [
+            "Asset manager's output token account (destination)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "jupiter_program",
+          "docs": [
+            "Jupiter v6 program"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Classic SPL or Token-2022 — Jupiter routes name the program they need."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ExecuteSwapJupiterArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute_swap_titan",
+      "docs": [
+        "Execute a swap via Titan aggregator (processor only).",
+        "Same custody / remaining-accounts / invoke_signed path as Jupiter,",
+        "constrained to the Titan program ID."
+      ],
+      "discriminator": [
+        23,
+        142,
+        39,
+        123,
+        170,
+        238,
+        173,
+        248
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "docs": [
+            "Processor executes the swap"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "input_mint",
+          "docs": [
+            "Input token mint (SPL Token or Token-2022 via TokenInterface)."
+          ]
+        },
+        {
+          "name": "output_mint",
+          "docs": [
+            "Output token mint"
+          ]
+        },
+        {
+          "name": "input_token_account",
+          "docs": [
+            "Asset manager's input token account (source)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "output_token_account",
+          "docs": [
+            "Asset manager's output token account (destination)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "titan_program",
+          "docs": [
+            "Titan aggregator program"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Classic SPL or Token-2022 — Titan routes name the program they need."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ExecuteSwapTitanArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "force_pause",
+      "docs": [
+        "Force pause an asset manager (authority only)."
+      ],
+      "discriminator": [
+        63,
+        181,
+        56,
+        131,
+        110,
+        43,
+        57,
+        58
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "force_unpause",
+      "docs": [
+        "Force unpause an asset manager (authority only)."
+      ],
+      "discriminator": [
+        139,
+        122,
+        61,
+        95,
+        3,
+        78,
+        53,
+        240
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "global_pause",
+      "docs": [
+        "Pause the entire program globally (authority only)."
+      ],
+      "discriminator": [
+        241,
+        111,
+        9,
+        216,
+        198,
+        197,
+        249,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "global_unpause",
+      "docs": [
+        "Unpause the entire program globally (authority only)."
+      ],
+      "discriminator": [
+        149,
+        58,
+        190,
+        18,
+        64,
+        63,
+        221,
+        250
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_adapter_registry",
+      "docs": [
+        "Initialize the per-AssetManager AdapterRegistry. Required before any",
+        "`propose_adapter` call. Manager-gated, one per AssetManager."
+      ],
+      "discriminator": [
+        67,
+        106,
+        163,
+        85,
+        187,
+        153,
+        130,
+        251
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "adapter_registry",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Pays for the AdapterRegistry rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_asset_manager",
+      "docs": [
+        "Initialize an asset manager for a specific vault.",
+        "Creates the per-vault AssetManager PDA with limits and authorities."
+      ],
+      "discriminator": [
+        74,
+        122,
+        228,
+        118,
+        254,
+        42,
+        173,
+        198
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "Authority that can create asset managers"
+          ],
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Payer for account creation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitAssetManagerArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "init_token_account",
+      "docs": [
+        "Initialize a token custody account for the asset manager.",
+        "Creates a PDA-owned token account for a specific mint."
+      ],
+      "discriminator": [
+        17,
+        16,
+        88,
+        108,
+        240,
+        140,
+        102,
+        248
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The mint for the token account to create"
+          ]
+        },
+        {
+          "name": "token_account",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "Manager or processor may initialize custody ATAs (processor needs this",
+            "before `execute_swap_jupiter` can buy the yield asset)."
+          ],
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Payer for account creation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_token_account_2022",
+      "docs": [
+        "Token-2022 / TokenInterface custody ATA (N159)."
+      ],
+      "discriminator": [
+        49,
+        122,
+        8,
+        49,
+        127,
+        26,
+        48,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "token_account",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Initialize the global config account with CCTP v2 program IDs and settings.",
+        "Can only be called once by the initial authority."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "The initial authority for the program"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "The program's executable data account containing the upgrade authority"
+          ]
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Payer for account creation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitializeArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "pause",
+      "docs": [
+        "Pause the asset manager (manager only)."
+      ],
+      "discriminator": [
+        211,
+        22,
+        221,
+        251,
+        74,
+        121,
+        193,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "probe_custody_roundtrip",
+      "docs": [
+        "One-base-unit acquire→hold→return probe; writes `CustodyReadiness`."
+      ],
+      "discriminator": [
+        117,
+        139,
+        214,
+        214,
+        100,
+        87,
+        7,
+        186
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager"
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "custody_token_account",
+          "docs": [
+            "Escrow custody ATA for `mint` (must already exist)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "probe_token_account",
+          "docs": [
+            "Funded probe ATA owned by `probe_authority`."
+          ],
+          "writable": true
+        },
+        {
+          "name": "probe_authority",
+          "docs": [
+            "Signs the inbound leg (probe → custody)."
+          ],
+          "signer": true
+        },
+        {
+          "name": "manager",
+          "docs": [
+            "Escrow manager (factory_authority PDA when used from the factory)."
+          ],
+          "signer": true
+        },
+        {
+          "name": "custody_readiness",
+          "writable": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose_adapter",
+      "docs": [
+        "Propose a new AdapterBinding (creates the PDA in Pending status).",
+        "Starts the adapter cooldown clock. Manager-gated."
+      ],
+      "discriminator": [
+        250,
+        105,
+        201,
+        205,
+        6,
+        27,
+        187,
+        139
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "adapter_registry",
+          "docs": [
+            "Existence required: any propose_adapter requires the registry to be",
+            "initialized. We do NOT bump count here — only on accept."
+          ]
+        },
+        {
+          "name": "adapter_binding",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Pays for the AdapterBinding rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ProposeAdapterArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "propose_adapter_cooldown",
+      "docs": [
+        "Propose a new `adapter_change_cooldown` (manager-gated). Self-gated by",
+        "the current adapter cooldown; the new value must be >= the non-zero",
+        "floor `MIN_ADAPTER_CHANGE_COOLDOWN`."
+      ],
+      "discriminator": [
+        154,
+        104,
+        226,
+        25,
+        0,
+        192,
+        205,
+        105
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_cooldown",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_authority",
+      "docs": [
+        "Propose a new global authority. Starts a cooldown period before the",
+        "new authority can accept the transfer."
+      ],
+      "discriminator": [
+        20,
+        148,
+        236,
+        198,
+        76,
+        119,
+        99,
+        142
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "Current authority (must sign)"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_limits",
+      "docs": [
+        "Propose new limits for the asset manager.",
+        "Starts a timelock period before limits can be accepted."
+      ],
+      "discriminator": [
+        132,
+        125,
+        46,
+        103,
+        247,
+        74,
+        74,
+        57
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ProposeLimitsArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "propose_manager",
+      "docs": [
+        "Propose a new manager for an asset manager. Starts a cooldown period",
+        "before the new manager can accept the transfer."
+      ],
+      "discriminator": [
+        182,
+        178,
+        222,
+        226,
+        6,
+        122,
+        251,
+        116
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_manager",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_processor",
+      "docs": [
+        "Propose a new processor for an asset manager. Starts a cooldown period",
+        "before the new processor can accept the transfer."
+      ],
+      "discriminator": [
+        136,
+        206,
+        23,
+        56,
+        118,
+        219,
+        64,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_processor",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_proxy",
+      "docs": [
+        "Propose a new proxy asset manager address. Starts a cooldown period",
+        "before the change can be accepted.",
+        "Can only be called by the manager."
+      ],
+      "discriminator": [
+        60,
+        123,
+        86,
+        191,
+        192,
+        174,
+        8,
+        2
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_proxy",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "receive_via_cctp",
+      "docs": [
+        "Receive USDC via CCTP from another chain (processor only).",
+        "Processes the CCTP message and attestation, minting USDC to custody.",
+        "Creates a MessageMarker to prevent replay attacks."
+      ],
+      "discriminator": [
+        56,
+        65,
+        7,
+        165,
+        219,
+        111,
+        129,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "docs": [
+            "Processor executes the CCTP receive operation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Payer for the MessageMarker account creation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "message_marker",
+          "docs": [
+            "MessageMarker is initialized here as a *secondary* replay guard.",
+            "`init` fails if it already exists, preventing double-processing.",
+            "",
+            "L-3 NOTE — intentional nonce truncation: the seed uses only the LAST 8",
+            "bytes of the 32-byte CCTP nonce (`extract_nonce_u64`), not the full",
+            "256-bit identity Circle uses in its `used_nonces`. This is accepted, not",
+            "a bug:",
+            "* AUTHORITATIVE replay protection is upstream — the `receive_message`",
+            "CPI to MessageTransmitterV2 rejects a reused full nonce, and that",
+            "CPI must succeed for this marker to ever be committed (same tx). So",
+            "this local marker is redundant defense-in-depth.",
+            "* Truncation can only ever OVER-reject (a true replay has the identical",
+            "full nonce → identical low 8 bytes → still caught; a *distinct*",
+            "message can at worst be falsely rejected, never replayed through).",
+            "* Nonces are Circle-assigned, so a collision can't be steered; an",
+            "accidental one is birthday-bounded at ~2^32 messages per",
+            "(asset_manager, source_domain).",
+            "Widening to the full nonce would require changing BOTH this and",
+            "`emergency_cctp_receive`, plus every client that derives this PDA",
+            "(scripts + the live keeper) in lockstep, or in-flight CCTP receives",
+            "break. Not worth it for a redundant, over-reject-only guard."
+          ],
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "usdc_custody",
+          "docs": [
+            "The USDC custody account that will receive the minted USDC"
+          ],
+          "writable": true
+        },
+        {
+          "name": "message_transmitter_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ReceiveViaCctpArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "remove_destination",
+      "docs": [
+        "Remove an authorized CCTP destination."
+      ],
+      "discriminator": [
+        57,
+        157,
+        206,
+        225,
+        233,
+        131,
+        241,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "domain",
+          "type": "u32"
+        },
+        {
+          "name": "recipient",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "return_funds",
+      "docs": [
+        "Return funds from asset manager custody back to the vault.",
+        "Performs CPI to stoken::return_funds.",
+        "Can only be called by the processor."
+      ],
+      "discriminator": [
+        220,
+        104,
+        119,
+        202,
+        186,
+        1,
+        45,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "docs": [
+            "Asset manager instance account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "returner",
+          "docs": [
+            "The processor returning funds"
+          ],
+          "signer": true
+        },
+        {
+          "name": "vault_config",
+          "docs": [
+            "S-Token vault config account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "Underlying token mint (the vault's underlying asset)"
+          ]
+        },
+        {
+          "name": "asset_manager_token_account",
+          "docs": [
+            "Asset manager's custody token account (source)",
+            "PDA: [\"token_custody\", asset_manager, mint]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault_underlying_account",
+          "docs": [
+            "S-Token vault's underlying token account (destination)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "config",
+          "docs": [
+            "Global config account for validating stoken_program_id"
+          ]
+        },
+        {
+          "name": "stoken_program",
+          "docs": [
+            "S-Token program for CPI"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Token program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "send_via_cctp",
+      "docs": [
+        "Send USDC via CCTP to a cross-chain destination (processor only).",
+        "Burns USDC on Solana and initiates cross-chain transfer."
+      ],
+      "discriminator": [
+        161,
+        163,
+        226,
+        91,
+        126,
+        251,
+        234,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "docs": [
+            "Processor executes the CCTP send operation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint",
+          "docs": [
+            "USDC mint - must be writable for CCTP burn operation"
+          ],
+          "writable": true
+        },
+        {
+          "name": "usdc_custody",
+          "writable": true
+        },
+        {
+          "name": "sender_authority_pda"
+        },
+        {
+          "name": "denylist_account"
+        },
+        {
+          "name": "message_transmitter",
+          "writable": true
+        },
+        {
+          "name": "token_messenger"
+        },
+        {
+          "name": "remote_token_messenger"
+        },
+        {
+          "name": "token_minter"
+        },
+        {
+          "name": "local_token",
+          "writable": true
+        },
+        {
+          "name": "message_sent_event_data",
+          "docs": [
+            "Ephemeral event data signer for MessageTransmitter"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_messenger_minter_program"
+        },
+        {
+          "name": "message_transmitter_program"
+        },
+        {
+          "name": "tmm_event_authority"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "SendViaCctpArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "send_via_cctp_with_hook",
+      "docs": [
+        "Send USDC via CCTP V2 with a forwarder hook payload (processor only).",
+        "Required for destinations that cannot accept a flat recipient and route",
+        "through a forwarder contract — e.g. Stellar's CctpForwarder."
+      ],
+      "discriminator": [
+        142,
+        188,
+        156,
+        174,
+        79,
+        48,
+        213,
+        67
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "docs": [
+            "Processor executes the CCTP send operation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint",
+          "docs": [
+            "USDC mint - must be writable for CCTP burn operation"
+          ],
+          "writable": true
+        },
+        {
+          "name": "usdc_custody",
+          "writable": true
+        },
+        {
+          "name": "sender_authority_pda"
+        },
+        {
+          "name": "denylist_account"
+        },
+        {
+          "name": "message_transmitter",
+          "writable": true
+        },
+        {
+          "name": "token_messenger"
+        },
+        {
+          "name": "remote_token_messenger"
+        },
+        {
+          "name": "token_minter"
+        },
+        {
+          "name": "local_token",
+          "writable": true
+        },
+        {
+          "name": "message_sent_event_data",
+          "docs": [
+            "Ephemeral event data signer for MessageTransmitter"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_messenger_minter_program"
+        },
+        {
+          "name": "message_transmitter_program"
+        },
+        {
+          "name": "tmm_event_authority"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "SendViaCctpWithHookArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_cctp_programs",
+      "docs": [
+        "Authority-only: set CCTP v2 TokenMessengerMinter + MessageTransmitter IDs.",
+        "Fixes configs initialized with V1 / swapped pins."
+      ],
+      "discriminator": [
+        118,
+        19,
+        67,
+        188,
+        75,
+        145,
+        7,
+        215
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "SetCctpProgramsArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_destination_hook",
+      "docs": [
+        "Set (or clear) the approved `hook_data` hash for an authorized",
+        "destination (manager only). Required before that destination can be",
+        "used via `send_via_cctp_with_hook`."
+      ],
+      "discriminator": [
+        225,
+        53,
+        184,
+        233,
+        81,
+        247,
+        136,
+        183
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "domain",
+          "type": "u32"
+        },
+        {
+          "name": "recipient",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "hook_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap_and_bridge",
+      "docs": [
+        "Atomic swap-then-bridge operation (processor only).",
+        "Combines Jupiter swap and CCTP send in one transaction."
+      ],
+      "discriminator": [
+        204,
+        63,
+        169,
+        171,
+        186,
+        125,
+        86,
+        159
+      ],
+      "accounts": [
+        {
+          "name": "processor",
+          "docs": [
+            "Processor executes the swap + bridge"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "input_mint",
+          "docs": [
+            "Input token mint (token being sold)"
+          ]
+        },
+        {
+          "name": "input_token_account",
+          "docs": [
+            "Asset manager's input token account (source for swap)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "usdc_mint",
+          "docs": [
+            "USDC mint (output of swap, input for CCTP)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "usdc_custody",
+          "docs": [
+            "Asset manager's USDC custody account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "jupiter_program",
+          "docs": [
+            "Jupiter v6 program"
+          ]
+        },
+        {
+          "name": "sender_authority_pda"
+        },
+        {
+          "name": "denylist_account"
+        },
+        {
+          "name": "message_transmitter",
+          "writable": true
+        },
+        {
+          "name": "token_messenger"
+        },
+        {
+          "name": "remote_token_messenger"
+        },
+        {
+          "name": "token_minter"
+        },
+        {
+          "name": "local_token",
+          "writable": true
+        },
+        {
+          "name": "message_sent_event_data",
+          "docs": [
+            "Ephemeral event data signer for MessageTransmitter"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_messenger_minter_program"
+        },
+        {
+          "name": "message_transmitter_program"
+        },
+        {
+          "name": "tmm_event_authority"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "SwapAndBridgeArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "transfer_to_proxy",
+      "docs": [
+        "Transfer funds from asset manager custody to a destination (e.g., proxy custody).",
+        "Allows the asset_manager_escrow to send funds back through a proxy layer.",
+        "Can only be called by the processor. Allowed even when paused."
+      ],
+      "discriminator": [
+        178,
+        52,
+        82,
+        59,
+        247,
+        118,
+        110,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "docs": [
+            "Asset manager instance account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "returner",
+          "docs": [
+            "The processor transferring funds"
+          ],
+          "signer": true
+        },
+        {
+          "name": "underlying_mint",
+          "docs": [
+            "Underlying token mint"
+          ]
+        },
+        {
+          "name": "asset_manager_token_account",
+          "docs": [
+            "Asset manager's custody token account (source)",
+            "PDA: [\"token_custody\", asset_manager, mint]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "destination_token_account",
+          "docs": [
+            "Destination token account (must be owned by the registered proxy asset manager)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Token program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "unpause",
+      "docs": [
+        "Unpause the asset manager (manager only)."
+      ],
+      "discriminator": [
+        169,
+        144,
+        4,
+        38,
+        10,
+        141,
+        188,
+        255
+      ],
+      "accounts": [
+        {
+          "name": "asset_manager",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AdapterBinding",
+      "discriminator": [
+        218,
+        152,
+        172,
+        218,
+        130,
+        123,
+        182,
+        65
+      ]
+    },
+    {
+      "name": "AdapterRegistry",
+      "discriminator": [
+        27,
+        187,
+        195,
+        109,
+        0,
+        66,
+        232,
+        31
+      ]
+    },
+    {
+      "name": "AssetManager",
+      "discriminator": [
+        136,
+        86,
+        167,
+        98,
+        220,
+        48,
+        54,
+        97
+      ]
+    },
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "CustodyReadiness",
+      "discriminator": [
+        123,
+        214,
+        219,
+        61,
+        184,
+        141,
+        56,
+        12
+      ]
+    },
+    {
+      "name": "MessageMarker",
+      "discriminator": [
+        95,
+        18,
+        173,
+        65,
+        165,
+        216,
+        58,
+        10
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AdapterAccepted",
+      "discriminator": [
+        223,
+        222,
+        82,
+        102,
+        161,
+        2,
+        254,
+        2
+      ]
+    },
+    {
+      "name": "AdapterCancelled",
+      "discriminator": [
+        49,
+        195,
+        50,
+        8,
+        108,
+        202,
+        158,
+        71
+      ]
+    },
+    {
+      "name": "AdapterClosed",
+      "discriminator": [
+        166,
+        216,
+        61,
+        180,
+        240,
+        218,
+        238,
+        54
+      ]
+    },
+    {
+      "name": "AdapterCooldownChangePending",
+      "discriminator": [
+        5,
+        168,
+        80,
+        243,
+        12,
+        110,
+        85,
+        170
+      ]
+    },
+    {
+      "name": "AdapterCooldownChanged",
+      "discriminator": [
+        158,
+        205,
+        232,
+        143,
+        164,
+        151,
+        8,
+        243
+      ]
+    },
+    {
+      "name": "AdapterDisabled",
+      "discriminator": [
+        125,
+        162,
+        190,
+        186,
+        131,
+        118,
+        123,
+        106
+      ]
+    },
+    {
+      "name": "AdapterEnabled",
+      "discriminator": [
+        163,
+        116,
+        110,
+        194,
+        110,
+        131,
+        53,
+        58
+      ]
+    },
+    {
+      "name": "AdapterProposed",
+      "discriminator": [
+        173,
+        62,
+        126,
+        226,
+        137,
+        229,
+        35,
+        242
+      ]
+    },
+    {
+      "name": "AdapterRegistryInitialized",
+      "discriminator": [
+        252,
+        186,
+        19,
+        104,
+        116,
+        150,
+        214,
+        194
+      ]
+    },
+    {
+      "name": "AssetManagerForcePaused",
+      "discriminator": [
+        25,
+        160,
+        214,
+        66,
+        169,
+        77,
+        201,
+        183
+      ]
+    },
+    {
+      "name": "AssetManagerForceUnpaused",
+      "discriminator": [
+        5,
+        84,
+        55,
+        197,
+        54,
+        251,
+        11,
+        70
+      ]
+    },
+    {
+      "name": "AssetManagerInitialized",
+      "discriminator": [
+        159,
+        112,
+        218,
+        47,
+        155,
+        53,
+        222,
+        246
+      ]
+    },
+    {
+      "name": "AssetManagerPaused",
+      "discriminator": [
+        220,
+        166,
+        20,
+        32,
+        23,
+        225,
+        11,
+        165
+      ]
+    },
+    {
+      "name": "AssetManagerUnpaused",
+      "discriminator": [
+        250,
+        164,
+        134,
+        126,
+        255,
+        89,
+        247,
+        177
+      ]
+    },
+    {
+      "name": "AuthorityChangePending",
+      "discriminator": [
+        173,
+        181,
+        46,
+        231,
+        53,
+        11,
+        48,
+        196
+      ]
+    },
+    {
+      "name": "AuthorityUpdated",
+      "discriminator": [
+        133,
+        207,
+        24,
+        122,
+        14,
+        234,
+        91,
+        34
+      ]
+    },
+    {
+      "name": "CctpHookSendInitiated",
+      "discriminator": [
+        172,
+        244,
+        38,
+        39,
+        251,
+        224,
+        166,
+        171
+      ]
+    },
+    {
+      "name": "CctpProgramsUpdated",
+      "discriminator": [
+        103,
+        109,
+        219,
+        91,
+        169,
+        30,
+        177,
+        79
+      ]
+    },
+    {
+      "name": "CctpReceiveCompleted",
+      "discriminator": [
+        128,
+        10,
+        234,
+        166,
+        163,
+        117,
+        202,
+        239
+      ]
+    },
+    {
+      "name": "CctpSendInitiated",
+      "discriminator": [
+        70,
+        35,
+        107,
+        107,
+        230,
+        221,
+        99,
+        83
+      ]
+    },
+    {
+      "name": "ConfigInitialized",
+      "discriminator": [
+        181,
+        49,
+        200,
+        156,
+        19,
+        167,
+        178,
+        91
+      ]
+    },
+    {
+      "name": "CustodyReadinessProbed",
+      "discriminator": [
+        244,
+        221,
+        128,
+        247,
+        80,
+        116,
+        121,
+        227
+      ]
+    },
+    {
+      "name": "DestinationAdded",
+      "discriminator": [
+        231,
+        129,
+        217,
+        37,
+        0,
+        212,
+        48,
+        25
+      ]
+    },
+    {
+      "name": "DestinationHookSet",
+      "discriminator": [
+        233,
+        13,
+        189,
+        243,
+        88,
+        138,
+        68,
+        132
+      ]
+    },
+    {
+      "name": "DestinationRemoved",
+      "discriminator": [
+        101,
+        84,
+        137,
+        242,
+        154,
+        68,
+        62,
+        199
+      ]
+    },
+    {
+      "name": "EmergencySweepExecuted",
+      "discriminator": [
+        15,
+        183,
+        233,
+        190,
+        18,
+        219,
+        98,
+        114
+      ]
+    },
+    {
+      "name": "FundsReturned",
+      "discriminator": [
+        56,
+        103,
+        194,
+        194,
+        209,
+        120,
+        218,
+        66
+      ]
+    },
+    {
+      "name": "FundsTransferredToProxy",
+      "discriminator": [
+        153,
+        104,
+        73,
+        154,
+        255,
+        223,
+        95,
+        176
+      ]
+    },
+    {
+      "name": "GlobalPaused",
+      "discriminator": [
+        78,
+        165,
+        2,
+        203,
+        150,
+        87,
+        182,
+        148
+      ]
+    },
+    {
+      "name": "GlobalUnpaused",
+      "discriminator": [
+        69,
+        62,
+        8,
+        87,
+        43,
+        227,
+        127,
+        169
+      ]
+    },
+    {
+      "name": "KaminoDepositExecuted",
+      "discriminator": [
+        167,
+        159,
+        103,
+        8,
+        115,
+        52,
+        167,
+        95
+      ]
+    },
+    {
+      "name": "KaminoWithdrawExecuted",
+      "discriminator": [
+        17,
+        53,
+        123,
+        6,
+        130,
+        141,
+        99,
+        51
+      ]
+    },
+    {
+      "name": "LimitsChangePending",
+      "discriminator": [
+        77,
+        199,
+        247,
+        25,
+        23,
+        127,
+        21,
+        94
+      ]
+    },
+    {
+      "name": "LimitsUpdated",
+      "discriminator": [
+        160,
+        131,
+        108,
+        76,
+        91,
+        80,
+        118,
+        137
+      ]
+    },
+    {
+      "name": "ManagerChangePending",
+      "discriminator": [
+        189,
+        201,
+        91,
+        108,
+        179,
+        193,
+        106,
+        61
+      ]
+    },
+    {
+      "name": "ManagerUpdated",
+      "discriminator": [
+        152,
+        29,
+        234,
+        10,
+        167,
+        73,
+        43,
+        81
+      ]
+    },
+    {
+      "name": "NativeClaimExecuted",
+      "discriminator": [
+        154,
+        108,
+        147,
+        219,
+        162,
+        103,
+        118,
+        184
+      ]
+    },
+    {
+      "name": "NativeDepositExecuted",
+      "discriminator": [
+        26,
+        80,
+        38,
+        183,
+        86,
+        21,
+        130,
+        120
+      ]
+    },
+    {
+      "name": "NativeWithdrawExecuted",
+      "discriminator": [
+        193,
+        196,
+        199,
+        2,
+        33,
+        182,
+        145,
+        95
+      ]
+    },
+    {
+      "name": "ProcessorChangePending",
+      "discriminator": [
+        21,
+        13,
+        108,
+        47,
+        61,
+        228,
+        173,
+        42
+      ]
+    },
+    {
+      "name": "ProcessorUpdated",
+      "discriminator": [
+        52,
+        11,
+        58,
+        230,
+        46,
+        113,
+        37,
+        151
+      ]
+    },
+    {
+      "name": "ProxyAssetManagerUpdated",
+      "discriminator": [
+        139,
+        244,
+        170,
+        253,
+        246,
+        134,
+        144,
+        41
+      ]
+    },
+    {
+      "name": "ProxyChangePending",
+      "discriminator": [
+        7,
+        141,
+        130,
+        142,
+        51,
+        54,
+        73,
+        190
+      ]
+    },
+    {
+      "name": "SwapExecuted",
+      "discriminator": [
+        150,
+        166,
+        26,
+        225,
+        28,
+        89,
+        38,
+        79
+      ]
+    },
+    {
+      "name": "TokenAccountInitialized",
+      "discriminator": [
+        44,
+        123,
+        53,
+        151,
+        51,
+        240,
+        232,
+        22
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized access"
+    },
+    {
+      "code": 6001,
+      "name": "UnauthorizedManager",
+      "msg": "Unauthorized manager"
+    },
+    {
+      "code": 6002,
+      "name": "UnauthorizedProcessor",
+      "msg": "Unauthorized processor"
+    },
+    {
+      "code": 6003,
+      "name": "UnauthorizedAuthority",
+      "msg": "Unauthorized authority"
+    },
+    {
+      "code": 6004,
+      "name": "Paused",
+      "msg": "Operation not allowed while paused"
+    },
+    {
+      "code": 6005,
+      "name": "AlreadyPaused",
+      "msg": "Already paused"
+    },
+    {
+      "code": 6006,
+      "name": "NotPaused",
+      "msg": "Not paused"
+    },
+    {
+      "code": 6007,
+      "name": "GlobalPaused",
+      "msg": "Global circuit breaker engaged"
+    },
+    {
+      "code": 6008,
+      "name": "ForcePausedByAuthority",
+      "msg": "Force-paused by authority — only authority can unpause via force_unpause"
+    },
+    {
+      "code": 6009,
+      "name": "AmountExceedsMax",
+      "msg": "Amount exceeds maximum per transaction"
+    },
+    {
+      "code": 6010,
+      "name": "DailyLimitExceeded",
+      "msg": "Daily limit exceeded"
+    },
+    {
+      "code": 6011,
+      "name": "CooldownNotElapsed",
+      "msg": "Cooldown period not elapsed"
+    },
+    {
+      "code": 6012,
+      "name": "EmergencyCooldownNotMet",
+      "msg": "Emergency cooldown not met"
+    },
+    {
+      "code": 6013,
+      "name": "LimitsChangeTimelockActive",
+      "msg": "Limits change timelock is still active"
+    },
+    {
+      "code": 6014,
+      "name": "NoPendingLimitsChange",
+      "msg": "No pending limits change to accept"
+    },
+    {
+      "code": 6015,
+      "name": "NoLimitsChanges",
+      "msg": "No limits changes specified"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidCooldown",
+      "msg": "Cooldown value out of allowed range"
+    },
+    {
+      "code": 6017,
+      "name": "NoPendingAuthorityChange",
+      "msg": "No pending authority change to accept"
+    },
+    {
+      "code": 6018,
+      "name": "AuthorityChangeCooldownNotExpired",
+      "msg": "Authority change cooldown not expired"
+    },
+    {
+      "code": 6019,
+      "name": "NoPendingManagerChange",
+      "msg": "No pending manager change to accept"
+    },
+    {
+      "code": 6020,
+      "name": "ManagerChangeCooldownNotExpired",
+      "msg": "Manager change cooldown not expired"
+    },
+    {
+      "code": 6021,
+      "name": "NoPendingProcessorChange",
+      "msg": "No pending processor change to accept"
+    },
+    {
+      "code": 6022,
+      "name": "ProcessorChangeCooldownNotExpired",
+      "msg": "Processor change cooldown not expired"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount"
+    },
+    {
+      "code": 6024,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient funds"
+    },
+    {
+      "code": 6025,
+      "name": "CustodyProbeImbalance",
+      "msg": "Token-2022 custody probe left an unexpected balance"
+    },
+    {
+      "code": 6026,
+      "name": "ZeroAmount",
+      "msg": "Amount is zero"
+    },
+    {
+      "code": 6027,
+      "name": "SlippageExceeded",
+      "msg": "Slippage exceeded"
+    },
+    {
+      "code": 6028,
+      "name": "DestinationNotAuthorized",
+      "msg": "Destination not authorized"
+    },
+    {
+      "code": 6029,
+      "name": "DestinationAlreadyAuthorized",
+      "msg": "Destination already authorized"
+    },
+    {
+      "code": 6030,
+      "name": "MaxDestinationsReached",
+      "msg": "Maximum destinations reached"
+    },
+    {
+      "code": 6031,
+      "name": "DestinationNotFound",
+      "msg": "Destination not found"
+    },
+    {
+      "code": 6032,
+      "name": "InvalidAccount",
+      "msg": "Invalid account"
+    },
+    {
+      "code": 6033,
+      "name": "InvalidHookData",
+      "msg": "Hook data must not be empty"
+    },
+    {
+      "code": 6034,
+      "name": "InvalidVault",
+      "msg": "Invalid vault"
+    },
+    {
+      "code": 6035,
+      "name": "InvalidMint",
+      "msg": "Invalid mint"
+    },
+    {
+      "code": 6036,
+      "name": "InvalidProgramId",
+      "msg": "Invalid program ID"
+    },
+    {
+      "code": 6037,
+      "name": "AlreadyInitialized",
+      "msg": "Already initialized"
+    },
+    {
+      "code": 6038,
+      "name": "InvalidProgramData",
+      "msg": "Invalid program data account"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidProxyAssetManager",
+      "msg": "Invalid proxy asset manager"
+    },
+    {
+      "code": 6040,
+      "name": "InvalidProxyProgram",
+      "msg": "Invalid proxy program or proxy-owned account"
+    },
+    {
+      "code": 6041,
+      "name": "NoPendingProxyChange",
+      "msg": "No pending proxy change to accept"
+    },
+    {
+      "code": 6042,
+      "name": "ProxyChangeCooldownNotExpired",
+      "msg": "Proxy change cooldown not expired"
+    },
+    {
+      "code": 6043,
+      "name": "IndexExhausted",
+      "msg": "Asset manager index exhausted"
+    },
+    {
+      "code": 6044,
+      "name": "MessageAlreadyProcessed",
+      "msg": "CCTP message already processed"
+    },
+    {
+      "code": 6045,
+      "name": "InvalidCctpMessage",
+      "msg": "Invalid CCTP message"
+    },
+    {
+      "code": 6046,
+      "name": "InvalidAttestation",
+      "msg": "Invalid attestation"
+    },
+    {
+      "code": 6047,
+      "name": "InvalidSourceDomain",
+      "msg": "Invalid source domain"
+    },
+    {
+      "code": 6048,
+      "name": "MathOverflow",
+      "msg": "Math overflow"
+    },
+    {
+      "code": 6049,
+      "name": "MathUnderflow",
+      "msg": "Math underflow"
+    },
+    {
+      "code": 6050,
+      "name": "InsufficientLiquidity",
+      "msg": "Insufficient liquidity in pool"
+    },
+    {
+      "code": 6051,
+      "name": "InvalidPool",
+      "msg": "Invalid pool configuration"
+    },
+    {
+      "code": 6052,
+      "name": "InvalidSwapRoute",
+      "msg": "Invalid swap route data"
+    },
+    {
+      "code": 6053,
+      "name": "SwapOutputBelowMinimum",
+      "msg": "Swap output below minimum"
+    },
+    {
+      "code": 6054,
+      "name": "SwapInputAboveMaximum",
+      "msg": "Swap input above maximum"
+    },
+    {
+      "code": 6055,
+      "name": "InvalidDexProgram",
+      "msg": "Invalid DEX program"
+    },
+    {
+      "code": 6056,
+      "name": "SwapFailed",
+      "msg": "Swap failed"
+    },
+    {
+      "code": 6057,
+      "name": "InvalidSwapTokenAccount",
+      "msg": "Invalid token account for swap"
+    },
+    {
+      "code": 6058,
+      "name": "PoolMintMismatch",
+      "msg": "Pool mints do not match expected tokens"
+    },
+    {
+      "code": 6059,
+      "name": "TooManyAccounts",
+      "msg": "Too many accounts provided"
+    },
+    {
+      "code": 6060,
+      "name": "AdapterRegistryMismatch",
+      "msg": "Adapter registry mismatch"
+    },
+    {
+      "code": 6061,
+      "name": "AdapterMismatch",
+      "msg": "Adapter binding mismatch (program/instance does not match binding)"
+    },
+    {
+      "code": 6062,
+      "name": "AdapterDisabled",
+      "msg": "Adapter binding is disabled"
+    },
+    {
+      "code": 6063,
+      "name": "AdapterNotActive",
+      "msg": "Adapter binding is not active"
+    },
+    {
+      "code": 6064,
+      "name": "AdapterNotPending",
+      "msg": "Adapter binding is not in pending state"
+    },
+    {
+      "code": 6065,
+      "name": "AdapterPendingNotReady",
+      "msg": "Adapter pending change is not yet ready (cooldown not elapsed)"
+    },
+    {
+      "code": 6066,
+      "name": "AdapterNoPendingChange",
+      "msg": "Adapter binding has no pending change"
+    },
+    {
+      "code": 6067,
+      "name": "AdapterNotPendingWithdrawals",
+      "msg": "Adapter does not support pending withdrawals (claim path)"
+    },
+    {
+      "code": 6068,
+      "name": "AdapterClaimZeroReceived",
+      "msg": "Adapter claim received zero USDC"
+    },
+    {
+      "code": 6069,
+      "name": "AdapterWithdrawZeroReceived",
+      "msg": "Instant adapter withdraw returned zero USDC to escrow custody"
+    },
+    {
+      "code": 6070,
+      "name": "InvalidAdapterCustody",
+      "msg": "Adapter USDC custody does not match the bound instance's custody PDA"
+    },
+    {
+      "code": 6071,
+      "name": "MaxAdaptersReached",
+      "msg": "Maximum number of adapters reached for this asset manager"
+    },
+    {
+      "code": 6072,
+      "name": "AdapterCpiFailed",
+      "msg": "Inner CPI to adapter program failed"
+    },
+    {
+      "code": 6073,
+      "name": "NoPendingAdapterCooldownChange",
+      "msg": "No pending adapter cooldown change to accept"
+    },
+    {
+      "code": 6074,
+      "name": "AdapterStillActive",
+      "msg": "Adapter binding must be disabled before it can be closed"
+    },
+    {
+      "code": 6075,
+      "name": "HookDataMismatch",
+      "msg": "Hook data does not match the approved payload for this destination"
+    },
+    {
+      "code": 6076,
+      "name": "HookNotApproved",
+      "msg": "No approved hook payload configured for this destination"
+    },
+    {
+      "code": 6077,
+      "name": "InvalidDestinationCaller",
+      "msg": "destination_caller must equal the destination recipient"
+    },
+    {
+      "code": 6078,
+      "name": "CctpAmountExceedsU64",
+      "msg": "CCTP burn amount or fee does not fit u64"
+    },
+    {
+      "code": 6079,
+      "name": "CctpFeeExceedsAmount",
+      "msg": "CCTP fee is greater than or equal to the burn amount"
+    },
+    {
+      "code": 6080,
+      "name": "CctpAmountMismatch",
+      "msg": "Minted USDC does not equal CCTP burn amount minus feeExecuted"
+    },
+    {
+      "code": 6081,
+      "name": "CctpMintRecipientMismatch",
+      "msg": "CCTP mintRecipient is not this asset manager's USDC custody"
+    }
+  ],
+  "types": [
+    {
+      "name": "AdapterAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "binding",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_instance",
+            "type": "pubkey"
+          },
+          {
+            "name": "native_asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "supports_pending_withdrawals",
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterBinding",
+      "docs": [
+        "Per-(asset_manager, adapter_program) binding record.",
+        "",
+        "Created by `propose_adapter` (status=Pending), activated by `accept_adapter`",
+        "(status=Active, active=true) after `asset_manager.adapter_change_cooldown`",
+        "has elapsed. Can be toggled via `disable_adapter` / `enable_adapter` once",
+        "active. `cancel_adapter` closes the PDA while it's still Pending.",
+        "",
+        "Seeds: [\"adapter_binding\", asset_manager, adapter_program]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "docs": [
+              "AssetManager PDA this binding belongs to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "docs": [
+              "Adapter program ID (e.g. huma_adapter's program id)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_instance",
+            "docs": [
+              "Adapter-side instance PDA (e.g. HumaInstance PDA)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "native_asset_mint",
+            "docs": [
+              "Mint of the native-asset side (PST/mPST/etc)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "supports_pending_withdrawals",
+            "docs": [
+              "True when this adapter exposes the deposit -> withdraw-request ->",
+              "claim lifecycle; false for instant-redeem adapters."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "active",
+            "docs": [
+              "Convenience toggle: false disables execution without un-binding."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "Status (Pending => requires accept; Active => usable subject to `active`)."
+            ],
+            "type": {
+              "defined": {
+                "name": "AdapterStatus"
+              }
+            }
+          },
+          {
+            "name": "pending",
+            "docs": [
+              "Pending change set during propose; cleared on accept."
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdapterChange"
+                }
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Created timestamp."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "docs": [
+              "Last updated timestamp."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_count",
+            "docs": [
+              "Registry adapter_count after the close (post-decrement)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterCooldownChangePending",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "new_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterCooldownChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "new_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterDisabled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterEnabled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "binding",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_instance",
+            "type": "pubkey"
+          },
+          {
+            "name": "native_asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "supports_pending_withdrawals",
+            "type": "bool"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterRegistry",
+      "docs": [
+        "Per-AssetManager registry that tracks how many AdapterBindings exist.",
+        "",
+        "One AdapterRegistry must be created (via `init_adapter_registry`) before any",
+        "`propose_adapter` call. Bindings themselves live in their own PDAs (see",
+        "`AdapterBinding`); this registry only enforces the cap and exists as a",
+        "stable, easy-to-fetch summary record.",
+        "",
+        "Seeds: [\"adapter_registry\", asset_manager]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "docs": [
+              "The AssetManager PDA this registry belongs to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_count",
+            "docs": [
+              "Number of accepted (status=Active) adapter bindings currently",
+              "registered — i.e. those that have been `accept_adapter`-ed and not yet",
+              "`close_adapter`-ed. Incremented on accept, decremented on close. A",
+              "`disable_adapter` does NOT decrement it (the binding still occupies its",
+              "slot until closed). Bounded by `MAX_ADAPTERS_PER_ASSET_MANAGER` as a",
+              "concurrent cap."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Created timestamp."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "docs": [
+              "Last updated timestamp."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterRegistryInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "registry",
+            "type": "pubkey"
+          },
+          {
+            "name": "initialized_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterStatus",
+      "docs": [
+        "Status of an adapter binding.",
+        "",
+        "Pending = freshly proposed, not yet usable; binding sits in its PDA holding",
+        "the pending change details. `cancel_adapter` can drop it (closes PDA).",
+        "Active  = accepted after cooldown; can be enabled/disabled to gate execution."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Active"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetManager",
+      "docs": [
+        "Per-vault asset manager instance.",
+        "Manages funds, limits, and cross-chain operations for a specific S-Token vault."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "index",
+            "docs": [
+              "Unique index for this asset manager.",
+              "",
+              "LAYOUT COUPLING (L-5): `huma_adapter::verify_escrow_caller` reads this",
+              "field directly from account bytes `[8..16]` (immediately after the",
+              "8-byte Anchor discriminator) to re-derive and authenticate the escrow",
+              "caller. `index` MUST remain the first field of this struct — reordering",
+              "it would silently break every adapter handshake."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "vault",
+            "docs": [
+              "The S-Token vault this asset manager serves"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "underlying_mint",
+            "docs": [
+              "The vault's underlying token mint"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "docs": [
+              "Manager authority - pause, governance proposals, destinations, emergency (manager paths)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "docs": [
+              "Processor authority - executes swaps, bridges, return_funds, transfer_to_proxy"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "authorized_destinations",
+            "docs": [
+              "Whitelisted CCTP destinations"
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "AuthorizedDestination"
+                }
+              }
+            }
+          },
+          {
+            "name": "processor_cooldown",
+            "docs": [
+              "Minimum seconds between processor operations"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "processor_max_per_tx",
+            "docs": [
+              "Maximum amount per processor transaction"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "processor_daily_limit",
+            "docs": [
+              "Daily limit for processor operations"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "processor_daily_used",
+            "docs": [
+              "Amount used today by processor"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "last_daily_reset",
+            "docs": [
+              "Timestamp of last daily limit reset"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "last_operation_time",
+            "docs": [
+              "Timestamp of last processor operation"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "Whether this asset manager is paused"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "force_paused",
+            "docs": [
+              "Whether this pause was initiated by the authority via force_pause.",
+              "When true, only the authority can unpause (via force_unpause)."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "paused_at",
+            "docs": [
+              "Timestamp when paused (for emergency cooldown calculation)"
+            ],
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "emergency_cooldown",
+            "docs": [
+              "Required cooldown before emergency withdrawal (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "manager_change_cooldown",
+            "docs": [
+              "Cooldown period before proposed manager can be accepted (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_manager",
+            "docs": [
+              "Pending manager change awaiting acceptance after cooldown"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingManager"
+                }
+              }
+            }
+          },
+          {
+            "name": "processor_change_cooldown",
+            "docs": [
+              "Cooldown period before proposed processor can be accepted (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_processor",
+            "docs": [
+              "Pending processor change awaiting acceptance after cooldown"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingProcessor"
+                }
+              }
+            }
+          },
+          {
+            "name": "limits_cooldown",
+            "docs": [
+              "Cooldown period before proposed limits can be accepted (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_limits",
+            "docs": [
+              "Pending limits change awaiting acceptance after cooldown"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingLimits"
+                }
+              }
+            }
+          },
+          {
+            "name": "proxy_asset_manager",
+            "docs": [
+              "The proxy asset manager this asset manager sends funds through"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "proxy_change_cooldown",
+            "docs": [
+              "Cooldown period before proposed proxy can be accepted (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_proxy",
+            "docs": [
+              "Pending proxy change awaiting acceptance after cooldown"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingProxy"
+                }
+              }
+            }
+          },
+          {
+            "name": "adapter_change_cooldown",
+            "docs": [
+              "Cooldown period before a proposed AdapterBinding change can be accepted (seconds).",
+              "Symmetric with `proxy_change_cooldown`. AdapterBinding pending changes",
+              "(creation via `propose_adapter`) use this cooldown. Has a non-zero hard",
+              "floor (`MIN_ADAPTER_CHANGE_COOLDOWN`) and is itself governable via",
+              "`propose_adapter_cooldown` / `accept_adapter_cooldown` (self-gated by the",
+              "current value of this field)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_adapter_cooldown",
+            "docs": [
+              "Pending `adapter_change_cooldown` change awaiting acceptance."
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdapterCooldown"
+                }
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Creation timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "docs": [
+              "Last update timestamp"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetManagerForcePaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetManagerForceUnpaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetManagerInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "underlying_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetManagerPaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "paused_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AssetManagerUnpaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "unpaused_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityChangePending",
+      "docs": [
+        "Event emitted when an authority change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityUpdated",
+      "docs": [
+        "Event emitted when a pending authority change is accepted and applied"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorizedDestination",
+      "docs": [
+        "Authorized destination for CCTP transfers"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "domain",
+            "docs": [
+              "CCTP domain ID (0=Ethereum, 3=Arbitrum, etc.)"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "docs": [
+              "Destination address in 32-byte format"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "active",
+            "docs": [
+              "Whether this destination is currently active"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "hook_hash",
+            "docs": [
+              "SHA-256 of the approved `hook_data` payload for `send_via_cctp_with_hook`",
+              "(H-2). All-zero means \"no hook payload approved\" — the destination is",
+              "usable for the plain `send_via_cctp` path only. Set via",
+              "`set_destination_hook`."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CctpHookSendInitiated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination_domain",
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hook_data_len",
+            "type": "u32"
+          },
+          {
+            "name": "nonce",
+            "docs": [
+              "NOT the real CCTP nonce — this is a synthetic value (the block time) used",
+              "only as a local correlation id. The authoritative nonce is emitted by",
+              "CCTP's own `MessageSent` event. Do not treat this as the CCTP nonce."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CctpProgramsUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_messenger_v2",
+            "type": "pubkey"
+          },
+          {
+            "name": "message_transmitter_v2",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CctpReceiveCompleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "source_domain",
+            "type": "u32"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "message_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CctpSendInitiated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination_domain",
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "docs": [
+        "Global configuration account for the Cross-Chain Asset Manager program.",
+        "Stores CCTP program IDs, authority, and global pause state."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "Authority that can manage global settings and force-pause asset managers"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_mint",
+            "docs": [
+              "USDC mint address (required for CCTP operations)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "token_messenger_v2",
+            "docs": [
+              "Circle CCTP v2 Token Messenger Minter program ID"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "message_transmitter_v2",
+            "docs": [
+              "Circle CCTP v2 Message Transmitter program ID"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "stoken_program_id",
+            "docs": [
+              "S-Token program ID for CPI validation"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "Whether the entire program is globally paused"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "next_asset_manager_index",
+            "docs": [
+              "Counter for unique asset manager indices"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Timestamp when config was created"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "docs": [
+              "Timestamp when config was last updated"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "authority_change_cooldown",
+            "docs": [
+              "Cooldown period before proposed authority can be accepted (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_authority",
+            "docs": [
+              "Pending authority change awaiting acceptance after cooldown"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAuthority"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_messenger_v2",
+            "type": "pubkey"
+          },
+          {
+            "name": "message_transmitter_v2",
+            "type": "pubkey"
+          },
+          {
+            "name": "stoken_program_id",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CustodyReadiness",
+      "docs": [
+        "Escrow-owned record that `register_pool` consumes for Token-2022 pools."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "escrow_asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "extension_snapshot_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "transfer_hook_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "hook_extra_accounts_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "probe_slot",
+            "type": "u64"
+          },
+          {
+            "name": "readiness_hash",
+            "docs": [
+              "Digest written at probe time — must equal `params.custody_readiness_hash`."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CustodyReadinessProbed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "escrow_asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "readiness_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "probe_slot",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DestinationAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "domain",
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DestinationHookSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "domain",
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "hook_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DestinationRemoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "domain",
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EmergencyCctpReceiveArgs",
+      "docs": [
+        "Arguments for emergency CCTP receive operation"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "message",
+            "docs": [
+              "The CCTP message bytes"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "attestation",
+            "docs": [
+              "The attestation from Circle"
+            ],
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EmergencySweepExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecuteKaminoDepositArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount_in",
+            "type": "u64"
+          },
+          {
+            "name": "min_shares",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecuteKaminoWithdrawArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "shares",
+            "type": "u64"
+          },
+          {
+            "name": "min_out",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecuteNativeClaimArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "request_id",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecuteNativeDepositArgs",
+      "docs": [
+        "Args for `execute_native_deposit`.",
+        "",
+        "NOTE: `AdapterDepositArgs` in the adapter program has the same layout and",
+        "MUST be kept in sync. We cannot depend on the adapter as a Cargo dep — the",
+        "adapter set is open-ended."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "min_shares_out",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecuteNativeWithdrawArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "shares",
+            "type": "u64"
+          },
+          {
+            "name": "expected_request_id",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecuteSwapJupiterArgs",
+      "docs": [
+        "Arguments for executing a swap via Jupiter aggregator"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "route_data",
+            "docs": [
+              "Serialized Jupiter route instruction data",
+              "This is obtained from Jupiter's Quote API and passed to the on-chain program"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "amount_in",
+            "docs": [
+              "Input amount to swap"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_amount_out",
+            "docs": [
+              "Minimum output amount (slippage protection)"
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecuteSwapTitanArgs",
+      "docs": [
+        "Arguments for executing a swap via Titan aggregator"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "route_data",
+            "docs": [
+              "Serialized Titan route instruction data",
+              "Obtained off-chain from Titan DART (or Gateway) and passed on-chain."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "amount_in",
+            "docs": [
+              "Input amount to swap"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_amount_out",
+            "docs": [
+              "Minimum output amount (slippage protection)"
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FundsReturned",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "returner",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FundsTransferredToProxy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "transferred_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalPaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalUnpaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitAssetManagerArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "The S-Token vault this asset manager serves"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "underlying_mint",
+            "docs": [
+              "The vault's underlying token mint"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "docs": [
+              "Manager authority (governance: pause, proposals, destinations, etc.)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "processor",
+            "docs": [
+              "Processor authority (executes swaps, bridges, return_funds, transfer_to_proxy)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "proxy_asset_manager",
+            "docs": [
+              "The proxy asset manager this asset manager sends funds through"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "limits_cooldown",
+            "docs": [
+              "Cooldown period for limits changes (None uses default 24h)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "manager_change_cooldown",
+            "docs": [
+              "Cooldown period for manager changes (None uses default 24h)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "processor_change_cooldown",
+            "docs": [
+              "Cooldown period for processor changes (None uses default 24h)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "proxy_change_cooldown",
+            "docs": [
+              "Cooldown period for proxy changes (None uses default 24h)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "adapter_change_cooldown",
+            "docs": [
+              "Cooldown period for adapter binding changes (None uses default 24h)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitializeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "usdc_mint",
+            "docs": [
+              "USDC mint address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "token_messenger_v2",
+            "docs": [
+              "Circle CCTP v2 Token Messenger Minter program ID"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "message_transmitter_v2",
+            "docs": [
+              "Circle CCTP v2 Message Transmitter program ID"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "stoken_program_id",
+            "docs": [
+              "S-Token program ID for CPI validation in return_funds"
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "KaminoDepositExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_in",
+            "type": "u64"
+          },
+          {
+            "name": "shares_out",
+            "type": "u64"
+          },
+          {
+            "name": "executor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "KaminoWithdrawExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares",
+            "type": "u64"
+          },
+          {
+            "name": "amount_out",
+            "type": "u64"
+          },
+          {
+            "name": "executor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LimitsChangePending",
+      "docs": [
+        "Event emitted when a limits change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_processor_daily_limit",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_processor_max_per_tx",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_processor_cooldown",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_emergency_cooldown",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "old_processor_daily_limit",
+            "type": "u64"
+          },
+          {
+            "name": "old_processor_max_per_tx",
+            "type": "u64"
+          },
+          {
+            "name": "old_processor_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "old_emergency_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LimitsUpdated",
+      "docs": [
+        "Event emitted when pending limits are accepted and applied"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_processor_daily_limit",
+            "type": "u64"
+          },
+          {
+            "name": "new_processor_daily_limit",
+            "type": "u64"
+          },
+          {
+            "name": "old_processor_max_per_tx",
+            "type": "u64"
+          },
+          {
+            "name": "new_processor_max_per_tx",
+            "type": "u64"
+          },
+          {
+            "name": "old_processor_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "new_processor_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "old_emergency_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "new_emergency_cooldown",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagerChangePending",
+      "docs": [
+        "Event emitted when a manager change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ManagerUpdated",
+      "docs": [
+        "Event emitted when a pending manager change is accepted and applied"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MessageMarker",
+      "docs": [
+        "CCTP message marker for replay protection.",
+        "Created when a CCTP message is received to prevent double-processing."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "docs": [
+              "The asset manager that received this message"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "source_domain",
+            "docs": [
+              "Source CCTP domain ID"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "nonce",
+            "docs": [
+              "CCTP message nonce (unique per source domain)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "message_hash",
+            "docs": [
+              "Hash of the CCTP message for verification"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "received_at",
+            "docs": [
+              "When this message was received"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Amount received (for tracking)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NativeClaimExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_instance",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_id",
+            "type": "u128"
+          },
+          {
+            "name": "received_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NativeDepositExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_instance",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "min_shares_out",
+            "type": "u64"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NativeWithdrawExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_instance",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares",
+            "type": "u64"
+          },
+          {
+            "name": "expected_request_id",
+            "type": "u128"
+          },
+          {
+            "name": "received_usdc",
+            "docs": [
+              "Amount received in ESCROW custody at withdraw time (0 for pending-style adapters)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdapterChange",
+      "docs": [
+        "Pending change carried by an AdapterBinding while it's still in `Pending`",
+        "status. After cooldown elapses, `accept_adapter` flips status to Active and",
+        "clears this."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "adapter_instance",
+            "docs": [
+              "Adapter instance PDA that this binding will resolve to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "native_asset_mint",
+            "docs": [
+              "Mint of the native-asset side (e.g. mPST for Huma)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "supports_pending_withdrawals",
+            "docs": [
+              "Whether the adapter supports the pending-withdrawal/claim lifecycle",
+              "(true for Huma) vs an instant withdraw (false)."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "When the change was proposed (used for cooldown calc)."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdapterCooldown",
+      "docs": [
+        "Pending `adapter_change_cooldown` update awaiting acceptance after the",
+        "(current) adapter cooldown elapses."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_cooldown",
+            "docs": [
+              "The proposed new adapter_change_cooldown (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "When this pending change was proposed (used for cooldown calculation)"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAuthority",
+      "docs": [
+        "Pending authority change awaiting acceptance after cooldown"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_authority",
+            "docs": [
+              "The proposed new authority"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "When this pending change was proposed (used for cooldown calculation)"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingLimits",
+      "docs": [
+        "Pending limits change awaiting acceptance after cooldown"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_processor_daily_limit",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_processor_max_per_tx",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_processor_cooldown",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "new_emergency_cooldown",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "When this pending change was proposed (used for cooldown calculation)"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingManager",
+      "docs": [
+        "Pending manager change awaiting acceptance after cooldown"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_manager",
+            "docs": [
+              "The proposed new manager"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "When this pending change was proposed (used for cooldown calculation)"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingProcessor",
+      "docs": [
+        "Pending processor change awaiting acceptance after cooldown"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_processor",
+            "docs": [
+              "The proposed new processor"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "When this pending change was proposed (used for cooldown calculation)"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingProxy",
+      "docs": [
+        "Pending proxy change awaiting acceptance after cooldown"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_proxy",
+            "docs": [
+              "The proposed new proxy asset manager"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "docs": [
+              "When this pending change was proposed (used for cooldown calculation)"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProcessorChangePending",
+      "docs": [
+        "Event emitted when a processor change is proposed and pending timelock"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProcessorUpdated",
+      "docs": [
+        "Event emitted when a pending processor change is accepted and applied"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_processor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposeAdapterArgs",
+      "docs": [
+        "Arguments for proposing a new AdapterBinding."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "adapter_program",
+            "docs": [
+              "Adapter program ID to bind (e.g. huma_adapter's program id)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_instance",
+            "docs": [
+              "Adapter-side instance PDA (e.g. HumaInstance PDA)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "native_asset_mint",
+            "docs": [
+              "Mint of the native-asset side (PST/mPST/etc)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "supports_pending_withdrawals",
+            "docs": [
+              "Whether the adapter exposes the deposit -> withdraw-request -> claim",
+              "lifecycle (true for Huma) vs an instant-redeem adapter (false)."
+            ],
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposeLimitsArgs",
+      "docs": [
+        "Arguments for proposing new limits"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "processor_daily_limit",
+            "docs": [
+              "New processor daily limit (None to keep current)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "processor_max_per_tx",
+            "docs": [
+              "New processor max per transaction (None to keep current)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "processor_cooldown",
+            "docs": [
+              "New processor cooldown in seconds (None to keep current)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "emergency_cooldown",
+            "docs": [
+              "New emergency cooldown in seconds (None to keep current)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProxyAssetManagerUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_proxy",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_proxy",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProxyChangePending",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_proxy",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReceiveViaCctpArgs",
+      "docs": [
+        "Arguments for CCTP receive operation"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "message",
+            "docs": [
+              "The CCTP message bytes"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "attestation",
+            "docs": [
+              "The attestation from Circle"
+            ],
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoleKind",
+      "docs": [
+        "Vault role kind for per-role claim (`accept_role_assignment`)"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Manager"
+          },
+          {
+            "name": "Processor"
+          },
+          {
+            "name": "Accountant"
+          },
+          {
+            "name": "Oracle"
+          },
+          {
+            "name": "AssetManager"
+          },
+          {
+            "name": "Guardian"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SendViaCctpArgs",
+      "docs": [
+        "Arguments for CCTP send operation"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "docs": [
+              "Amount of USDC to send"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "destination_domain",
+            "docs": [
+              "CCTP destination domain ID"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "docs": [
+              "Recipient address in 32-byte format"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "destination_caller",
+            "docs": [
+              "Optional destination caller restriction (use Pubkey::default() for none)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_fee",
+            "docs": [
+              "Maximum fee to pay for CCTP"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_finality_threshold",
+            "docs": [
+              "Minimum finality threshold for the message"
+            ],
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SendViaCctpWithHookArgs",
+      "docs": [
+        "Arguments for CCTP send-with-hook operation.",
+        "",
+        "Borsh layout matches Circle's `DepositForBurnWithHookParams` exactly:",
+        "amount, destination_domain, mint_recipient, destination_caller,",
+        "max_fee, min_finality_threshold, hook_data"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "docs": [
+              "Amount of USDC to send"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "destination_domain",
+            "docs": [
+              "CCTP destination domain ID (e.g. 27 for Stellar)"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "docs": [
+              "Recipient address in 32-byte format. For Stellar this is the",
+              "StrKey-decoded CctpForwarder contract address."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "destination_caller",
+            "docs": [
+              "Destination caller restriction. For Stellar this must equal the",
+              "CctpForwarder contract address (same value as `recipient`)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_fee",
+            "docs": [
+              "Maximum fee to pay for CCTP"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_finality_threshold",
+            "docs": [
+              "Minimum finality threshold for the message"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "hook_data",
+            "docs": [
+              "Forwarder-specific hook payload. Cannot be empty (CCTP V2 enforces this",
+              "on the program side)."
+            ],
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SetCctpProgramsArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_messenger_v2",
+            "docs": [
+              "Circle CCTP v2 Token Messenger Minter program ID"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "message_transmitter_v2",
+            "docs": [
+              "Circle CCTP v2 Message Transmitter program ID"
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwapAndBridgeArgs",
+      "docs": [
+        "Arguments for atomic swap + CCTP bridge operation"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "swap_route_data",
+            "docs": [
+              "Serialized Jupiter route instruction data for the swap"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "amount_in",
+            "docs": [
+              "Input amount to swap"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_usdc_out",
+            "docs": [
+              "Minimum USDC output from swap (slippage protection)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "destination_domain",
+            "docs": [
+              "CCTP destination domain ID"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "recipient",
+            "docs": [
+              "Recipient address on destination chain (32 bytes)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "destination_caller",
+            "docs": [
+              "Optional destination caller restriction (use Pubkey::default() for none)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_fee",
+            "docs": [
+              "Maximum CCTP fee"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_finality_threshold",
+            "docs": [
+              "Minimum finality threshold for CCTP message"
+            ],
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwapExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "input_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "output_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_in",
+            "type": "u64"
+          },
+          {
+            "name": "amount_out",
+            "type": "u64"
+          },
+          {
+            "name": "dex",
+            "type": "string"
+          },
+          {
+            "name": "executor",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenAccountInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    }
+  ]
+}
