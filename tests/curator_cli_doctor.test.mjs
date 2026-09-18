@@ -164,7 +164,7 @@ test('doctor: with docker present it inspects both images and reads compose ps',
   const r3 = await runDoctor(ctx, { exec: noImage });
   assert.equal(r3.exit, 1);
   assert.match(crossLine(r3, 'signer image'), /weavr-backend:curator-local is not a local image/);
-  assert.match(r3.text, /fix: build it from the weavr backend dest branch/);
+  assert.match(r3.text, /fix: docker pull the signer image weavr published/);
 });
 
 // ---------------------------------------------------------------- planted failures
@@ -415,14 +415,14 @@ const CASES = [
     check: 'agent heartbeat',
     plant: (ctx) => { ctx.state.signer.metrics = '# HELP process_cpu_seconds_total Total user and system CPU time.\n# TYPE process_cpu_seconds_total counter\nprocess_cpu_seconds_total 1.5\n'; },
     line: /\/metrics answered but carries no curator gauges: not this signer, or an older image$/,
-    fix: /pass --signer-url for the curator signer, or rebuild the signer image/,
+    fix: /pass --signer-url for the curator signer, or pull the current signer image weavr published/,
   },
   {
     name: '/metrics with curator gauges but no last tick',
     check: 'agent heartbeat',
     plant: (ctx) => { ctx.state.signer.metrics = { curator_paused: 0, curator_self_locked: 0 }; },
     line: /\/metrics answered but carries no curator_last_tick_ts gauge \(2 other curator gauges\): an older signer image/,
-    fix: /rebuild the signer image/,
+    fix: /pull the current signer image weavr published/,
   },
   {
     name: 'compose.env lacks HERMES_UID',
