@@ -42,7 +42,7 @@ The wallet tool, the approval plugin and this host's skill:
 ```bash
 git clone https://github.com/desync-labs/weavr-claw-agent ~/weavr-wallet/tools/claw-agent
 cd ~/weavr-wallet/tools/claw-agent && npm i
-cp -r plugins/weavr-wallet-gate ~/.hermes/plugins/ && claw plugins enable weavr-wallet-gate
+mkdir -p ~/.hermes/plugins && cp -r plugins/weavr-wallet-gate ~/.hermes/plugins/ && claw plugins enable weavr-wallet-gate
 mkdir -p ~/.hermes/skills/weavr
 cp skills/weavr/SKILL.md ~/.hermes/skills/weavr/SKILL.md   # this repo's copy: wallet choice + funding rules (the served one lacks them)
 ```
