@@ -8,8 +8,9 @@
 #
 # Images
 #   signer  ${CURATOR_SIGNER_IMAGE:-weavr-backend:curator-local}
-#           No published signer image yet. Today it is built from a checkout
-#           of the weavr backend:  docker build -t weavr-backend:curator-local <backend>
+#           No published signer image yet. Build it from the weavr backend
+#           dest branch (main and demo do not carry packages/curator):
+#             git clone -b dest <backend> && docker build -t weavr-backend:curator-local <backend>
 #           A published image is pending; until then the doctor checks that the
 #           image exists locally.
 #   agent   ${HERMES_IMAGE:-hermes-agent}

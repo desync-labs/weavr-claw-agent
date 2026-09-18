@@ -164,7 +164,7 @@ test('doctor: with docker present it inspects both images and reads compose ps',
   const r3 = await runDoctor(ctx, { exec: noImage });
   assert.equal(r3.exit, 1);
   assert.match(crossLine(r3, 'signer image'), /weavr-backend:curator-local is not a local image/);
-  assert.match(r3.text, /fix: build it from a checkout of the weavr backend/);
+  assert.match(r3.text, /fix: build it from the weavr backend dest branch/);
 });
 
 // ---------------------------------------------------------------- planted failures

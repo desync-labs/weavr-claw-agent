@@ -61,8 +61,9 @@ Three parts, two of them yours.
 - A Telegram bot token from BotFather, your numeric Telegram user id, and
   the chat id the briefs should land in.
 - Docker with compose v2, and the two images: the signer image, built today
-  from a checkout of the weavr backend (a published image is pending), and
-  the agent image, built from the Claw Agent checkout. The header of
+  from the weavr backend **`dest`** branch (a published image is pending;
+  `main` and `demo` do not carry `packages/curator`), and the agent image,
+  built from the Claw Agent checkout. The header of
   `curator/compose/curator.yml` names both and how to build them.
 - Node 20 or newer, for the `weavr-curator` command and the tests.
 - A little SOL for the curator key, and a private Solana RPC endpoint.
@@ -250,9 +251,10 @@ in the profile and running init again, which re-renders it; words, no numbers.
 
 ## What stays private, and what is weavr's
 
-- The signer image is built from weavr's backend, which is not public today;
-  the compose file documents the local build and the doctor checks the image
-  exists. A published image will replace that step.
+- The signer image is built from weavr's backend **`dest`** branch, which is
+  not public today; the compose file documents the local build and the
+  doctor checks the image exists. `main` and `demo` cannot produce this
+  image. A published image will replace that step.
 - The guardian, the keeper, the api and the MCP server are weavr's. Your
   host talks to the api over HTTPS and sends signed transactions through it.
 - Everything else, the key, the tokens, the journal, the policy and the
