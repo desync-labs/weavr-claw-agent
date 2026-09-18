@@ -28,6 +28,7 @@
 #   CURATOR_TREASURY          the portfolio's fee recipient, read from chain by init
 #   CURATOR_EXPECTED_GUARDIAN weavr's guardian key, read from chain by init
 #   CURATOR_API_URL           the weavr api, default https://api.weavr.sh
+#   WEAVR_PROGRAM_IDS         demo: the signer decodes the demo factory, not alpha
 #   CURATOR_START_PAUSED      default 1: the signer boots paused; resume with the ops token once the doctor is green
 #   HERMES_HOME               the agent's home on the host: the rendered profile plus its .env (0600)
 #   HERMES_UID / HERMES_GID   the host user that owns HERMES_HOME (the image remaps its user to these)
@@ -46,6 +47,7 @@ services:
       - CURATOR_KEYPAIR=/keys/curator.json
       - CURATOR_POLICY_FILE=/policy/policy.json
       - CURATOR_API_URL=${CURATOR_API_URL:-https://api.weavr.sh}
+      - WEAVR_PROGRAM_IDS=demo
       - CURATOR_PORTFOLIO_MINT=${CURATOR_PORTFOLIO_MINT:?the portfolio's shares mint (weavr-curator init writes it)}
       - CURATOR_TREASURY=${CURATOR_TREASURY:?the portfolio's fee recipient (weavr-curator init writes it)}
       - CURATOR_EXPECTED_GUARDIAN=${CURATOR_EXPECTED_GUARDIAN:?the guardian key (weavr-curator init writes it)}
