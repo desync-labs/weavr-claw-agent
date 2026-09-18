@@ -109,7 +109,7 @@ The check signs a test message that can never be sent and spends nothing. What i
 Then prove the gate:
 
 ```bash
-claw chat -q "Deposit 5 dollars into my MAJ portfolio."   # must end: BLOCKED ... (Wallet action: deposit ...)
+claw chat -q "Deposit 5 dollars into my MAJ portfolio."   # no send: BLOCKED ... (Wallet action: deposit ...) or a single-query / no-approval refusal
 ```
 
 ### 5. Use it

@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { init, EXIT_INIT, rememberedUrls } from '../lib/curator/init.mjs';
 import { homePaths, parseEnv } from '../lib/curator/home.mjs';
 import { factoryConfigAddress, decodeFactoryConfig, lamportsToSol } from '../lib/curator/chain.mjs';
-import { composeVariables, mergeJobs, readConfigModel } from '../lib/curator/render.mjs';
+import { composeProjectName, composeVariables, mergeJobs, readConfigModel } from '../lib/curator/render.mjs';
 import { legsOf } from '../lib/curator/weavr-api.mjs';
 import { canonicalSha256, policyDigest, stripComments, validatePolicyAgainstBook } from '../lib/curator/policy-check.mjs';
 import { parseArgs } from '../lib/curator/args.mjs';
@@ -182,6 +182,8 @@ test('init: a funded key that already curates renders the whole home with the ri
   assert.equal(composeEnv.values.CURATOR_SIGNER_IMAGE, SIGNER_IMAGE, 'init writes the published tag curator.yml names');
   assert.equal(composeEnv.values.HERMES_IMAGE, 'hermes-agent');
   assert.equal(composeEnv.values.CURATOR_START_PAUSED, '1');
+  assert.equal(composeEnv.values.COMPOSE_PROJECT_NAME, 'weavr-clawa1');
+  assert.equal(composeEnv.values.CURATOR_SIGNER_PLATFORM, 'linux/amd64');
   assert.doesNotMatch(readFileSync(paths.composeEnv, 'utf8'), /[0-9a-f]{64}/, 'compose.env carries no token');
 
   // Nothing secret reached stdout.
@@ -193,6 +195,25 @@ test('init: a funded key that already curates renders the whole home with the ri
   assert.ok(!printed.includes(opsToken), 'the ops token is never printed');
   assert.ok(!printed.includes('private-rpc-never-printed'), 'the RPC URL is never printed');
   assert.ok(!printed.includes(Buffer.from(key.secretKey).toString('base64')));
+});
+
+test('init: a re-run keeps COMPOSE_PROJECT_NAME and CURATOR_SIGNER_PLATFORM the owner set', async (t) => {
+  const key = Keypair.generate();
+  const home = tmpHome();
+  const paths = homePaths(home);
+  writeKey(paths.keyFile, key);
+  const w = await world({ curator: key.publicKey.toBase58(), balances: { [key.publicKey.toBase58()]: FLOOR * 5 } });
+  t.after(() => w.server.close());
+  const first = await runInit(w, home);
+  assert.equal(first.exit, 0, first.text);
+  writeFileSync(paths.composeEnv, readFileSync(paths.composeEnv, 'utf8')
+    .replace(/^COMPOSE_PROJECT_NAME=.*$/m, 'COMPOSE_PROJECT_NAME=weavr-custom')
+    .replace(/^CURATOR_SIGNER_PLATFORM=.*$/m, 'CURATOR_SIGNER_PLATFORM=linux/arm64'));
+  const second = await runInit(w, home);
+  assert.equal(second.exit, 0, second.text);
+  const values = parseEnv(readFileSync(paths.composeEnv, 'utf8')).values;
+  assert.equal(values.COMPOSE_PROJECT_NAME, 'weavr-custom');
+  assert.equal(values.CURATOR_SIGNER_PLATFORM, 'linux/arm64');
 });
 
 // ---------------------------------------------------------------- planted failures
@@ -1275,6 +1296,14 @@ test('init: a re-run without --policy keeps the policy.json the home holds, edit
 
 // ---------------------------------------------------------------- pure pieces
 
+test('composeProjectName: weavr- plus the onchain symbol', () => {
+  assert.equal(composeProjectName('CLAWA1'), 'weavr-clawa1');
+  assert.equal(composeProjectName('BTCMAXI2'), 'weavr-btcmaxi2');
+  assert.equal(composeProjectName('btc-maxi'), 'weavr-btcmaxi');
+  assert.equal(composeProjectName(''), 'weavr-curator');
+  assert.equal(composeProjectName(null), 'weavr-curator');
+});
+
 test('validatePolicyAgainstBook: each rule reports on a planted violation and is silent on a clean book', () => {
   const pools = catalogue();
   const row = (legs) => portfolioRow({ mint: MINT, creator: 'x', curator: 'x', feeRecipient: 'x', legs });
@@ -1283,6 +1312,8 @@ test('validatePolicyAgainstBook: each rule reports on a planted violation and is
   assert.ok(codes([['pSOL', 6000], ['pCBBTC', 4000]]).includes('MIN_LEGS'));
   assert.ok(codes([['pSOL', 6000], ['pCBBTC', 4000]]).includes('LEG_WEIGHT_CAP'), 'pSOL 60 is over the standard per-leg cap');
   assert.ok(codes([['pSOL', 6000], ['pCBBTC', 4000]]).includes('STABLE_BAND'), 'no stable sleeve under standard');
+  const wide = catalogue().map((p) => (p.symbol === 'pCBBTC' || p.symbol === 'pSOL' ? { ...p, maxWeightBps: 9000 } : p));
+  assert.deepEqual(validatePolicyAgainstBook(REHEARSAL, row([['pCBBTC', 8500], ['pSOL', 1500]]), wide), [], 'rehearsal admits a two-leg 85/15 book when the pools do');
   assert.ok(codes([['pSOL', 3000], ['pJITOSOL', 3000], ['pCBBTC', 2000], ['pUSDS', 2000]]).length === 0);
   assert.ok(codes([['pSOL', 3500], ['pJITOSOL', 3500], ['pCBBTC', 1000], ['pUSDS', 2000]], { ...STANDARD, shape: { ...STANDARD.shape, categoryMaxBps: 3000 } }).includes('CATEGORY_CAP'));
   assert.ok(codes([['pSOL', 4000], ['pCBBTC', 4000], ['pUSDS', 2000]], { ...STANDARD, shape: { ...STANDARD.shape, maxLegs: 2 } }).includes('MAX_LEGS'));

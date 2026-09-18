@@ -23,6 +23,8 @@
 #           or set HERMES_IMAGE to an image you trust.
 #
 # Variables (from <home>/compose.env, which init writes and --env-file names; none is a secret)
+#   COMPOSE_PROJECT_NAME      one project per book (weavr-<symbol>); without it two homes share a journal
+#   CURATOR_SIGNER_PLATFORM   linux/amd64: the published signer image has no arm64 manifest
 #   CURATOR_KEY_FILE          the curator keypair file on the host; mounted read-only, never in the environment
 #   CURATOR_POLICY_FILE       the policy document, e.g. ../policy/standard.json; edit and restart to change it
 #   CURATOR_SIGNER_ENV        the signer's secret env file (signer.env.example lists the names), 0600
@@ -35,14 +37,20 @@
 #   HERMES_HOME               the agent's home on the host: the rendered profile plus its .env (0600)
 #   HERMES_UID / HERMES_GID   the host user that owns HERMES_HOME (the image remaps its user to these)
 #
+# Unset CURATOR_KEY_FILE CURATOR_POLICY_FILE CURATOR_SIGNER_ENV HERMES_HOME
+# before `up`: compose interpolates the shell over this env-file, and a leftover
+# path from another book mounts the wrong key.
+#
 # Network: the two services share a private compose network and nothing is
 # published beyond the host. The agent reaches the signer as
 # http://signer:8091, so CURATOR_SIGNER_URL in ${HERMES_HOME}/.env must be
 # exactly that. The signer is also published on 127.0.0.1:8091 for the ops
 # commands you run from the host (never on another interface).
+name: ${COMPOSE_PROJECT_NAME:-weavr-curator}
 services:
   signer:
     image: ${CURATOR_SIGNER_IMAGE:-intothefathom/curator-public:0.1.0}
+    platform: ${CURATOR_SIGNER_PLATFORM:-linux/amd64}
     restart: unless-stopped
     environment:
       - SERVICE=curator

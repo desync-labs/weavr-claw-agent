@@ -40,7 +40,7 @@ Collect these before the first command. Ask once, in one message.
 | Telegram bot token | curator | from `@BotFather`; the operator writes it |
 | Telegram numeric user id | curator | from `@userinfobot`; both `TELEGRAM_ALLOWED_USERS` and `TELEGRAM_HOME_CHANNEL` |
 | Solana RPC URL | signer | a private endpoint; the operator writes it into `~/weavr-wallet/secrets.env` |
-| funding | wallet, curator key | about 0.15 SOL and the deposit's USDC to the agent wallet; 0.1 SOL to the curator key, when asked |
+| funding | wallet, curator key | about 0.15 SOL and the deposit's USDC to the agent wallet; the curator key needs the amount init's fix names (often 0.02 SOL; 0.1 is plenty) |
 
 ## 0. Preflight
 
@@ -130,7 +130,7 @@ operator's word:
 set -a; . ~/.hermes/.env; set +a
 node tools/sign.mjs --balance            # EXPECT "ok":{"create":true,...} and "usdc" at least the deposit amount
 node tools/sign-check.mjs                # EXPECT {"status":"ok",...,"signer":"local",...}, exit 0; a CONFIG line names what is wrong with the file
-claw chat -q "Deposit 5 dollars into my MAJ portfolio."   # EXPECT the answer ends with BLOCKED ... (Wallet action: deposit ...): the gate holds
+claw chat -q "Deposit 5 dollars into my MAJ portfolio."   # EXPECT no send. The answer is BLOCKED ... (Wallet action: deposit ...) or a single-query / no-approval refusal: either means the gate held. A deposit signature is the failure.
 ```
 
 ## 3. Create the portfolio
@@ -198,7 +198,8 @@ Exit codes, read with `.exit` and `.steps[]` (`kind`, `name`, `detail`,
 `fix`) in the JSON:
 
 - `3`: the curator key needs SOL. `.key` is its address. `STOP`: the
-  operator sends 0.1 SOL there. With `--wait` the run polls up to
+  operator sends at least the amount the `signer SOL` fix names (often
+  0.02 SOL; 0.1 is plenty). With `--wait` the run polls up to
   `--wait-secs`; if it timed out, run the same command again.
 - `2`: a cross; the step with `kind: "cross"` names the fix. On the first
   run the expected cross is `policy vs book`: the standard preset refuses
@@ -206,15 +207,18 @@ Exit codes, read with `.exit` and `.steps[]` (`kind`, `name`, `detail`,
 - `0`: done; skip to "Fill the agent's env".
 
 Write the book's policy. `.portfolio.legs[].symbol` in `init.json` are the
-pool symbols the document must admit. Start from the document below (a
-book of five Solana legs on the standard preset with the universe opened):
+pool symbols the document must admit. Start from the document below (the
+standard preset with the universe opened, and `shape` wide enough for a
+two-leg 85/15 book as well as a five-leg mix):
 put each leg's symbol on `universe.allowlist` and in exactly one
 `universe.categories` entry, keep `pUSDS` in `stable` so a stable category
 exists with a zero floor, set `universe.maxExecutionLossBps` to the highest
 catalogue cost among the legs (`get_asset` shows it; 200 covers the pre-IPO
-legs), leave `requirePythFeedId` false if any leg lacks a feed, and leave
+legs), leave `requirePythFeedId` false if any leg lacks a feed, set
+`shape.minLegs` / `maxLegWeightBps` / `categoryMaxBps` so the live mix
+fits (2 / 9000 / 9000 covers an 85/15 book), and leave
 `invariants.rebalanceDelaySecs` as it is: `init` rewrites it to the book's
-notice. Everything else stays as written.
+notice. Do not loosen `turnover` or `cost` to pass `policy vs book`.
 
 ```bash
 cat > $H/curator/policy.json <<'EOT'
@@ -226,8 +230,8 @@ cat > $H/curator/policy.json <<'EOT'
     "allowlist": ["pNVDA", "pANTHROPIC", "pTOPENAI", "pJUPSOL", "pCBBTC", "pUSDS"],
     "categories": { "equity": ["pNVDA"], "preipo": ["pANTHROPIC", "pTOPENAI"], "lst": ["pJUPSOL"], "btc": ["pCBBTC"], "stable": ["pUSDS"] }
   },
-  "shape": { "minLegs": 3, "maxLegs": 8, "pageLimit": 8, "minLegWeightBps": 500, "maxLegWeightBps": 4000,
-             "stableCategory": "stable", "stableMinBps": 0, "stableMaxBps": 4000, "categoryMaxBps": 6000, "sumBps": 10000 },
+  "shape": { "minLegs": 2, "maxLegs": 8, "pageLimit": 8, "minLegWeightBps": 500, "maxLegWeightBps": 9000,
+             "stableCategory": "stable", "stableMinBps": 0, "stableMaxBps": 4000, "categoryMaxBps": 9000, "sumBps": 10000 },
   "turnover": { "maxTurnoverBps": 3000 },
   "cost": { "maxEstimatedCostBps": 100 },
   "cadence": { "minSecsSinceLastRebalance": 0, "maxProposalsPer30d": 10, "quotaWindowSecs": 2592000,
@@ -265,7 +269,7 @@ names a 0600 file you copy the four values from. Then pin the agent image
 in `compose.env` and check:
 
 ```bash
-sed -i 's#^HERMES_IMAGE=.*#HERMES_IMAGE=nousresearch/hermes-agent:v2026.8.27#' $H/compose.env
+perl -i -pe 's#^HERMES_IMAGE=.*#HERMES_IMAGE=nousresearch/hermes-agent:v2026.8.27#' $H/compose.env
 grep -cE '^(OPENAI_API_KEY|TELEGRAM_BOT_TOKEN|TELEGRAM_ALLOWED_USERS|TELEGRAM_HOME_CHANNEL)=.+' $H/hermes-home/.env   # EXPECT 4
 grep -E '^(CURATOR_SIGNER_IMAGE|HERMES_IMAGE)=' $H/compose.env   # EXPECT intothefathom/curator-public:0.1.0 and nousresearch/hermes-agent:v2026.8.27
 ```
@@ -277,7 +281,8 @@ Start, check, resume, check:
 
 ```bash
 cd ~/weavr-wallet/tools/claw-agent
-docker pull intothefathom/curator-public:0.1.0 && docker pull nousresearch/hermes-agent:v2026.8.27
+docker pull --platform linux/amd64 intothefathom/curator-public:0.1.0 && docker pull nousresearch/hermes-agent:v2026.8.27
+unset CURATOR_KEY_FILE CURATOR_POLICY_FILE CURATOR_SIGNER_ENV HERMES_HOME
 docker compose --env-file $H/compose.env -f curator/compose/curator.yml up -d
 sleep 40
 weavr-curator doctor --home $H --json > ~/weavr-wallet/doctor.json; echo "exit $?"
@@ -364,7 +369,7 @@ the policy caps everything.
   refuses: the refusal is the answer.
 - Do not accept a sign link for the create, and do not change the operator's
   mix, name or ticker.
-- Do not pass `--yes` to `init --policy` over an edited policy, and do not
-  loosen a policy number to get past `policy vs book`: open the universe to
-  the book's legs, as above, and leave the caps.
+- Do not pass `--yes` to `init --policy` over an edited policy. Do not loosen turnover or cost
+  to get past `policy vs book`: open the universe to the book's legs and set
+  `shape` so that mix fits, as above.
 - Do not resume the signer before the doctor shows every other line green.

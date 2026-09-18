@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_comment": "The rehearsal curator policy preset, for a dust portfolio you use to watch the machine work before running the standard preset. Differences from standard.json: a smaller allowlist, minLegs 2 and no stable floor, a one-minute notice invariant (the portfolio's onchain delay must match), requirePythFeedId off, no cadence gate, an all-day propose window, and deposit and withdraw moved out of the agent's verbs into `denied`: the agent makes no deposits or withdrawals here. Every number is still a refusal threshold; the signer refuses to boot on an unknown or missing key.",
+  "_comment": "The rehearsal curator policy preset, for a dust portfolio you use to watch the machine work before running the standard preset. Differences from standard.json: a smaller allowlist, minLegs 2, no stable floor, and per-leg / category caps that admit a two-leg 85/15 book, a one-minute notice invariant (the portfolio's onchain delay must match), requirePythFeedId off, no cadence gate, an all-day propose window, and deposit and withdraw moved out of the agent's verbs into `denied`: the agent makes no deposits or withdrawals here. Turnover and cost stay at the standard thresholds. Every number is still a refusal threshold; the signer refuses to boot on an unknown or missing key.",
   "universe": {
     "chains": [
       "solana"
@@ -35,11 +35,11 @@
     "maxLegs": 8,
     "pageLimit": 8,
     "minLegWeightBps": 500,
-    "maxLegWeightBps": 7000,
+    "maxLegWeightBps": 9000,
     "stableCategory": "stable",
     "stableMinBps": 0,
     "stableMaxBps": 4000,
-    "categoryMaxBps": 7000,
+    "categoryMaxBps": 9000,
     "sumBps": 10000
   },
   "turnover": {

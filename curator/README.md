@@ -157,13 +157,16 @@ the only home under `~/.config/weavr-curator/`; with several, pass `--home`.
 ## Run it
 
 ```bash
+unset CURATOR_KEY_FILE CURATOR_POLICY_FILE CURATOR_SIGNER_ENV HERMES_HOME
 docker compose --env-file ~/.config/weavr-curator/<TICKER>/compose.env -f curator/compose/curator.yml up -d
 ```
 
-init prints this line with your home filled in. Keep the `--env-file`:
-`docker compose -f curator/compose/curator.yml up -d` on its own reads no
-`compose.env` and stops on a variable it cannot fill. The signer boots
-paused. When the doctor is green:
+init prints this line with your home filled in and writes
+`COMPOSE_PROJECT_NAME` plus `CURATOR_SIGNER_PLATFORM=linux/amd64` so two
+books do not share a journal and Apple Silicon can pull the signer. Keep
+the `--env-file`: `docker compose -f curator/compose/curator.yml up -d` on its own reads no
+`compose.env` and stops. Unset the four path variables first: the shell
+overrides the env file. The signer boots paused. When the doctor is green:
 
 ```bash
 weavr-curator ops resume

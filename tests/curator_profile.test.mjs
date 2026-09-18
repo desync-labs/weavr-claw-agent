@@ -58,6 +58,7 @@ test('config.yaml parses and pins the hardening keys the fork actually reads', (
   assert.equal(cfg.telegram.dm_policy, 'allowlist');
   assert.equal(cfg.telegram.unauthorized_dm_behavior, 'ignore');
   assert.equal(cfg.telegram.allow_from, undefined, 'no allow_from: the loader never expands ${VAR}, the ids come from TELEGRAM_ALLOWED_USERS on the host');
+  assert.equal(cfg._config_version, 12, 'Hermes v2026.8.27 migrates from this marker');
 });
 
 test('the weavr MCP server exposes exactly the 11 read tools and no write tool', () => {
@@ -415,8 +416,10 @@ test('the two policy presets parse, share a schema, and differ exactly where the
     assert.ok(doc.verbs.ops.includes('resume') && doc.verbs.ops.includes('unlock') && doc.verbs.ops.includes('rotate-curator'), `${name}: ops verbs`);
     assert.ok(!doc.verbs.agent.includes('resume'), `${name}: the agent can never resume itself`);
   }
-  // the rehearsal: a two-leg book, no cadence gate, an all-day window, a minute of notice, no money verbs
+  // the rehearsal: a two-leg 85/15 book, no cadence gate, an all-day window, a minute of notice, no money verbs
   assert.equal(rehearsal.shape.minLegs, 2);
+  assert.equal(rehearsal.shape.maxLegWeightBps, 9000);
+  assert.equal(rehearsal.shape.categoryMaxBps, 9000);
   assert.equal(rehearsal.cadence.minSecsSinceLastRebalance, 0);
   assert.deepEqual(rehearsal.cadence.proposeWindowUtc, { fromHour: 0, toHour: 24 });
   assert.equal(rehearsal.invariants.rebalanceDelaySecs, 60);
@@ -456,6 +459,8 @@ test('the compose file publishes the signer on loopback only and takes every sec
   assert.ok(doc.services.signer.volumes.some((v) => v.endsWith(':/keys/curator.json:ro')), 'the key is bind-mounted read-only');
   assert.ok(doc.services.signer.volumes.some((v) => v.endsWith(':/policy/policy.json:ro')), 'the policy is bind-mounted read-only');
   assert.equal(SIGNER_IMAGE, `intothefathom/curator-public:${SIGNER_VERSION}`, 'the compose default is the published image at the version signer/package.json declares');
+  assert.equal(doc.name, '${COMPOSE_PROJECT_NAME:-weavr-curator}');
+  assert.equal(doc.services.signer.platform, '${CURATOR_SIGNER_PLATFORM:-linux/amd64}');
   assert.match(text, /docker build -t curator-public:local signer/, 'the header tells the self-hoster how to run their own build');
   assert.doesNotMatch(text, /weavr-backend:curator-local|pending|checkout of the weavr backend/, 'the private build is gone from the header');
   assert.match(text, /HERMES_IMAGE:-hermes-agent/);
@@ -497,11 +502,14 @@ test('docker compose config accepts the file with placeholder values', { skip: !
       CURATOR_TREASURY: 'Treas111111111111111111111111111111111111111',
       CURATOR_EXPECTED_GUARDIAN: 'Guard111111111111111111111111111111111111111',
       HERMES_HOME: join(dir, 'home'),
+      COMPOSE_PROJECT_NAME: 'weavr-demo',
     };
     const r = spawnSync('docker', ['compose', '-f', COMPOSE, 'config'], { encoding: 'utf8', env, timeout: 90_000 });
     assert.equal(r.status, 0, r.stderr);
     const rendered = yamlLoad(r.stdout);
+    assert.equal(rendered.name, 'weavr-demo');
     assert.equal(rendered.services.signer.image, SIGNER_IMAGE);
+    assert.equal(rendered.services.signer.platform, 'linux/amd64');
     assert.equal(rendered.services.agent.image, 'hermes-agent');
     assert.equal(rendered.services.signer.ports[0].host_ip, '127.0.0.1');
     assert.equal(rendered.services.signer.environment.CURATOR_START_PAUSED, '1');
@@ -519,7 +527,7 @@ test('docker compose config accepts the file with placeholder values', { skip: !
 
 test('curator/README.md is the self-hoster page: short, in order, and without a policy number', () => {
   const text = readFileSync(join(ROOT, 'curator/README.md'), 'utf8');
-  assert.ok(text.split('\n').length <= 260, 'under about 250 lines');
+  assert.ok(text.split('\n').length <= 270, 'under about 250 lines');
   const order = ['## What it is', '## The trust boundaries', '## What you need', '## Setup', '## Run it', '## The daily life', '## Operations', '## What stays private'];
   let last = -1;
   for (const heading of order) {
@@ -551,4 +559,19 @@ test('the compose header and the policy page give the start and restart commands
   const bare = page.indexOf('`docker compose -f curator/compose/curator.yml up -d` on its own reads no');
   assert.ok(real >= 0 && bare > real, 'the counter-example follows the real command');
   assert.equal((page.match(new RegExp(BARE.source, 'g')) ?? []).length, 1, 'and the bare form appears nowhere else on the page');
+});
+
+test('the walkthroughs name the published-path traps', () => {
+  for (const rel of ['AGENT-WALKTHROUGH.md', 'WALKTHROUGH.md']) {
+    const text = readFileSync(join(ROOT, rel), 'utf8');
+    assert.match(text, /--platform linux\/amd64/, `${rel} pulls the amd64 signer`);
+    assert.match(text, /unset CURATOR_KEY_FILE CURATOR_POLICY_FILE CURATOR_SIGNER_ENV HERMES_HOME/, `${rel} unsets compose path leftovers`);
+    assert.doesNotMatch(text, /\bsed -i /, `${rel} still uses GNU sed -i`);
+    assert.match(text, /"minLegs": 2/, `${rel} sample admits a two-leg book`);
+    assert.match(text, /"maxLegWeightBps": 9000/, `${rel} sample admits 85/15`);
+    assert.match(text, /Do not loosen turnover or cost/, `${rel} keeps turnover and cost`);
+  }
+  const agent = readFileSync(join(ROOT, 'AGENT-WALKTHROUGH.md'), 'utf8');
+  assert.match(agent, /perl -i -pe/);
+  assert.match(agent, /single-query \/ no-approval refusal/);
 });
