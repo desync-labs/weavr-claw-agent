@@ -1331,6 +1331,21 @@ test('validatePolicyAgainstBook: each rule reports on a planted violation and is
   assert.match(items.find((i) => i.code === 'MIN_LEGS').fix, /--policy rehearsal/);
 });
 
+test('validatePolicyAgainstBook: an allowlist of * admits any catalogue pool, counted in the category listing * unless another names it', () => {
+  const pools = catalogue();
+  const row = (legs) => portfolioRow({ mint: MINT, creator: 'x', curator: 'x', feeRecipient: 'x', legs });
+  const book = row([['pSOL', 3000], ['pXAUT', 3000], ['pCBBTC', 2000], ['pUSDS', 2000]]);
+  const chains = ['solana', 'ethereum'];
+  const listed = validatePolicyAgainstBook({ ...STANDARD, universe: { ...STANDARD.universe, chains } }, book, pools);
+  assert.deepEqual(listed.map((i) => i.code), ['POOL_DENIED']);
+  assert.match(listed[0].message, /pXAUT is not on universe\.allowlist/);
+  const universe = { ...STANDARD.universe, chains, allowlist: ['*'], categories: { stable: ['pUSDS'], other: ['*'] } };
+  const capped = validatePolicyAgainstBook({ ...STANDARD, universe }, book, pools);
+  assert.deepEqual(capped.map((i) => i.code), ['CATEGORY_CAP']);
+  assert.match(capped[0].message, /category other holds 8000 bps/);
+  assert.deepEqual(validatePolicyAgainstBook({ ...STANDARD, universe, shape: { ...STANDARD.shape, categoryMaxBps: 10000 } }, book, pools), []);
+});
+
 
 test('validatePolicyAgainstBook: a number a rule needs and cannot find is INPUTS_INCOMPLETE, never a pass', () => {
   const pools = catalogue();

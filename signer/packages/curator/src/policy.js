@@ -33,6 +33,13 @@ const refuse = (code, message) => ({ ok: false, code, message });
 /** Slippage the deposit and withdraw floors leave under the quoted price, on top of the vault fee. */
 export const MIN_OUT_TOLERANCE_BPS = 50;
 
+/**
+ * `universe.allowlist: ["*"]` admits every catalogue pool; the chain, status,
+ * price-feed, risk-tier and loss-cap rows still apply. The category that
+ * lists `*` takes every pool no other category names.
+ */
+const ANY_POOL = '*';
+
 /** USDC and WEAVR shares both carry six decimals; the vault price is scaled by the same factor. */
 const BASE_UNITS = 1_000_000n;
 const HOUR_SECS = 3600;
@@ -226,7 +233,9 @@ function deepFreeze(object) {
  * allowlist is unique and every symbol on it sits in exactly one category;
  * every category member is allowlisted (a member the engine can never target
  * is a stale edit); `stableCategory` exists; the leg and stable bands are
- * ordered; the verb lists do not contradict each other.
+ * ordered; the verb lists do not contradict each other. `ANY_POOL` stands
+ * alone on the allowlist, and exactly one category lists it, so every pool
+ * the wildcard admits still has one category.
  *
  * Throws `Error('policy: …')`; returns a deep-frozen object.
  * @param {string | object} jsonOrObject CURATOR_POLICY_JSON or its parsed form
@@ -266,14 +275,17 @@ export function loadPolicy(jsonOrObject) {
   // Universe relations.
   const { allowlist, categories } = policy.universe;
   if (new Set(allowlist).size !== allowlist.length) fail('universe.allowlist has a duplicate symbol');
+  const anyPool = allowlist.includes(ANY_POOL);
+  if (anyPool && allowlist.length > 1) fail(`universe.allowlist names ${ANY_POOL} beside other symbols; ${ANY_POOL} already admits every catalogue pool`);
   const categoryOf = new Map();
   for (const [name, symbols] of Object.entries(categories)) {
     for (const symbol of symbols) {
       if (categoryOf.has(symbol)) fail(`${symbol} is in two categories (${categoryOf.get(symbol)}, ${name})`);
       categoryOf.set(symbol, name);
-      if (!allowlist.includes(symbol)) fail(`category ${name} lists ${symbol}, which is not allowlisted`);
+      if (!anyPool && !allowlist.includes(symbol)) fail(`category ${name} lists ${symbol}, which is not allowlisted`);
     }
   }
+  if (anyPool && !categoryOf.has(ANY_POOL)) fail(`universe.allowlist is ${ANY_POOL}, so one category must list ${ANY_POOL} for the pools no other category names`);
   for (const symbol of allowlist) {
     if (!categoryOf.has(symbol)) fail(`allowlisted ${symbol} is in no category`);
   }
@@ -470,6 +482,9 @@ function recentProposals(ledger, nowSecs, windowSecs) {
  * Refusal while `/simulate` shows the LLM the whole list.
  *
  * Definitions the rules rely on:
+ * - a pool's category is the one naming its symbol, else the one listing
+ *   `ANY_POOL`; with an allowlist of `ANY_POOL` every catalogue pool is
+ *   allowlisted;
  * - current weights are the book's *target* weights (`holdings.legs[].targetWeightBps`),
  *   never the actual ones — the keeper moves money towards target, so a
  *   proposal's cost is the distance between two target sets;
@@ -521,6 +536,7 @@ export function evaluateProposal(input) {
   const { universe, shape: shp, turnover, cost, cadence, reason } = policy;
   const categoryOf = new Map();
   for (const [name, symbols] of Object.entries(universe.categories)) for (const s of symbols) categoryOf.set(s, name);
+  const anyPool = universe.allowlist.includes(ANY_POOL);
 
   // Universe — per target, in the caller's order.
   for (const { poolId } of targets) {
@@ -532,7 +548,7 @@ export function evaluateProposal(input) {
     const label = pool.symbol ?? poolId;
     if (!universe.chains.includes(pool.chain)) add('CHAIN_DENIED', `${label} is on ${pool.chain ?? 'an unknown chain'}; allowed: ${universe.chains.join(', ')}`);
     if (pool.status !== universe.requireStatus) add('POOL_NOT_ACTIVE', `${label} status is ${pool.status ?? 'unknown'}, not ${universe.requireStatus}`);
-    if (!universe.allowlist.includes(pool.symbol)) add('POOL_DENIED', `${label} is not on the allowlist`);
+    if (!anyPool && !universe.allowlist.includes(pool.symbol)) add('POOL_DENIED', `${label} is not on the allowlist`);
     const tier = toNumber(pool.riskTier);
     if (tier == null) add('POOL_DENIED', `${label} riskTier unknown`);
     else if (tier > universe.maxRiskTier) add('POOL_DENIED', `${label} riskTier ${tier} exceeds ${universe.maxRiskTier}`);
@@ -563,7 +579,7 @@ export function evaluateProposal(input) {
     const cap = poolCap == null ? shp.maxLegWeightBps : Math.min(shp.maxLegWeightBps, poolCap);
     if (weightBps < shp.minLegWeightBps) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is under the ${shp.minLegWeightBps} bps leg minimum`);
     else if (weightBps > cap) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is over its ${cap} bps cap`);
-    const category = pool ? categoryOf.get(pool.symbol) : undefined;
+    const category = pool ? categoryOf.get(pool.symbol) ?? categoryOf.get(ANY_POOL) : undefined;
     if (category) categoryBps[category] += weightBps;
   }
   const stable = categoryBps[shp.stableCategory] ?? 0;

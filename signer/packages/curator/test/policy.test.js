@@ -32,6 +32,13 @@ const FIXTURE = resolve(here, 'fixtures/policy.v1.json');
 const policyJson = readFileSync(FIXTURE, 'utf8');
 const policy = loadPolicy(policyJson);
 const fresh = () => JSON.parse(policyJson);
+/** The fixture with an allowlist of `*` and these categories. */
+const anyPoolPolicy = (categories) => {
+  const doc = fresh();
+  doc.universe.allowlist = ['*'];
+  doc.universe.categories = categories;
+  return loadPolicy(doc);
+};
 
 const DAY = 86_400;
 // Friday 11 Sep 2026 09:00:00 UTC — inside the 08:00–12:00 propose window.
@@ -244,6 +251,23 @@ describe('loadPolicy', () => {
     assert.throws(() => loadPolicy(doc), /category alt lists pBAR, which is not allowlisted/);
   });
 
+  it('loads an allowlist of * whose categories name any symbol and list * once', () => {
+    const any = anyPoolPolicy({ stable: ['pUSDT', 'pXAUT'], other: ['*'] });
+    assert.deepEqual(any.universe.allowlist, ['*']);
+    assert.deepEqual(any.universe.categories, { stable: ['pUSDT', 'pXAUT'], other: ['*'] });
+  });
+
+  it('refuses * beside other symbols, * in no category or in two, and a category listing * under a symbol allowlist', () => {
+    const beside = fresh();
+    beside.universe.allowlist.push('*');
+    assert.throws(() => loadPolicy(beside), /universe\.allowlist names \* beside other symbols/);
+    assert.throws(() => anyPoolPolicy(fresh().universe.categories), /universe\.allowlist is \*, so one category must list \*/);
+    assert.throws(() => anyPoolPolicy({ stable: ['pUSDT', '*'], other: ['*'] }), /\* is in two categories \(stable, other\)/);
+    const listed = fresh();
+    listed.universe.categories.alt.push('*');
+    assert.throws(() => loadPolicy(listed), /category alt lists \*, which is not allowlisted/);
+  });
+
   it('refuses contradictory verb lists', () => {
     const doc = fresh();
     doc.verbs.denied.push('propose');
@@ -430,6 +454,30 @@ describe('evaluateProposal', () => {
   it('POOL_COST_TOO_HIGH: maxExecutionLossBps over the universe cap, or unknown', () => {
     assert.deepEqual(codes(proposal({ snapshot: snap({ pools: withPool('pINF', { maxExecutionLossBps: 150 }) }) })), ['POOL_COST_TOO_HIGH']);
     assert.ok(codes(proposal({ snapshot: snap({ pools: withPool('pINF', { maxExecutionLossBps: null }) }) })).includes('POOL_COST_TOO_HIGH'));
+  });
+
+  it('an allowlist of * admits any catalogue pool, into the category listing * unless another names it; the other universe rows still bind', () => {
+    const any = anyPoolPolicy({ sol: ['pSOL'], stable: ['pUSDT'], other: ['*'] });
+    const plus = (symbol) => targets(['pSOL', 3000], ['pJITOSOL', 2500], ['pCBBTC', 2000], ['pUSDT', 2000], [symbol, 500]);
+    const result = proposal({ policy: any, targets: plus('pETH') });
+    assert.equal(result.ok, true, JSON.stringify(codes(result)));
+    assert.deepEqual(result.summary.categories, { sol: 3000, stable: 2000, other: 5000 });
+    assert.deepEqual(codes(proposal({ policy: any, targets: plus('pWSTETH') })), ['CHAIN_DENIED']);
+    assert.match(proposal({ policy: any, targets: plus('pSYRUPUSDC') }).message, /pSYRUPUSDC has no pythFeedId/);
+    assert.match(proposal({ policy: any, targets: plus('pNOPE') }).message, /pool-pNOPE is not in the catalogue/);
+    assert.match(proposal({ policy: any, targets: plus('pETH'), snapshot: snap({ pools: withPool('pETH', { riskTier: 5 }) }) }).message, /pETH riskTier 5 exceeds 4/);
+  });
+
+  it('CATEGORY_CAP and STABLE_BAND count every unnamed pool in the category listing *', () => {
+    const any = anyPoolPolicy({ stable: ['pUSDT'], other: ['*'] });
+    const capped = proposal({ policy: any });
+    assert.deepEqual(codes(capped), ['CATEGORY_CAP']);
+    assert.match(capped.message, /other at 8000 bps is over the 6000 bps category cap/);
+    const stableByDefault = anyPoolPolicy({ sol: ['pSOL'], lst: ['pJITOSOL', 'pINF'], btc: ['pCBBTC'], stable: ['*'] });
+    assert.deepEqual(codes(proposal({ policy: stableByDefault })), []);
+    const overStable = proposal({ policy: stableByDefault, targets: targets(['pSOL', 3000], ['pJITOSOL', 1500], ['pCBBTC', 1000], ['pUSDT', 2000], ['pETH', 2500]) });
+    assert.deepEqual(codes(overStable), ['STABLE_BAND']);
+    assert.match(overStable.message, /stable at 4500 bps is over the 4000 bps ceiling/);
   });
 
   // Shape.
