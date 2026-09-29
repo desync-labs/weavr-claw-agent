@@ -28,7 +28,8 @@ risk tier and the symbol allowlist (`POOL_DENIED`); the pool's own
 maxExecutionLossBps ceiling (`POOL_COST_TOO_HIGH`). `categories` assigns each
 allowlisted symbol to exactly one category; the catalogue carries none, so the
 document does. The allowlist is the shelf: a pool not on it is out however
-good it looks.
+good it looks. An allowlist of `*` makes the whole catalogue the shelf, and
+the category listing `*` holds every pool no other category names.
 
 ## `shape`: what a proposal may look like
 

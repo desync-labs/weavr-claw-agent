@@ -173,8 +173,9 @@ disagrees):
 - `PAUSED` — §4.9 step 1 ("refuses writes; cancel stays allowed") needs a code
   distinct from `SELF_LOCKED` (which also refuses cancel).
 - `LEG_WEIGHT_CAP` covers both bounds of "per leg 5%–min(40%, pool maxWeightBps)".
-- `POOL_DENIED` covers: not in the catalogue, not in the allowlist, `riskTier`
-  unknown or above the cap, or no `pythFeedId`. `POOL_COST_TOO_HIGH` is
+- `POOL_DENIED` covers: not in the catalogue, not in the allowlist (an
+  allowlist of `*` admits every catalogue pool), `riskTier` unknown or above
+  the cap, or no `pythFeedId`. `POOL_COST_TOO_HIGH` is
   `maxExecutionLossBps` unknown or above the cap. `POOL_NOT_ACTIVE` is
   `status !== 'active'`. `CHAIN_DENIED` is chain not in the policy's chain list.
 - `BAD_REQUEST` — an argument that has the wrong shape (targets not a
@@ -619,7 +620,7 @@ ceiling one lamport under the honest create.
 ### `src/policy.js` (pure)
 
 ```js
-/** Parse + validate the policy document (JSON string or object). Throws `Error('policy: …')` on a missing or unknown key, a wrong type, version !== 1, an allowlisted pool outside every category, or any pool in two categories; `_comment` keys are dropped. Returns a deep-frozen object. */
+/** Parse + validate the policy document (JSON string or object). Throws `Error('policy: …')` on a missing or unknown key, a wrong type, version !== 1, an allowlisted pool outside every category, or any pool in two categories; `*` beside other symbols on the allowlist, or an allowlist of `*` with no category listing `*`; `_comment` keys are dropped. Returns a deep-frozen object. */
 export function loadPolicy(jsonOrObject) → policy
 
 /** Is `verb` allowed for this token kind and session? `verb` is the route name without the slash. */

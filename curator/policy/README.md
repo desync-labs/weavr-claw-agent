@@ -61,6 +61,9 @@ Some rules to keep in mind when editing:
   delay onchain first (`weavr-curator ops set-delay`), then the document.
 - Every symbol in `universe.allowlist` must appear in exactly one category,
   and `shape.stableCategory` must name one of them.
+- An allowlist of `["*"]` admits every pool in the catalogue, today's and the
+  ones weavr lists later; the other `universe` rows still apply. Exactly one
+  category must then list `"*"`: it takes every pool no other category names.
 - `verbs.agent` and `verbs.denied` together must settle every route the
   plugin calls, every read verb stays in `verbs.agent`, and `verbs.agent`
   names nothing the agent does not call. The signer checks a verb by list
