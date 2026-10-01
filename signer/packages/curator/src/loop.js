@@ -37,6 +37,7 @@
  * stale; one account read per tick keeps it current.
  */
 import { Refusal } from './errors.js';
+import { stampTags } from './metadata.js';
 import {
   applySend, refreshNav, raiseAlert, clearAlert, clearApplyAlerts, depsOf, scrubText,
   pendingOf, currentTargetsOf, targetsEqual, keeperOkOf, initialApplyState, writeAttemptsLastHour, num,
@@ -450,6 +451,11 @@ export function createLoop(opts) {
       }
       if (ctx.state.apply.state === 'IDLE' || ctx.state.apply.state === 'DONE') clearApplyAlerts(ctx);
     }
+
+    // The metadata document's tags, last so a slow metadata service never
+    // delays an apply. A pause does not hold it (metadata.js stampTags says why).
+    const stamped = await stampTags(ctx, snapshot, { raiseAlert, clearAlert, journal });
+    if (stamped?.alert) result.alerts.push(stamped.alert);
 
     ctx.state.lastTick = { at: nowSecs, ok: true, error: null };
     result.applyState = ctx.state.apply.state;

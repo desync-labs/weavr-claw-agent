@@ -171,7 +171,7 @@ test('the allowances are exactly the documented ones', () => {
     ['| 6020 | RebalanceTooSoon | delay since the last apply not elapsed | HOLD until `nextProposeAt` |', 'ERRORS.md'], // the code cell
     ['| 6012 | CreatorFeeOutOfRange | creator fee not in (0, 10000) | create-time only |', 'ERRORS.md'],             // a program bound, no unit
     ['| 6042 | MaxPriceAgeOutOfRange | pool max price age outside 1..86400 | governance only |', 'ERRORS.md'],
-    ['version: 0.2.0', 'SKILL.md'],                                        // frontmatter version
+    ['version: 0.3.0', 'SKILL.md'],                                        // frontmatter version
     ['# Mandate v1 (11 Sep 2026)', 'MANDATE.md'],                          // a date in a header
     ['review daily 09:00 UTC; weekly Mon 10:00 UTC', 'MEMORY.md'],         // two schedules are not a window
     ['apply lands 2026-09-13 09:12 UTC', 'BRIEF.md'],                      // a timestamp

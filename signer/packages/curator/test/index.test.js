@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AddressLookupTableAccount, Keypair } from '@solana/web3.js';
 import { boot, readConfig, allowedProgramSet, loadLookupTables, CORE_PROGRAMS, jsonLogger } from '../src/index.js';
-import { fakeDeps, fakeClient, fakeSigner, fakeSnapshot, POLICY, MINT, TREASURY, GUARDIAN, WALLET } from './fakes.js';
+import { fakeDeps, fakeClient, fakeSigner, fakeMetadata, fakeSnapshot, POLICY, MINT, TREASURY, GUARDIAN, WALLET } from './fakes.js';
 import { Journal, canonicalSha256 } from '../src/journal.js';
 
 /** The real journal on a temp file, with the stdout mirror off so a planted lock line is not printed. */
@@ -52,6 +52,9 @@ test('readConfig refuses each missing or malformed variable by name, never by va
     [{ CURATOR_POLICY_JSON: '' }, /CURATOR_POLICY_JSON \(or CURATOR_POLICY_FILE\) is required/],
     [{ CURATOR_PORT: '70000' }, /CURATOR_PORT must be an integer/],
     [{ CURATOR_TICK_MS: '10' }, /CURATOR_TICK_MS must be an integer between 1000/],
+    [{ CURATOR_METADATA_URL: 'meta:8080' }, /CURATOR_METADATA_URL must be an http/],
+    [{ CURATOR_METADATA_TAGS: 'agent:thesis' }, /CURATOR_METADATA_TAGS: .* is not a tag/],
+    [{ CURATOR_METADATA_SIGN_DOMAIN: 'weavr.sh/evil' }, /CURATOR_METADATA_SIGN_DOMAIN must be a host name/],
   ];
   for (const [over, pattern] of cases) {
     const env = fullEnv(over);
@@ -68,6 +71,13 @@ test('readConfig refuses each missing or malformed variable by name, never by va
   assert.equal(cfg.port, 9000);
   assert.equal(cfg.startPaused, true);
   assert.equal(cfg.tickMs, 1000);
+  assert.equal(cfg.metadataUrl, 'http://api.test:8080', 'the metadata service defaults to the api host');
+  assert.deepEqual(cfg.metadataTags, [], 'no tags, no stamp');
+  assert.equal(cfg.metadataDomain, 'weavr.sh');
+  const tagged = readConfig(fullEnv({ CURATOR_METADATA_URL: 'https://api.weavr.sh', CURATOR_METADATA_TAGS: 'agent-managed,agent-thesis', CURATOR_METADATA_SIGN_DOMAIN: 'localhost:3000' }));
+  assert.equal(tagged.metadataUrl, 'https://api.weavr.sh');
+  assert.deepEqual(tagged.metadataTags, ['agent-managed', 'agent-thesis']);
+  assert.equal(tagged.metadataDomain, 'localhost:3000');
 });
 
 test('boot with a short token rejects before the key file is opened or a port is bound', async () => {
@@ -90,11 +100,12 @@ test('a full boot on port 0 with fakes: ctx wired, boot record journaled, first 
   const deps = fakeDeps({ trace, snapshot: fakeSnapshot() });
   const client = fakeClient({ trace });
   const signer = fakeSigner({ trace });
+  const metadata = fakeMetadata({ trace, clock: { now: () => Date.now() } });
   const logs = [];
   const started = await boot({
-    env: fullEnv({ CURATOR_JOURNAL: journalFile, CURATOR_START_PAUSED: '1' }),
+    env: fullEnv({ CURATOR_JOURNAL: journalFile, CURATOR_START_PAUSED: '1', CURATOR_METADATA_TAGS: 'agent-managed' }),
     overrides: {
-      signer, client, deps, connection: { getSlot: async () => 1 }, log: (level, event, fields) => logs.push({ level, event, ...fields }), signals: false,
+      signer, client, deps, metadata, connection: { getSlot: async () => 1 }, log: (level, event, fields) => logs.push({ level, event, ...fields }), signals: false,
       journal: quietJournal(journalFile),
     },
   });
@@ -123,10 +134,15 @@ test('a full boot on port 0 with fakes: ctx wired, boot record journaled, first 
     assert.equal(status.status, 200);
     const statusBody = await status.json();
     assert.equal(statusBody.paused, true);
+    // The first tick stamps the configured tag, paused or not.
+    assert.deepEqual(metadata.doc.tags, ['agent-managed']);
+    assert.equal(statusBody.metadata.state, 'ok');
     const lines = readFileSync(journalFile, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
     assert.equal(lines[0].kind, 'boot');
     assert.equal(lines[0].wallet, WALLET);
     assert.equal(lines[0].paused, true);
+    assert.deepEqual(lines[0].metadataTags, ['agent-managed']);
+    assert.ok(lines.some((line) => line.kind === 'metadata' && line.ok === true));
     // The policy digest: computed once at boot over the LOADED document (comments stripped), quoted by the boot
     // record, the boot log line and /status alike, and served whole by /policy.
     assert.match(lines[0].policySha256, /^[0-9a-f]{64}$/);

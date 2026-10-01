@@ -54,6 +54,7 @@ export const ROUTES = Object.freeze([
   ['POST', '/refresh-nav', 'refresh-nav', { tokenKind: 'agent' }],
   ['POST', '/pause', 'pause', { tokenKind: 'agent' }],
   ['POST', '/note', 'note', { tokenKind: 'agent' }],
+  ['POST', '/strategy', 'strategy', { tokenKind: 'agent' }],
   ['POST', '/hermes-heartbeat', 'hermes-heartbeat', { tokenKind: 'agent' }],
   ['POST', '/resume', 'resume', { tokenKind: 'ops' }],
   ['POST', '/unlock', 'unlock', { tokenKind: 'ops' }],

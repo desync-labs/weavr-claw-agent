@@ -58,18 +58,19 @@ const v0Transfer = () => {
 };
 
 describe('loadSigner', () => {
-  it('exposes the public key, the kind and sign — nothing else, frozen', () => {
+  it('exposes the public key, the kind, sign and signText — nothing else, frozen', () => {
     assert.equal(signer.wallet, keypair.publicKey.toBase58());
     assert.equal(signer.kind, 'curator');
     assert.equal(typeof signer.sign, 'function');
-    assert.deepEqual(Object.keys(signer).sort(), ['kind', 'sign', 'wallet']);
+    assert.equal(typeof signer.signText, 'function');
+    assert.deepEqual(Object.keys(signer).sort(), ['kind', 'sign', 'signText', 'wallet']);
     assert.ok(Object.isFrozen(signer));
   });
 
   it('never leaks the secret through JSON, inspect or the file path', () => {
     const secretHex = Buffer.from(keypair.secretKey).toString('hex');
     const secretJson = JSON.stringify(Array.from(keypair.secretKey));
-    for (const rendered of [JSON.stringify(signer), inspect(signer, { depth: 10 }), String(signer.sign)]) {
+    for (const rendered of [JSON.stringify(signer), inspect(signer, { depth: 10 }), String(signer.sign), String(signer.signText)]) {
       assert.ok(!rendered.includes(secretHex));
       assert.ok(!rendered.includes(secretJson));
       assert.ok(!rendered.includes('secretKey'));
@@ -173,6 +174,31 @@ describe('loadSigner refusals (code CONFIG, env var named, contents never echoed
   });
 });
 
+describe('signText (the metadata service\'s message)', () => {
+  const MESSAGE = [
+    'weavr.sh wants you to update portfolio metadata with your Solana account:', 'WALLET', '',
+    'Portfolio: P', 'Action: set-metadata', `Content-Hash: sha256:${'a'.repeat(64)}`, 'Issued-At: 2026-10-01T12:00:00.000Z', 'Nonce: 0123456789abcdef',
+  ].join('\n');
+
+  it('signs the text\'s UTF-8 bytes with the curator key: base64, 64 bytes, the Ed25519 a wallet\'s signMessage makes', async () => {
+    const signature = Buffer.from(await signer.signText(MESSAGE), 'base64');
+    assert.equal(signature.length, 64);
+    assert.ok(edVerifyRaw(keypair.publicKey, Buffer.from(MESSAGE, 'utf8'), signature));
+    assert.ok(!edVerifyRaw(keypair.publicKey, Buffer.from(`${MESSAGE} `, 'utf8'), signature), 'over that text only');
+    assert.equal(await signer.signText(MESSAGE), await signer.signText(MESSAGE), 'Ed25519 is deterministic');
+  });
+
+  it('refuses NOT_TEXT for anything but printable ASCII lines up to 1 KB, a transaction message included', async () => {
+    const legacyMessage = Transaction.from(Buffer.from(legacyTransfer(), 'base64')).serializeMessage();
+    const v0Message = Buffer.from(VersionedTransaction.deserialize(Buffer.from(v0Transfer(), 'base64')).message.serialize());
+    const refused = ['', null, 42, 'caf\u00e9', 'line\r\nfeed', 'tab\there', 'x'.repeat(1025), legacyMessage.toString('latin1'), v0Message.toString('latin1')];
+    for (const text of refused) {
+      await assert.rejects(signer.signText(text), (error) => error instanceof Refusal && error.code === 'NOT_TEXT', JSON.stringify(text)?.slice(0, 40));
+    }
+    assert.equal(Buffer.from(await signer.signText('x'.repeat(1024)), 'base64').length, 64);
+  });
+});
+
 describe('loadSigner from text (what an env var such as TREASURY_KEYPAIR_JSON carries)', () => {
   const text = () => JSON.stringify(Array.from(keypair.secretKey));
 
@@ -180,7 +206,7 @@ describe('loadSigner from text (what an env var such as TREASURY_KEYPAIR_JSON ca
     const fromText = loadSigner({ text: text(), env: 'TREASURY_KEYPAIR_JSON', kind: 'treasury' });
     assert.equal(fromText.wallet, keypair.publicKey.toBase58());
     assert.equal(fromText.kind, 'treasury');
-    assert.deepEqual(Object.keys(fromText).sort(), ['kind', 'sign', 'wallet']);
+    assert.deepEqual(Object.keys(fromText).sort(), ['kind', 'sign', 'signText', 'wallet']);
     assert.ok(Object.isFrozen(fromText));
     assert.ok(!JSON.stringify(fromText).includes(text().slice(1, 20)));
     assert.ok(!inspect(fromText, { depth: 5, showHidden: true }).includes(text().slice(1, 20)));

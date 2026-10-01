@@ -171,7 +171,7 @@ test('unknown paths and wrong methods are 404 NOT_FOUND', async () => {
     assert.match(res.json.error.message, /no route/);
   }
   assert.equal((await call('GET', '/status/', { token: AGENT })).status, 200, 'a trailing slash is tolerated');
-  assert.equal(ROUTES.length, 23);
+  assert.equal(ROUTES.length, 24);
   assert.deepEqual(ROUTES.filter((r) => r[3].tokenKind === 'none').map((r) => r[1]), ['/healthz', '/metrics']);
 });
 
@@ -305,4 +305,17 @@ test('readBody rejects over the byte cap with BAD_REQUEST', async () => {
   req.emit('data', Buffer.from('{"a":"0123456789"}'));
   await assert.rejects(promise, (error) => error.code === 'BAD_REQUEST');
   assert.equal(drained, true, 'the rest of the body is drained, not destroyed');
+});
+
+test('POST /strategy is an agent route: the agent token publishes the text, the session is journaled, GET is 404', async () => {
+  const { ctx, call } = await up({ metadataTags: ['agent-managed'] });
+  const res = await call('POST', '/strategy', { token: AGENT, body: { text: 'Hold SOL and BTC against a stable core.' }, headers: { 'x-curator-session': 'chat' } });
+  assert.equal(res.status, 200, res.text);
+  assert.equal(res.json.verb, 'strategy');
+  assert.deepEqual(res.json.tags, ['agent-managed']);
+  assert.equal(ctx.journal.records().find((r) => r.verb === 'strategy').session, 'chat');
+  const link = await call('POST', '/strategy', { token: AGENT, body: { text: 'see https://x.example' } });
+  assert.equal(link.status, 400);
+  assert.equal(link.json.error.code, 'STRATEGY_REFUSED');
+  assert.equal((await call('GET', '/strategy', { token: AGENT })).status, 404);
 });

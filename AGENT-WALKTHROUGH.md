@@ -240,7 +240,7 @@ cat > $H/curator/policy.json <<'EOT'
   "deposit": { "dailyCapUsd": 1000, "launchDayCapUsd": 2500, "launchDay": null, "requireBookFresh": true },
   "withdraw": { "chatOnly": true, "dailyCapUsd": 500, "toSignerAtaOnly": true },
   "verbs": {
-    "agent": ["status", "review", "policy", "alerts", "simulate", "propose", "apply", "cancel", "deposit", "withdraw", "refresh-nav", "pause", "note", "journal", "hermes-heartbeat"],
+    "agent": ["status", "review", "policy", "alerts", "simulate", "propose", "apply", "cancel", "deposit", "withdraw", "refresh-nav", "pause", "note", "journal", "strategy", "hermes-heartbeat"],
     "ops": ["resume", "unlock", "rotate-curator", "set-delay", "set-metadata"],
     "denied": ["transfer-curator", "accept-curator", "cancel-curator", "propose-fee-recipient", "accept-fee-recipient", "revive", "create"],
     "cronDenied": ["withdraw"]
@@ -271,7 +271,7 @@ in `compose.env` and check:
 ```bash
 perl -i -pe 's#^HERMES_IMAGE=.*#HERMES_IMAGE=nousresearch/hermes-agent:v2026.8.27#' $H/compose.env
 grep -cE '^(OPENAI_API_KEY|TELEGRAM_BOT_TOKEN|TELEGRAM_ALLOWED_USERS|TELEGRAM_HOME_CHANNEL)=.+' $H/hermes-home/.env   # EXPECT 4
-grep -E '^(CURATOR_SIGNER_IMAGE|HERMES_IMAGE)=' $H/compose.env   # EXPECT intothefathom/curator-public:0.2.0 and nousresearch/hermes-agent:v2026.8.27
+grep -E '^(CURATOR_SIGNER_IMAGE|HERMES_IMAGE)=' $H/compose.env   # EXPECT intothefathom/curator-public:0.3.0 and nousresearch/hermes-agent:v2026.8.27
 ```
 
 `STOP`: the operator opens a chat with the bot in Telegram and presses
@@ -281,7 +281,7 @@ Start, check, resume, check:
 
 ```bash
 cd ~/weavr-wallet/tools/claw-agent
-docker pull --platform linux/amd64 intothefathom/curator-public:0.2.0 && docker pull nousresearch/hermes-agent:v2026.8.27
+docker pull --platform linux/amd64 intothefathom/curator-public:0.3.0 && docker pull nousresearch/hermes-agent:v2026.8.27
 unset CURATOR_KEY_FILE CURATOR_POLICY_FILE CURATOR_SIGNER_ENV HERMES_HOME
 docker compose --env-file $H/compose.env -f curator/compose/curator.yml up -d
 sleep 40

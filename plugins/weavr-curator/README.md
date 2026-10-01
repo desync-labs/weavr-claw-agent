@@ -52,6 +52,7 @@ handler still answers a clear error, without secrets, if it is called anyway.
 | `refresh_nav` | `POST /refresh-nav` | `{}` |
 | `pause` | `POST /pause` | `{ why? }` |
 | `note` | `POST /note` | `{ text }` |
+| `strategy` | `POST /strategy` | `{ text, why? }` — the portfolio's public description; the signer adds the tags |
 | `journal` | `GET /journal?n=` | none |
 
 `mix:[{asset, percent}]` becomes `targets:[{poolId, weightBps}]`: `asset` is
@@ -93,7 +94,7 @@ Only `tool_name == "weavr_curator"`; every other tool passes untouched.
 | verb | cron session | chat session |
 |---|---|---|
 | `status` `review` `policy` `simulate` `journal` `note` `pause` | pass | pass |
-| `propose` `apply` `cancel` `refresh_nav` `deposit` | pass (the signer's policy still applies) | **approve**: escalated to the human gate |
+| `propose` `apply` `cancel` `refresh_nav` `deposit` `strategy` | pass (the signer's policy still applies) | **approve**: escalated to the human gate; for `strategy` the prompt quotes the text being published |
 | `withdraw` | **block** | **approve** |
 | anything else | **block** | **block** |
 

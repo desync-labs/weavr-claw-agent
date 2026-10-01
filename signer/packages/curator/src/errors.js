@@ -197,6 +197,13 @@ export const REFUSAL_STATUS = Object.freeze({
   PAGED_PROPOSE_UNSUPPORTED: 502,
   MISSING_CUSTODY: 503,
   INVARIANTS_UNVERIFIED: 503,
+  // The metadata document (metadata.js) and the strategy verb.
+  STRATEGY_REFUSED: 400,
+  NOT_CURATOR: 409,
+  METADATA_TAGS_FULL: 409,
+  METADATA_REFUSED: 502,
+  METADATA_MESSAGE_MISMATCH: 502,
+  NOT_TEXT: 502,
 });
 
 /** A refusal: `code` is the contract, `status` follows REFUSAL_STATUS, `detail` is optional data (never a secret). */

@@ -62,10 +62,13 @@ DEFAULT_CHAIN = "solana"  # the api's poolId is `<symbol>@<chain>`; the policy's
 # must always be able to pause itself without a human in the loop. ``policy``
 # is a pure read of the signer's document.
 READ_VERBS = frozenset({"status", "review", "policy", "simulate", "journal", "note", "pause"})
-CRON_ALLOWED = frozenset({"propose", "apply", "cancel", "refresh_nav", "deposit"})
+# ``strategy`` publishes text, not a transaction, but the text is public (the
+# portfolio's description in every wallet), so chat still asks the human; an
+# unattended run may refresh it, since the signer refuses links and bounds it.
+CRON_ALLOWED = frozenset({"propose", "apply", "cancel", "refresh_nav", "deposit", "strategy"})
 VERBS = (
     "status", "review", "policy", "simulate", "propose", "apply", "cancel",
-    "deposit", "withdraw", "refresh_nav", "pause", "note", "journal",
+    "deposit", "withdraw", "refresh_nav", "pause", "note", "journal", "strategy",
 )
 # verb -> (method, signer route). Only agent-token routes; the ops routes are
 # reachable from the slash command alone, and only when CURATOR_OPS_TOKEN is set.
@@ -83,6 +86,7 @@ ROUTES = {
     "pause": ("POST", "/pause"),
     "note": ("POST", "/note"),
     "journal": ("GET", "/journal"),
+    "strategy": ("POST", "/strategy"),
 }
 # Keys that could only ever carry transaction bytes: the names the signer's
 # own journal scrubber refuses (``tx``, ``signed``, ``walletPayload``) plus the
@@ -101,7 +105,9 @@ SCHEMA = {
         "enforces (with version and sha256): read it once per run before deciding; its numbers beat "
         "anything written on any page. Writes (policy-checked, built, IDL-verified, signed and sent by "
         "the signer, never by you): propose (mix + why), apply, cancel (why), deposit (amountUsd), "
-        "withdraw (amountUsd, chat only), refresh_nav. Housekeeping: pause, note (text). Amounts are "
+        "withdraw (amountUsd, chat only), refresh_nav, strategy (text: the portfolio's public strategy, "
+        "plain text without links; a refusal names the length limit; the signer adds the portfolio's tags itself). "
+        "Housekeeping: pause, note (text). Amounts are "
         "USD; percents are percents. The reply is compact JSON; a refusal comes back as "
         "{ok:false, error:{code,message}} and the message carries the limit that bound."
     ),
@@ -122,9 +128,9 @@ SCHEMA = {
                     "required": ["asset", "percent"],
                 },
             },
-            "why": {"type": "string", "description": "propose/cancel/pause: the reason, journaled; the policy's reason limit applies (WHY_REQUIRED names it)."},
+            "why": {"type": "string", "description": "propose/cancel/pause/strategy: the reason, journaled; the policy's reason limit applies (WHY_REQUIRED names it)."},
             "amountUsd": {"type": "number", "description": "deposit/withdraw: amount in USD."},
-            "text": {"type": "string", "description": "note: free text for the journal (at most 2 KB)."},
+            "text": {"type": "string", "description": "note: free text for the journal (at most 2 KB). strategy: the strategy as the public reads it in wallets and on weavr (plain text, no links)."},
             "n": {"type": "integer", "description": "journal: how many records (default 50, max 500)."},
         },
         "required": ["verb"],
@@ -253,11 +259,14 @@ def request_for(verb: str, args: dict):
     elif verb == "pause":
         why = str(args.get("why") or "").strip()
         body = {"why": why} if why else {}
-    elif verb == "note":
+    elif verb in ("note", "strategy"):
         text = str(args.get("text") or "").strip()
         if not text:
-            raise ValueError("text is required for note")
+            raise ValueError(f"text is required for {verb}")
         body = {"text": text}
+        why = str(args.get("why") or "").strip()
+        if verb == "strategy" and why:
+            body["why"] = why
     elif verb == "journal":
         n = args.get("n")
         if n is not None:
@@ -583,6 +592,10 @@ def describe(verb: str, args: dict) -> str:
         return f"withdraw ${_pct(args.get('amountUsd'))} from {book} to the curator wallet"
     if verb == "refresh_nav":
         return f"refresh the NAV of {book} (the curator pays the crank fee)"
+    if verb == "strategy":
+        # The whole text up to a page: this is what the public will read, so the
+        # human approves the words, not a summary of them.
+        return f"publish this strategy as the public description of {book}" + _quote(args.get("text"), 600)
     return f"run weavr_curator {verb}"
 
 

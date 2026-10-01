@@ -55,6 +55,9 @@ read, the first named wins.
 | `CURATOR_TICK_MS` | no | default `30000`, minimum `1000` |
 | `CURATOR_START_PAUSED` or `CURATOR_PAUSED` | no | `1` boots paused (launch procedure, plan §7.5); it adds a pause, it never clears one the journal recorded |
 | `CURATOR_REBALANCE_DELAY_SECS` | no | default `86400`: the expected `portfolio.rebalanceDelaySecs` invariant; `policy.invariants.rebalanceDelaySecs` overrides it |
+| `CURATOR_METADATA_TAGS` | no | the tags this signer keeps on the portfolio's metadata document (§2.1), comma- or space-separated, each `^[a-z0-9][a-z0-9-]{0,31}$` (a colon is refused: `agent-thesis`, not `agent:thesis`), at most 10. Unset ⇒ no stamp; the `strategy` verb still works. weavr's site badges a book tagged `agent-managed` |
+| `CURATOR_METADATA_URL` | no, `http(s)://` | the metadata service's base, default `CURATOR_API_URL`. An in-cluster api URL does not route `/v1/metadata` (it is its own service); point this at the public api host, e.g. `https://api.weavr.sh` |
+| `CURATOR_METADATA_SIGN_DOMAIN` | no | default `weavr.sh`: the first word of the message the service asks the curator to sign (its `METADATA_SIGN_DOMAIN`); a message naming another domain is not signed |
 | `NAV_LOOKUP_TABLE` | no | the one v0 lookup table a built transaction may load from (`readNavLookupTableAddress()` from `@composable-portfolios/chain`: this env, else the chain package's cache file). Its contents are read from the chain at boot and every tick so the decoder can resolve a v0 apply page. Unset ⇒ no table is allowed and a v0 apply is refused `FOREIGN_LOOKUP_TABLE` |
 
 Boot exits 1, with a plain reason on stderr and no secret, when any required
@@ -88,7 +91,7 @@ called with the ops token are allowed (ops is a superset).
 
 | Method | Path | Request body | 200 response |
 |---|---|---|---|
-| GET | `/status` | — | `{ ok, at, error?, paused, selfLocked:{at,reason}\|null, apply:{state,deploymentId,effectiveAt,attempts,since,lastBlocker}, portfolio:{mint,symbol,state,priceState,pendingPrice,withdrawalsPending,curator,pendingCurator,rebalanceDelaySecs,lastRebalanceAt,applyNextPage,compositionLocked,pendingTargets}\|null, signer:{wallet,lamports,usdcBaseUnits,shares}, invariants:{ok,drift:[{invariant,expected,actual}]}, ledger:{lastProposalAt,proposalsLast30d,depositsTodayUsd,withdrawalsTodayUsd,writeAttemptsLastHour,lastDepositAt,topUpBudgetSpent}, policy:{version,sha256,review}, lastTick:{at,ok,error} }` — when the snapshot read fails the last good one is answered with `ok:false` and `error` set; `invariants.ok` is `null` with no snapshot. `ledger.lastDepositAt` is the newest ok deposit in the journal, whatever its day (`null` when there never was one); `ledger.topUpBudgetSpent` is true when the policy denies `deposit`, when the day's cap is zero, or when today's deposits have reached it (the day's cap is `deposit.launchDayCapUsd` on `deposit.launchDay` and `deposit.dailyCapUsd` otherwise, the same switch `evaluateDeposit` makes); `policy.sha256` is the digest `GET /policy` serves and `policy.review` is the loaded `review` section whole, which is how `deriveReview` gets the thresholds in force (it reads `status.policy.review` and falls back to constants of its own without it, so the counts the agent reads from `GET /policy` are the ones that wake it) |
+| GET | `/status` | — | `{ ok, at, error?, paused, selfLocked:{at,reason}\|null, apply:{state,deploymentId,effectiveAt,attempts,since,lastBlocker}, portfolio:{mint,symbol,state,priceState,pendingPrice,withdrawalsPending,curator,pendingCurator,rebalanceDelaySecs,lastRebalanceAt,applyNextPage,compositionLocked,pendingTargets}\|null, signer:{wallet,lamports,usdcBaseUnits,shares}, invariants:{ok,drift:[{invariant,expected,actual}]}, ledger:{lastProposalAt,proposalsLast30d,depositsTodayUsd,withdrawalsTodayUsd,writeAttemptsLastHour,lastDepositAt,topUpBudgetSpent}, metadata:{tags,state,at?,updatedAt?,error?}, policy:{version,sha256,review}, lastTick:{at,ok,error} }` — `metadata.state` is `off` (no `CURATOR_METADATA_TAGS`), `pending`, `ok`, `failed` (retrying, `error` says why) or `full` (no room for the tags, §2.1); when the snapshot read fails the last good one is answered with `ok:false` and `error` set; `invariants.ok` is `null` with no snapshot. `ledger.lastDepositAt` is the newest ok deposit in the journal, whatever its day (`null` when there never was one); `ledger.topUpBudgetSpent` is true when the policy denies `deposit`, when the day's cap is zero, or when today's deposits have reached it (the day's cap is `deposit.launchDayCapUsd` on `deposit.launchDay` and `deposit.dailyCapUsd` otherwise, the same switch `evaluateDeposit` makes); `policy.sha256` is the digest `GET /policy` serves and `policy.review` is the loaded `review` section whole, which is how `deriveReview` gets the thresholds in force (it reads `status.policy.review` and falls back to constants of its own without it, so the counts the agent reads from `GET /policy` are the ones that wake it) |
 | GET | `/review` | `?mode=universe` or `?mode=weekly`, else the plain review | `{ brief, triggers:[{code,detail}], wakeAgent, holdReason }` — `brief` ≤ `policy.review.briefMaxChars` (4096) plain text whose last line is `{"wakeAgent":<bool>}` for the Hermes wake gate; `holdReason:'STATUS_UNAVAILABLE'` when no snapshot exists. Every mode reads the review state (§4.5); only the plain review consumes an operator request, and only the first cron plain review of a UTC day on a fresh snapshot advances the drift streak, stores the risk tiers and journals a `review` record |
 | GET | `/policy` | — | `{ version, sha256, policy }`: the policy document as loaded (`loadPolicy`, comments stripped), whole, with its version and the sha256 hex of its canonical JSON (keys sorted at every level, `journal.canonicalSha256`). The document holds no secret: no key, no URL, no token. A read: never journaled, never a write attempt. The digest is the one `/status` quotes as `policy.sha256` and the boot record as `policySha256`, so an agent that reads a threshold here can name the document it read it from |
 | GET | `/alerts` | — | `{ since, alerts:[{key,code,at,message,count?,resolved?}] }` — anomalies not yet delivered since the last `/alerts` call; a `key` is delivered once, again after 6 h if still raised (`count`), and once more as `resolved: …` when it clears; `alerts:[]` means silent |
@@ -101,6 +104,7 @@ called with the ops token are allowed (ops is a superset).
 | POST | `/refresh-nav` | `{}` | `{ ok:true, verb:'refresh-nav', pages, signatures:[...] }` |
 | POST | `/pause` | `{ why? }` | `{ ok:true, paused:true }` — disarms apply, refuses every write except `cancel`; idempotent |
 | POST | `/note` | `{ text }` (≤ 2048 bytes) | `{ ok:true, journalId }` |
+| POST | `/strategy` | `{ text, why? }` | `{ ok:true, verb:'strategy', changed, description, tags, updatedAt, updatedBy, journalId }` — publishes `text` as the description of the portfolio's metadata document (§2.1) with the configured tags merged in; no transaction. Plain text: no links, no control characters, ≤ 2000 characters (`STRATEGY_REFUSED`). Refused `PAUSED`, `SELF_LOCKED`, `RATE_LIMITED` (it counts as a write attempt), `NOT_CURATOR` (the chain names another curator), `VERB_DENIED` unless the policy lists `strategy` in `verbs.agent`; not held by `LOW_SOL` or `INVARIANTS_UNVERIFIED`. The same text again is `changed:false` and writes nothing |
 | GET | `/journal?n=` | — | `{ records:[...] }` oldest first (newest last), `n` default 50, max 500, `BAD_REQUEST` when not a non-negative integer |
 | POST | `/hermes-heartbeat` | `{}` | `{ ok:true, at }` — sets `curator_hermes_heartbeat_ts` |
 
@@ -131,13 +135,13 @@ status from `REFUSAL_STATUS` (errors.js). Default `422`; overrides:
 
 | Status | Codes |
 |---|---|
-| 400 | `BAD_REQUEST` (malformed JSON, a non-object or > 64 KB body, a wrong argument type or range, `n` not an integer, `newCurator` already the curator), `WHY_REQUIRED` |
+| 400 | `BAD_REQUEST` (malformed JSON, a non-object or > 64 KB body, a wrong argument type or range, `n` not an integer, `newCurator` already the curator), `WHY_REQUIRED`, `STRATEGY_REFUSED` |
 | 401 | `UNAUTHORIZED` |
 | 403 | `OPS_ONLY`, `VERB_DENIED`, `WITHDRAW_CRON_BLOCKED`, `PORTFOLIO_NOT_ALLOWED` |
 | 404 | `NOT_FOUND` |
-| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
+| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`, `NOT_CURATOR`, `METADATA_TAGS_FULL`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
 | 429 | `RATE_LIMITED`, `PROPOSAL_QUOTA`, `DEPOSIT_DAILY_CAP`, `WITHDRAW_DAILY_CAP` |
-| 502 | `UPSTREAM` (api HTTP ≥ 500, unreachable, timed out or non-JSON), `BUILD_REFUSED` (api 4xx on a build — its `error.code` is in `detail`), `SEND_FAILED`, and the decode.js codes `NOT_A_TRANSACTION`, `WRONG_PAYER`, `FOREIGN_PROGRAM`, `FOREIGN_LOOKUP_TABLE`, `UNKNOWN_INSTRUCTION`, `UNEXPECTED_INSTRUCTIONS`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH`, `UNEXPECTED_STEP`, `PAGED_PROPOSE_UNSUPPORTED` — the api built something the signer would not sign |
+| 502 | `UPSTREAM` (api HTTP ≥ 500, unreachable, timed out or non-JSON), `BUILD_REFUSED` (api 4xx on a build — its `error.code` is in `detail`), `SEND_FAILED`, and the decode.js codes `NOT_A_TRANSACTION`, `WRONG_PAYER`, `FOREIGN_PROGRAM`, `FOREIGN_LOOKUP_TABLE`, `UNKNOWN_INSTRUCTION`, `UNEXPECTED_INSTRUCTIONS`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH`, `UNEXPECTED_STEP`, `PAGED_PROPOSE_UNSUPPORTED` — the api built something the signer would not sign; `METADATA_REFUSED` (the metadata service's 4xx, its `error.code` in `detail`), `METADATA_MESSAGE_MISMATCH` (the service asked for a signature over a text that is not the expected one), `NOT_TEXT` |
 | 503 | `LOW_SOL`, `INVARIANT_DRIFT`, `INVARIANTS_UNVERIFIED` (writes held while the accountant or FactoryConfig could not be read on the last tick), `BOOK_NOT_FRESH`, `MISSING_CUSTODY` |
 | 500 | `INTERNAL` — a verb crashed; the message is URL-scrubbed and carries no stack |
 | 422 | `CAP_HEADROOM`, `INSUFFICIENT_SHARES` (listed), and by default everything else: the remaining §4.4 policy codes, `INPUTS_INCOMPLETE`, the `proposeGates` codes `COMPOSITION_LOCKED` / `WRONG_PORTFOLIO_STATE` / `REBALANCE_TOO_SOON`. `CONFIG` (keys.js, weavr.js) is a boot-time refusal that never reaches HTTP |
@@ -146,6 +150,37 @@ A refusal is journaled (`kind:'refusal'`) before it is answered, with the
 caller and session. Response bodies are scrubbed of `tx`, `signed`,
 `walletPayload` and any `transactions` list at any depth before they leave
 the process.
+
+### 2.1 The metadata document (`metadata.js`)
+
+A portfolio's shares mint points at a JSON document weavr's metadata
+service keeps (`GET /v1/metadata/:portfolio`, keyed by the `Portfolio` PDA,
+never the mint); wallets read its `description` and `tags`, weavr's site
+badges a book tagged `agent-managed` and shows its description under "Agent
+strategy". Only the key the `Portfolio` account names as curator may change
+it, by signing a message the service builds. This process holds that key, so
+it writes the document for the agent, two ways, one path (`writeDocument`):
+
+- **the stamp**: with `CURATOR_METADATA_TAGS` set, each tick (after the
+  apply machine) until one read shows the tags or one write adds them, then
+  never again in this process. It runs while paused (the tags say what runs
+  the book, not what the agent decided), not while self-locked. A failure
+  retries on a doubling interval capped at an hour, journals its first
+  failure (`kind:'metadata'`) and raises alert `metadata` from the third in a
+  row; a document with no room for the tags (`METADATA_TAGS_FULL`) stops
+  retrying and stays alerted.
+- **`strategy`**, the agent's verb (§2): the description.
+
+Every write reads the stored document, merges (stored fields and tags kept,
+the configured tags appended, the description replaced) and sends the block
+back whole, because the service replaces it on every write. The tags come
+from the deployment only, so no description the agent publishes can drop
+one. Before signing, `checkMessage` holds the text to the service's exact
+eight lines: this domain, this wallet, this `Portfolio` PDA, `set-metadata`,
+the sha256 of the canonical JSON being sent, an `Issued-At` within 300 s of
+this clock and a 16-hex nonce; anything else is `METADATA_MESSAGE_MISMATCH`
+and nothing is signed. `keys.signText` then signs only printable ASCII lines
+(`NOT_TEXT` otherwise), so no text it signs can be a transaction message.
 
 ## 3. Refusal codes (plan §4.4, verbatim) — each owns one planted-violation test
 
@@ -226,9 +261,10 @@ Which module raises which:
 | `preflight.applyGates` | blocker codes, §5 below (`NO_PENDING_CHANGE`, `WINDOW_CLOSED`, `NOTICE_NOT_ELAPSED`, `VAULT_PAUSED`, `LEG_STALE`, `LEG_NOT_ACTIVE`, `LEG_PENDING_PRICE`, `BOOK_NOT_FRESH`, `BOOK_PENDING_PRICE`, `WITHDRAWALS_PENDING`, `APPLY_IN_FLIGHT`, `MISSING_CUSTODY`) |
 | `preflight.proposeGates` | six blocker codes: `COMPOSITION_LOCKED`, `WRONG_PORTFOLIO_STATE`, `TARGETS_PENDING`, `REBALANCE_TOO_SOON`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED` |
 | `decode.verifyBuilt` | `NOT_A_TRANSACTION`, `FOREIGN_LOOKUP_TABLE`, `FOREIGN_PROGRAM`, `UNKNOWN_INSTRUCTION`, `WRONG_PAYER`, `UNEXPECTED_STEP`, `UNEXPECTED_INSTRUCTIONS`, `PAGED_PROPOSE_UNSUPPORTED`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH` — §6 below |
-| `keys.loadSigner` | `CONFIG` at load; `NOT_A_TRANSACTION` from `sign()` |
+| `keys.loadSigner` | `CONFIG` at load; `NOT_A_TRANSACTION` from `sign()`; `NOT_TEXT` from `signText()` |
+| `metadata` | `METADATA_TAGS_FULL` (merge), `METADATA_MESSAGE_MISMATCH` (`checkMessage`), `NOT_CURATOR` (the service says another key is curator), `METADATA_REFUSED` / `UPSTREAM` (the client); the stamp turns them into alert `metadata` |
 | `weavr.weavrClient` | `CONFIG`, `BAD_REQUEST`, `UPSTREAM`, `BUILD_REFUSED`, `SEND_FAILED` |
-| `verbs` | the four hard rules re-checked before the policy (`PORTFOLIO_NOT_ALLOWED`, `WITHDRAW_CRON_BLOCKED`, `SELF_LOCKED`, `PAUSED`), `WHY_REQUIRED`, `BAD_REQUEST`, `NO_PENDING_CHANGE`, `MISSING_CUSTODY`, `INVARIANT_DRIFT` (`/unlock`), `expectFor`'s `UPSTREAM` (row without keys) / `INPUTS_INCOMPLETE` (a targeted pool with no Pool key), and the passthroughs `UPSTREAM`, `BUILD_REFUSED`, `NOT_A_TRANSACTION`, `UNKNOWN_INSTRUCTION` (a decode crash), `SEND_FAILED` (named by program error where possible) |
+| `verbs` | the four hard rules re-checked before the policy (`PORTFOLIO_NOT_ALLOWED`, `WITHDRAW_CRON_BLOCKED`, `SELF_LOCKED`, `PAUSED`), `WHY_REQUIRED`, `BAD_REQUEST`, `STRATEGY_REFUSED` / `RATE_LIMITED` / `NOT_CURATOR` and the `metadata` passthroughs (`strategy`), `NO_PENDING_CHANGE`, `MISSING_CUSTODY`, `INVARIANT_DRIFT` (`/unlock`), `expectFor`'s `UPSTREAM` (row without keys) / `INPUTS_INCOMPLETE` (a targeted pool with no Pool key), and the passthroughs `UPSTREAM`, `BUILD_REFUSED`, `NOT_A_TRANSACTION`, `UNKNOWN_INSTRUCTION` (a decode crash), `SEND_FAILED` (named by program error where possible) |
 | `loop` | alerts, not refusals: `INVARIANT_DRIFT`, `LOW_SOL`, `SEND_FAILED`, `WINDOW_CLOSED`, `APPLIED_MISMATCH`, `MISSING_CUSTODY`, and any blocker or decode code the machine escalates or blocks on (`alert:<code>`) |
 | `server` | `UNAUTHORIZED`, `BAD_REQUEST`, `NOT_FOUND`, `OPS_ONLY`, `INTERNAL` |
 | `scripts/create_portfolio.mjs` (§9, exit codes, never HTTP) | `BAD_REQUEST` (argv: key material, an unknown flag, malformed targets, a missing `--keeper-processor`, a missing `--name` or `--symbol`, a name, symbol or metadata URI wider than the factory's bytes, both key sources), `CONFIG` (no key or a malformed one, a malformed `NAV_LOOKUP_TABLE`), `INPUTS_INCOMPLETE` (a target without a Pool key), `BUILD_REFUSED` / `UPSTREAM` (also a `rentLamports` quote that is not integers), every `decode.verifyBuilt` code under the `create` verb (`TARGETS_MISMATCH` also for an outlay above `--max-lamports` or a priority fee above `--max-priority-lamports`), `SEND_FAILED` |
@@ -366,8 +402,8 @@ ledger = {
 ```js
 { id, at, kind, caller?, session?, tokenKind?, ...fields }
 // kind: 'boot' | 'verb' | 'refusal' | 'apply' | 'tick' | 'alert' | 'note' | 'lock' | 'unlock' | 'pause' | 'resume' | 'heartbeat'
-//     | 'operator-request' | 'operator-request-consumed' | 'review'
-// boot:    { wallet, mint, policyVersion, policySha256, paused, selfLocked, reviewState: { at } | null, port, tickMs, programs, lookupTables, lookupTablesResolved }
+//     | 'operator-request' | 'operator-request-consumed' | 'review' | 'metadata'
+// boot:    { wallet, mint, policyVersion, policySha256, paused, selfLocked, reviewState: { at } | null, port, tickMs, programs, lookupTables, lookupTablesResolved, metadataTags }
 // verb:    { verb (camelCase: refreshNav, setDelay, …), route, ok:true, args (targets/amountUsd/why/newCurator/uri only),
 //            signatures, deploymentId, steps, + the verb's own fields (effectiveAt, summary, amountBaseUnits, shares, …) }
 // refusal: { verb, route, ok:false, code, message, args, detail? }
@@ -375,6 +411,8 @@ ledger = {
 // alert:   { key, code, message, state: 'raised' | 're-raised' | 'resolved' }
 // lock:    { reason:'INVARIANT_DRIFT', drift }      tick: { ok:false, error } (a failed tick, once until it recovers)
 // review:  { driftStreak: { poolId: reviews }, riskTiers: { poolId: tier }, triggers: [code] }   written by the cron plain review only, at most once a UTC day, on a fresh snapshot (§4.5)
+// metadata: { action:'tags', ok, portfolio, added?, tags?, contentHash?, updatedAt?, code?, message? }   the loop's stamp (§2.1): a write that added tags, or its first failure
+// verb 'strategy': { args: { text, why }, portfolio, changed, contentHash, tags, updatedAt }   no signatures: a message was signed, not a transaction
 ```
 
 `journal.scrub` redacts, whatever the record: the keys `tx`, `signed`,
@@ -700,7 +738,8 @@ export const REFUSAL_STATUS  // { [code]: httpStatus }, default 422 (§2 Errors)
 
 ```js
 /** A 64-byte JSON array — a file (`file`) or the JSON text itself (`text`, what an env var carries; the create CLI's TREASURY_KEYPAIR_JSON) → signer; whitespace-only `text` counts as absent. Legacy: partialSign; v0: sign([keypair]). Never logs the source or the key; throws `Refusal('CONFIG', …)` naming the env var (default CURATOR_KEYPAIR) when neither source is set, when both are (the key is given once), or the source is unreadable, not JSON, not a 64-byte array or not a valid secret key. `sign` refuses NOT_A_TRANSACTION for anything it cannot decode. */
-export function loadSigner({ file?, text?, env = 'CURATOR_KEYPAIR', kind = 'curator' }) → Object.freeze({ wallet, kind, sign: async (base64[]) => base64[] })
+export function loadSigner({ file?, text?, env = 'CURATOR_KEYPAIR', kind = 'curator' }) → Object.freeze({ wallet, kind, sign: async (base64[]) => base64[], signText: async (text) => base64 })
+// signText: Ed25519 over the text's UTF-8 bytes (what a wallet's signMessage makes), printable ASCII lines ≤ 1 KB only, else NOT_TEXT
 export function isVersioned(rawBytes) → boolean   // v0 version prefix after the signature block
 export const KEYPAIR_ENV   // 'CURATOR_KEYPAIR'
 ```
@@ -757,6 +796,8 @@ export async function refreshNav(ctx, args, meta)
 export async function pause(ctx, { why }, meta)
 export async function note(ctx, { text }, meta)
 export async function journal(ctx, { n }, meta)
+export async function strategy(ctx, { text, why? }, meta)  // the metadata document's description (§2.1); signs a message, never a transaction
+export function strategyTextOf(raw) → text                 // trimmed; BAD_REQUEST when empty, STRATEGY_REFUSED for a link, a control character or > 2000 chars
 export async function hermesHeartbeat(ctx, args, meta)
 export async function resume(ctx, { why }, meta)          // ops
 export async function unlock(ctx, { why }, meta)          // ops
@@ -790,6 +831,19 @@ export function applyOutcome(applyState, outcome, now, policy) → { next, actio
 export function gaugesOf(ctx) → { curator_last_tick_ts, curator_hermes_heartbeat_ts, curator_pending_effective_at, curator_apply_state, curator_book_price_fresh, curator_signer_lamports, curator_self_locked, curator_paused, curator_write_attempts_1h }
 ```
 
+### `src/metadata.js`
+
+```js
+export function metadataClient({ baseUrl, fetchImpl?, timeoutMs? }) → { document(portfolio), message(portfolio, body), put(portfolio, body) }   // /v1/metadata; 4xx ⇒ METADATA_REFUSED, 5xx ⇒ UPSTREAM, no URL in a message
+export async function writeDocument(ctx, { portfolio, description? }) → { document, metadata, changed, added, contentHash }   // read → merge → message → checkMessage → signText → put; no change ⇒ no write
+export async function stampTags(ctx, snapshot, { raiseAlert, clearAlert, journal }) → { state, attempts, error, alert } | null   // the loop's step (§2.1)
+export function checkMessage(text, { domain, address, portfolio, contentHash, nowSecs }) → { issuedAt, nonce }   // the service's eight lines exactly, else METADATA_MESSAGE_MISMATCH
+export function mergeEditable(editable, { tags, description? }) → { metadata, changed, added }   // METADATA_TAGS_FULL past 10 tags
+export function canonicalJson(value), contentHashOf(metadata) → 'sha256:<hex>'   // the service's canonical form (undefined members dropped)
+export function parseTagList(raw) → string[]   // CURATOR_METADATA_TAGS; throws a plain Error naming the variable
+export const DEFAULT_SIGN_DOMAIN ('weavr.sh'), DESCRIPTION_MAX_CHARS (2000), MAX_TAGS (10), TAG_RE, MESSAGE_MAX_SKEW_SECS (300), STAMP_RETRY_MAX_SECS (3600), STAMP_ALERT_AFTER (3)
+```
+
 ### `src/server.js`
 
 ```js
@@ -799,7 +853,7 @@ export function authenticate(headerValue, tokens) → { kind:'agent'|'ops' } | n
 export function readBody(req, { maxBytes = 64 * 1024 }) → Promise<object>          // rejects ⇒ Refusal BAD_REQUEST; an empty body is {}
 export function scrubResponse(body) → body                                          // drops tx / signed / walletPayload / transactions[] / httpStatus at any depth
 export function metaOf(headers) → { session, caller, tokenKind:'agent' }            // tokenKind is filled after auth
-export const ROUTES  // [[method, path, verb, { tokenKind:'agent'|'ops'|'none' }], …] — 23 rows; the route table is the contract, §2 lists the same rows
+export const ROUTES  // [[method, path, verb, { tokenKind:'agent'|'ops'|'none' }], …] — 24 rows; the route table is the contract, §2 lists the same rows
 export const MIN_TOKEN_BYTES (32), MAX_BODY_BYTES (64 KB), HEALTHZ_STALE_TICKS (3)
 ```
 
@@ -807,8 +861,8 @@ export const MIN_TOKEN_BYTES (32), MAX_BODY_BYTES (64 KB), HEALTHZ_STALE_TICKS (
 
 ```js
 /** The environment, validated (§1). Throws a plain Error naming the variable, never a value. */
-export function readConfig(env = process.env) → { tokens, keypairFile, mint, treasury, guardian, apiUrl, rpcUrl, policyJson, policyFile, journalFile, port, tickMs, startPaused, rebalanceDelaySecs }
-/** Validate env, build ctx, rebuild the ledger (pause, self-lock, operator request and review state replayed into ctx.state), compute the policy digest once (ctx.policyDigest, journaled and logged as policySha256), start the loop and the server. Rejects with a plain reason (never a secret) on any guard; the CLI wrapper turns that into exit 1. `overrides` are the test seams (fake connection, client, signer, journal, policy, deps, clock; `listen:false`, `signals:false`). */
+export function readConfig(env = process.env) → { tokens, keypairFile, mint, treasury, guardian, apiUrl, rpcUrl, policyJson, policyFile, journalFile, port, tickMs, startPaused, rebalanceDelaySecs, metadataUrl, metadataTags, metadataDomain }
+/** Validate env, build ctx, rebuild the ledger (pause, self-lock, operator request and review state replayed into ctx.state), compute the policy digest once (ctx.policyDigest, journaled and logged as policySha256), start the loop and the server. Rejects with a plain reason (never a secret) on any guard; the CLI wrapper turns that into exit 1. `overrides` are the test seams (fake connection, client, metadata, signer, journal, policy, deps, clock; `listen:false`, `signals:false`). */
 export async function boot({ env = process.env, overrides = {} } = {}) → { ctx, loop, server, stop() }
 export function allowedProgramSet() → Set<base58>          // manifest programs + CORE_PROGRAMS
 export function allowedLookupTableSet() → Set<base58>      // the NAV table when this host knows it, else empty

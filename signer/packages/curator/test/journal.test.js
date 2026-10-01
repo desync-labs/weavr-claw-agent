@@ -358,8 +358,8 @@ describe('rebuildLedger', () => {
     assert.equal(small.rebuildLedger({ now: NOW_SECS }).proposalsLast30d, 1, 'only the second proposal is still on disk');
   });
 
-  it('write verbs are the nine that reach the chain', () => {
-    assert.deepEqual([...LEDGER_WRITE_VERBS], ['propose', 'apply', 'cancel', 'deposit', 'withdraw', 'refreshNav', 'rotateCurator', 'setDelay', 'setMetadata']);
+  it('write verbs are the nine that reach the chain and strategy, the one that signs the metadata document', () => {
+    assert.deepEqual([...LEDGER_WRITE_VERBS], ['propose', 'apply', 'cancel', 'deposit', 'withdraw', 'refreshNav', 'rotateCurator', 'setDelay', 'setMetadata', 'strategy']);
   });
 });
 
