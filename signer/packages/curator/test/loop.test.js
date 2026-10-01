@@ -510,3 +510,20 @@ test('tick: the NAV lookup table is refreshed every tick through ctx.chain.refre
   assert.ok(warn, 'the failure is logged');
   assert.ok(!JSON.stringify(warn).includes('rpc.example') && !JSON.stringify(warn).includes('SECRET'));
 });
+
+test('a tick stamps the configured tags after the machine, once; a held tick (paused) still stamps; a failing service never fails the tick', async () => {
+  const ctx = mk({ paused: true, metadataTags: ['agent-managed'] });
+  const loop = createLoop({ ctx });
+  const first = await loop.tick();
+  assert.equal(first.ok, true);
+  assert.deepEqual(ctx.metadata.doc.tags, ['agent-managed']);
+  await loop.tick();
+  assert.equal(ctx.metadata.calls.filter((c) => c.name === 'document').length, 1, 'stamped once per process');
+
+  const down = mk({ metadataTags: ['agent-managed'] });
+  down.metadata.fail.document = new Refusal('UPSTREAM', 'metadata GET timed out');
+  const tick = await createLoop({ ctx: down }).tick();
+  assert.equal(tick.ok, true);
+  assert.equal(down.state.metadata.state, 'failed');
+  assert.equal(down.state.lastTick.ok, true);
+});

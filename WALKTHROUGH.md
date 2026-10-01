@@ -128,7 +128,7 @@ Two images and the CLI. The signer image is public and compose pulls it
 on `up`; the agent image is the one you built or pulled for the chat agent:
 
 ```bash
-docker pull --platform linux/amd64 intothefathom/curator-public:0.2.0   # no linux/arm64 manifest; compose pins this platform
+docker pull --platform linux/amd64 intothefathom/curator-public:0.3.0   # no linux/arm64 manifest; compose pins this platform
 docker pull nousresearch/hermes-agent:v2026.8.27
 cd ~/weavr-wallet/tools/claw-agent && npm link          # `weavr-curator`; or node bin/weavr-curator.mjs
 docker image ls intothefathom/curator-public nousresearch/hermes-agent  # both tags listed
@@ -200,7 +200,7 @@ leaving it unattended. Do not loosen turnover or cost to pass `policy vs book`.
   "deposit": { "dailyCapUsd": 1000, "launchDayCapUsd": 2500, "launchDay": null, "requireBookFresh": true },
   "withdraw": { "chatOnly": true, "dailyCapUsd": 500, "toSignerAtaOnly": true },
   "verbs": {
-    "agent": ["status", "review", "policy", "alerts", "simulate", "propose", "apply", "cancel", "deposit", "withdraw", "refresh-nav", "pause", "note", "journal", "hermes-heartbeat"],
+    "agent": ["status", "review", "policy", "alerts", "simulate", "propose", "apply", "cancel", "deposit", "withdraw", "refresh-nav", "pause", "note", "journal", "strategy", "hermes-heartbeat"],
     "ops": ["resume", "unlock", "rotate-curator", "set-delay", "set-metadata"],
     "denied": ["transfer-curator", "accept-curator", "cancel-curator", "propose-fee-recipient", "accept-fee-recipient", "revive", "create"],
     "cronDenied": ["withdraw"]

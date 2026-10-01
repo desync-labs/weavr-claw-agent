@@ -2,7 +2,8 @@
  * The curator key: one 64-byte JSON array file, written by
  * `deploy/hydrate.mjs` at 0600 from CURATOR_KEYPAIR_JSON, read once at boot.
  * It never leaves this module as bytes — the signer object exposes the
- * public key and a `sign` function, nothing else, so no other module can
+ * public key, a `sign` function for transactions and a `signText` function
+ * for the metadata service's message, nothing else, so no other module can
  * log it by accident. Same contract as the ops local signer
  * (`integrations/claw-agent/tools/lib/local-signer.mjs`): legacy via
  * partialSign, v0 via sign([keypair]).
@@ -14,11 +15,21 @@
  * logs, which is exactly the class of leak this process exists to prevent.
  */
 import { readFileSync } from 'node:fs';
+import { createPrivateKey, sign as signEd25519 } from 'node:crypto';
 import { Keypair, Transaction, VersionedTransaction } from '@solana/web3.js';
 import { Refusal } from './errors.js';
 
 /** The env var the keypair path comes from; the refusal names it, not the path. */
 export const KEYPAIR_ENV = 'CURATOR_KEYPAIR';
+
+/** The longest text `signText` signs; the metadata service's message is about 300 bytes. */
+export const SIGN_TEXT_MAX_BYTES = 1024;
+
+/** Printable ASCII and line feeds: the only bytes `signText` signs. */
+const SIGNABLE_TEXT = /^[\x20-\x7e\n]+$/;
+
+/** RFC 8410 PKCS#8 DER prefix of an Ed25519 private key; the 32-byte seed follows it. */
+const ED25519_PKCS8_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex');
 
 /**
  * A serialised transaction is v0 when the first byte after the signature
@@ -93,6 +104,19 @@ export function loadSigner(opts = {}) {
 
   const wallet = keypair.publicKey.toBase58();
 
+  // The same secret as a node:crypto key, for the one text this process
+  // signs (the metadata service's message). Both copies of the seed made
+  // here are zeroed once the KeyObject holds it.
+  const seed = Buffer.from(keypair.secretKey.subarray(0, 32));
+  const der = Buffer.concat([ED25519_PKCS8_PREFIX, seed]);
+  let textKey;
+  try {
+    textKey = createPrivateKey({ key: der, format: 'der', type: 'pkcs8' });
+  } finally {
+    seed.fill(0);
+    der.fill(0);
+  }
+
   /**
    * Sign every transaction in the list and return them re-serialised, in
    * order. Legacy: `partialSign` so a second signer (the api's nonce
@@ -126,7 +150,28 @@ export function loadSigner(opts = {}) {
     });
   }
 
+  /**
+   * An Ed25519 signature over a text's UTF-8 bytes, base64: what a wallet's
+   * `signMessage` returns and the metadata service verifies. Printable ASCII
+   * and line feeds only, at most SIGN_TEXT_MAX_BYTES. That rule is what keeps
+   * this from being a second way to sign a transaction: a legacy message
+   * starts with its required-signature count, and a first byte of 0x20–0x7e
+   * asks for 32 to 126 signatures, more than any transaction under the
+   * 1232-byte packet can carry; a v0 message starts at 0x80. The caller
+   * (`metadata.js checkMessage`) has already held the text to the service's
+   * exact format; this is the floor under it.
+   * @param {string} text
+   * @returns {Promise<string>} base64 of the 64-byte signature
+   */
+  async function signText(text) {
+    if (typeof text !== 'string' || text === '') throw new Refusal('NOT_TEXT', 'signText expects a non-empty string');
+    if (!SIGNABLE_TEXT.test(text)) throw new Refusal('NOT_TEXT', 'only printable ASCII lines are signed as text');
+    const bytes = Buffer.from(text, 'utf8');
+    if (bytes.length > SIGN_TEXT_MAX_BYTES) throw new Refusal('NOT_TEXT', `text over ${SIGN_TEXT_MAX_BYTES} bytes is not signed`);
+    return signEd25519(null, bytes, textKey).toString('base64');
+  }
+
   // Frozen and closed over: no property ever holds the secret, so
   // JSON.stringify(signer) or util.inspect(signer) show wallet and kind only.
-  return Object.freeze({ wallet, kind, sign });
+  return Object.freeze({ wallet, kind, sign, signText });
 }

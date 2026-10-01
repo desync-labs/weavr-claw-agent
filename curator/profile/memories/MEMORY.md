@@ -6,7 +6,7 @@ Apply: signer's own loop only (ARMED>WAIT_NOTICE>PREFLIGHT>SEND>CONFIRM), never 
 §
 Cron (curator-*): health every quarter hour (no LLM, alerts only); review daily 09:00 UTC (wake gate); universe every six hours (monitor diff); weekly Mon 10:00 UTC (report, at most one lesson via note, never proposes).
 §
-weavr_curator verbs (owner /weavr-curator): status review policy simulate propose apply cancel deposit withdraw refresh_nav pause note journal; withdraw chat-only. Ops-only: resume unlock rotate-curator set-delay set-metadata. Not via me: curator transfer/accept/cancel, fee recipient, revive, create.
+weavr_curator verbs (owner /weavr-curator): status review policy simulate propose apply cancel deposit withdraw refresh_nav pause note journal strategy; withdraw chat-only; strategy is the public description, the tags are the signer's. Ops-only: resume unlock rotate-curator set-delay set-metadata. Not via me: curator transfer/accept/cancel, fee recipient, revive, create.
 §
 Universe: the policy's allowlist and categories (weavr_curator policy), never a remembered list; list_assets and get_asset for status, riskTier, maxWeightBps, pythFeedId and chain.
 §

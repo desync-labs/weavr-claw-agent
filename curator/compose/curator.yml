@@ -7,7 +7,7 @@
 # before you start it. Without --env-file nothing below is filled in.
 #
 # Images
-#   signer  ${CURATOR_SIGNER_IMAGE:-intothefathom/curator-public:0.2.0}
+#   signer  ${CURATOR_SIGNER_IMAGE:-intothefathom/curator-public:0.3.0}
 #           Public. Built from signer/ in this repository by
 #           .github/workflows/signer.yml; the tag is signer/package.json's
 #           version and never moves once published. Compose pulls it on `up`,
@@ -34,6 +34,7 @@
 #   CURATOR_API_URL           the weavr api, default https://api.weavr.sh
 #   WEAVR_PROGRAM_IDS         demo, set below: the wallet tools' selector; the signer image carries the demo program ids in its own manifest
 #   CURATOR_START_PAUSED      default 1: the signer boots paused; resume with the ops token once the doctor is green
+#   CURATOR_METADATA_TAGS     default agent-managed: the tags the signer keeps on the portfolio's metadata document (weavr badges agent-managed books)
 #   HERMES_HOME               the agent's home on the host: the rendered profile plus its .env (0600)
 #   HERMES_UID / HERMES_GID   the host user that owns HERMES_HOME (the image remaps its user to these)
 #
@@ -49,7 +50,7 @@
 name: ${COMPOSE_PROJECT_NAME:-weavr-curator}
 services:
   signer:
-    image: ${CURATOR_SIGNER_IMAGE:-intothefathom/curator-public:0.2.0}
+    image: ${CURATOR_SIGNER_IMAGE:-intothefathom/curator-public:0.3.0}
     platform: ${CURATOR_SIGNER_PLATFORM:-linux/amd64}
     restart: unless-stopped
     environment:
@@ -64,6 +65,7 @@ services:
       - CURATOR_JOURNAL=/journal/journal.jsonl
       - CURATOR_START_PAUSED=${CURATOR_START_PAUSED:-1}
       - CURATOR_TICK_MS=${CURATOR_TICK_MS:-30000}
+      - CURATOR_METADATA_TAGS=${CURATOR_METADATA_TAGS:-agent-managed}
       - CURATOR_PORT=8091
     env_file:
       - ${CURATOR_SIGNER_ENV:?the signer's secret env file (see signer.env.example)}

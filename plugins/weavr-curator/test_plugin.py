@@ -175,6 +175,7 @@ def test_chat_escalates_writes_with_a_named_action_and_a_per_args_rule_key():
             ("apply", "apply the announced rebalance on the portfolio"),
             ("cancel", "cancel the announced rebalance on the portfolio"),
             ("refresh_nav", "refresh the NAV of the portfolio"),
+            ("strategy", "publish this strategy as the public description of the portfolio"),
         ):
             r = gate(tool_name="weavr_curator", args={"verb": verb, "amountUsd": 250, "why": "risk exit"})
             assert r["action"] == "approve" and needle in r["message"], (verb, r)
@@ -395,6 +396,7 @@ def test_handler_rejects_bad_input_before_the_network():
         assert "twice" in json.loads(handle({"verb": "simulate", "mix": [{"asset": "SOL", "percent": 50}, {"asset": "pSOL", "percent": 50}]}))["error"]["message"]
         assert "amountUsd" in json.loads(handle({"verb": "deposit", "amountUsd": -1}))["error"]["message"]
         assert "text is required" in json.loads(handle({"verb": "note"}))["error"]["message"]
+        assert "text is required for strategy" in json.loads(handle({"verb": "strategy", "text": "  "}))["error"]["message"]
         assert "between 1 and 500" in json.loads(handle({"verb": "journal", "n": 900}))["error"]["message"]
         assert fake.calls == [], "no request may leave on a shape error"
 
@@ -539,6 +541,20 @@ def test_register_wires_tool_hook_and_command():
     assert ctx.hooks == [("pre_tool_call", gate)]
     ((name, fn, hint),) = ctx.commands
     assert name == "weavr-curator" and fn is command and "resume" in hint
+
+
+def test_strategy_posts_the_text_and_why_runs_in_cron_and_asks_in_chat_with_the_words():
+    method, path, body, _query = _mod.request_for("strategy", {"text": "  Hold SOL.  ", "why": "first run", "mix": MIX})
+    assert (method, path, body) == ("POST", "/strategy", {"text": "Hold SOL.", "why": "first run"})
+    assert _mod.request_for("strategy", {"text": "Hold SOL."})[2] == {"text": "Hold SOL."}
+    with cron():
+        assert gate(tool_name="weavr_curator", args={"verb": "strategy", "text": "Hold SOL."}) is None
+    with chat(), env(CURATOR_PORTFOLIO_SYMBOL="THDA4ADB"):
+        r = gate(tool_name="weavr_curator", args={"verb": "strategy", "text": "Hold SOL and BTC against a stable core."})
+        assert r["action"] == "approve"
+        assert 'description of THDA4ADB: "Hold SOL and BTC against a stable core."' in r["message"], r["message"]
+        other = gate(tool_name="weavr_curator", args={"verb": "strategy", "text": "Something else."})
+        assert other["rule_key"] != r["rule_key"], "an [a]lways answer covers that text only"
 
 
 # --------------------------------------------------------------------------- policy presets

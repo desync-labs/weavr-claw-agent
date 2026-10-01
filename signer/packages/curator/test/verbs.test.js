@@ -46,6 +46,7 @@ const WRITE_ARGS = {
   'rotate-curator': { newCurator: KEYS.governance.toBase58(), why: 'rotate' },
   'set-delay': { rebalanceDelaySecs: 86400, why: 'reset' },
   'set-metadata': { uri: 'https://www.weavr.sh/metadata/WEAVR', why: 'set' },
+  strategy: { text: 'Hold SOL and BTC against a stable core; trim winners past the band.' },
 };
 
 test('propose runs policy → build → verify → sign → send → journal in that order and arms the machine', async () => {
@@ -1180,4 +1181,92 @@ test('the thresholds deriveReview enforces are the policy the signer loaded, not
   const bare = mk({ depsOverrides: { deriveReview: realDeriveReview }, policy: { version: 1 } });
   assert.equal((await verbs.status(bare, {}, meta())).policy.review, null);
   assert.equal((await verbs.review(bare, {}, gate())).wakeAgent, false);
+});
+
+// ------------------------------------------------------------------ strategy
+
+const STRATEGY = WRITE_ARGS.strategy.text;
+const policyWith = (verbsOver) => ({ ...POLICY, verbs: { ...POLICY.verbs, ...verbsOver } });
+
+test('strategy publishes the text as the document\'s description with the configured tags, journals it, and signs no transaction', async () => {
+  const ctx = mk({ metadataTags: ['agent-managed'] });
+  ctx.metadata.doc.editable = { links: { twitter: 'https://x.com/a' } };
+  const out = await verbs.strategy(ctx, { text: `  ${STRATEGY}\n`, why: 'first run' }, meta({ session: 'cron' }));
+  assert.equal(out.ok, true);
+  assert.equal(out.changed, true);
+  assert.equal(out.description, STRATEGY);
+  assert.deepEqual(out.tags, ['agent-managed']);
+  assert.equal(out.updatedBy, WALLET);
+  const put = ctx.metadata.calls.find((c) => c.name === 'put');
+  assert.equal(put.portfolio, KEYS.portfolio.toBase58(), 'the document is named by the Portfolio PDA, never the mint');
+  assert.deepEqual(put.body.metadata, { links: { twitter: 'https://x.com/a' }, tags: ['agent-managed'], description: STRATEGY });
+  assert.equal(ctx.signer.calls.length, 0);
+  assert.equal(ctx.client.calls.length, 0);
+  const line = records(ctx).find((r) => r.kind === 'verb' && r.verb === 'strategy');
+  assert.equal(line.changed, true);
+  assert.equal(line.args.text, STRATEGY);
+  assert.equal(line.args.why, 'first run');
+  assert.ok(/^sha256:[0-9a-f]{64}$/.test(line.contentHash));
+  assert.equal(ctx.state.metadata.state, 'ok', 'the write carried the tags, so the loop\'s stamp is done');
+  assert.equal(verbs.statusBody(ctx, fakeSnapshot()).metadata.state, 'ok');
+
+  const again = await verbs.strategy(ctx, { text: STRATEGY }, meta());
+  assert.equal(again.changed, false);
+  assert.equal(ctx.metadata.calls.filter((c) => c.name === 'put').length, 1);
+});
+
+test('strategy refuses what is not plain public text: empty, a link, control characters, over 2000 characters, a long why', async () => {
+  const ctx = mk();
+  await rejectsWith(verbs.strategy(ctx, {}, meta()), 'BAD_REQUEST');
+  await rejectsWith(verbs.strategy(ctx, { text: '   ' }, meta()), 'BAD_REQUEST');
+  for (const text of ['Read more at https://example.org', 'see www.example.org', 'Hold SOL\u0007', 'x'.repeat(2001)]) {
+    const error = await rejectsWith(verbs.strategy(ctx, { text }, meta()), 'STRATEGY_REFUSED');
+    assert.equal(error.status, 400);
+  }
+  await rejectsWith(verbs.strategy(ctx, { text: STRATEGY, why: 'w'.repeat(501) }, meta()), 'WHY_REQUIRED');
+  assert.equal(ctx.metadata.calls.length, 0);
+  assert.equal(records(ctx).filter((r) => r.kind === 'refusal' && r.verb === 'strategy').length, 7, 'every refusal is journaled');
+  assert.equal((await verbs.strategy(ctx, { text: `Line one.\n\tLine two, ${'y'.repeat(1900)}` }, meta())).ok, true, 'line feeds and tabs are fine');
+});
+
+test('strategy holds the agent-write rules: VERB_DENIED unless the policy lists it, PAUSED (ops token too), SELF_LOCKED, RATE_LIMITED, NOT_CURATOR, another mint', async () => {
+  const { verbAllowed } = await import('../src/policy.js');
+  const denied = mk({ policy: POLICY, depsOverrides: { verbAllowed } });
+  await rejectsWith(verbs.strategy(denied, { text: STRATEGY }, meta()), 'VERB_DENIED');
+  const listed = mk({ policy: policyWith({ agent: [...POLICY.verbs.agent, 'strategy'] }), depsOverrides: { verbAllowed } });
+  assert.equal((await verbs.strategy(listed, { text: STRATEGY }, meta())).ok, true);
+
+  const paused = mk({ paused: true });
+  await rejectsWith(verbs.strategy(paused, { text: STRATEGY }, meta({ tokenKind: 'ops' })), 'PAUSED');
+  const locked = mk({ selfLocked: { at: T0, reason: 'INVARIANT_DRIFT', drift: [] } });
+  await rejectsWith(verbs.strategy(locked, { text: STRATEGY }, meta()), 'SELF_LOCKED');
+
+  const busy = mk();
+  const cap = POLICY.rate.maxWriteAttemptsPerHour;
+  busy.state.ledger.writeAttempts.push(...Array.from({ length: cap }, () => T0 - 10));
+  await rejectsWith(verbs.strategy(busy, { text: STRATEGY }, meta()), 'RATE_LIMITED');
+
+  const handedOver = mk({ snapshot: fakeSnapshot({ curator: KEYS.governance.toBase58() }) });
+  const error = await rejectsWith(verbs.strategy(handedOver, { text: STRATEGY }, meta()), 'NOT_CURATOR');
+  assert.equal(error.status, 409);
+  await rejectsWith(verbs.strategy(mk(), { text: STRATEGY, mint: KEYS.vault.toBase58() }, meta()), 'PORTFOLIO_NOT_ALLOWED');
+  for (const ctx of [paused, locked, busy, handedOver]) assert.equal(ctx.metadata.calls.filter((c) => c.name !== 'document').length, 0);
+});
+
+test('strategy passes the service\'s refusal through by code and is not held by LOW_SOL', async () => {
+  const ctx = mk({ snapshot: fakeSnapshot({ lamports: 1 }) });
+  ctx.metadata.fail.put = new Refusal('METADATA_REFUSED', 'metadata PUT refused: stale', { code: 'STALE_REQUEST' });
+  const error = await rejectsWith(verbs.strategy(ctx, { text: STRATEGY }, meta()), 'METADATA_REFUSED');
+  assert.equal(error.status, 502);
+  assert.equal(error.detail.code, 'STALE_REQUEST');
+  delete ctx.metadata.fail.put;
+  assert.equal((await verbs.strategy(ctx, { text: STRATEGY }, meta())).ok, true);
+});
+
+test('status reports the metadata stamp: off without tags, pending before the first try, the error while failing', async () => {
+  assert.deepEqual(verbs.statusBody(mk(), fakeSnapshot()).metadata, { tags: [], state: 'off' });
+  const ctx = mk({ metadataTags: ['agent-managed'] });
+  assert.equal(verbs.statusBody(ctx, fakeSnapshot()).metadata.state, 'pending');
+  ctx.state.metadata = { state: 'failed', at: T0, attempts: 1, nextAt: T0 + 60, error: { code: 'UPSTREAM', message: 'down' }, updatedAt: null };
+  assert.deepEqual(verbs.statusBody(ctx, fakeSnapshot()).metadata, { tags: ['agent-managed'], state: 'failed', at: T0, updatedAt: null, error: { code: 'UPSTREAM', message: 'down' } });
 });

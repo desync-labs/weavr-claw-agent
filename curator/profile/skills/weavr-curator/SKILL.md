@@ -1,7 +1,7 @@
 ---
 name: weavr-curator
 description: Curate one weavr portfolio through the policy signer.
-version: 0.2.0
+version: 0.3.0
 author: weavr
 license: MIT
 platforms: [linux, macos]
@@ -87,8 +87,8 @@ and every owner message about the portfolio.
 ## The weavr_curator verbs
 
 `status review policy simulate propose apply cancel deposit withdraw
-refresh_nav pause note journal`, always `weavr_curator {verb, args}`. The
-alerts and the heartbeat belong to the health script, not to you.
+refresh_nav pause note journal strategy`, always `weavr_curator {verb, args}`.
+The alerts and the heartbeat belong to the health script, not to you.
 
 - `withdraw {amountUsd}` in chat only, when the owner asks; a cron run is
   refused (`WITHDRAW_CRON_BLOCKED`).
@@ -100,9 +100,18 @@ alerts and the heartbeat belong to the health script, not to you.
 - `note {text}` (≤ 2 KB) records your rationale or the weekly lesson in the
   journal; it is tagged untrusted and pulled into later briefs.
 - `journal {n}` is what actually happened, newest last.
+- `strategy {text, why?}` publishes the portfolio's strategy as its public
+  description: what wallets show and what weavr shows under "Agent
+  strategy". Write it on your first run if the portfolio has none from you,
+  and again only when the strategy itself changes (the weekly report is the
+  place to notice that), never after every rebalance. Plain text for a
+  holder, no links (`STRATEGY_REFUSED` names the limit it hit); the same text
+  twice is `changed: false`. The signer adds the portfolio's tags (such as
+  `agent-managed`) itself; they are not yours to set.
 - Ops-only, never yours: `resume unlock rotate-curator set-delay
-  set-metadata` (`OPS_ONLY`). Never through the signer at all: curator
-  transfer/accept/cancel, fee recipient, revive, create (`VERB_DENIED`).
+  set-metadata` (`OPS_ONLY`; `set-metadata` moves the on-chain link, not the
+  description). Never through the signer at all: curator transfer/accept/
+  cancel, fee recipient, revive, create (`VERB_DENIED`).
 - The owner's slash command is `/weavr-curator status|review|journal [n]|
   policy|pause|resume|cancel <why>|apply|note <text>`; in chat every write
   asks the owner first.

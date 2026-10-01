@@ -55,6 +55,7 @@ import * as decodeMod from './decode.js';
 import * as preflightMod from './preflight.js';
 import * as metricsMod from './metrics.js';
 import { canonicalSha256 } from './journal.js';
+import { writeDocument, tagsOf, stampStateOf, DESCRIPTION_MAX_CHARS } from './metadata.js';
 
 /** An alert key that stays raised is delivered again after this long. */
 export const REALERT_SECS = 6 * 3600;
@@ -169,6 +170,7 @@ export function initialState({ paused = false, selfLocked = null, operatorReques
     lastTick: { at: null, ok: null, error: null },
     lastSnapshot: null,
     ledgerFromJournal: false,
+    metadata: null,
   };
 }
 
@@ -792,6 +794,7 @@ export function statusBody(ctx, snapshot, error = null) {
       lastDepositAt: ledger.lastDepositAt ?? null,
       topUpBudgetSpent: topUpBudgetSpentOf(ctx, ledger, nowSecs),
     },
+    metadata: metadataStatusOf(ctx),
     // `review` is the loaded threshold section, whole: `deriveReview` reads
     // `status.policy.review` and falls back to its own defaults without it, so
     // this is what makes the counts in force the document's (the ones GET
@@ -799,6 +802,19 @@ export function statusBody(ctx, snapshot, error = null) {
     policy: { version: ctx.policy?.version ?? null, sha256: policyDigestOf(ctx), review: ctx.policy?.review ?? null },
     lastTick: ctx.state.lastTick,
   };
+}
+
+/**
+ * The tags this signer stamps on the metadata document and where the stamp
+ * stands: `off` (no CURATOR_METADATA_TAGS), `pending` (not tried yet),
+ * `ok` (the document carries them), `failed` (retrying; `error` says why),
+ * `full` (no room for them; an operator has to clear a tag).
+ */
+function metadataStatusOf(ctx) {
+  const tags = ctx.config?.metadata?.tags ?? [];
+  if (!tags.length) return { tags: [], state: 'off' };
+  const st = ctx.state.metadata ?? { state: 'pending', at: null, error: null, updatedAt: null };
+  return { tags, state: st.state, at: st.at ?? null, updatedAt: st.updatedAt ?? null, error: st.error ?? null };
 }
 
 /**
@@ -1380,6 +1396,129 @@ export async function setMetadata(ctx, args, meta) {
   });
 }
 
+/** Control characters a public text never carries; line feeds and tabs are fine. */
+const CONTROL_CHARS = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/;
+/** A link: a scheme (`https://`, `ipfs://` …) or a `www.` host. */
+const LINK_RE = /[a-z][a-z0-9+.-]*:\/\/|\bwww\.[a-z0-9-]/i;
+
+/**
+ * The strategy text as it will be published, or a refusal. Plain text: no
+ * links (the description is public and read in wallets; an agent talked
+ * into publishing a link is the obvious abuse), no control characters, at
+ * most the service's 2000 characters.
+ */
+export function strategyTextOf(raw) {
+  if (typeof raw !== 'string' || raw.trim() === '') throw bad('text must be a non-empty string: the strategy as the public should read it');
+  const text = raw.trim();
+  if (text.length > DESCRIPTION_MAX_CHARS) throw new Refusal('STRATEGY_REFUSED', `the strategy is ${text.length} characters; the metadata document takes at most ${DESCRIPTION_MAX_CHARS}`);
+  if (CONTROL_CHARS.test(text)) throw new Refusal('STRATEGY_REFUSED', 'the strategy carries control characters; plain text only');
+  if (LINK_RE.test(text)) throw new Refusal('STRATEGY_REFUSED', 'the strategy carries a link; it is published as plain text and links are not');
+  return text;
+}
+
+/**
+ * POST /strategy { text, why? } — publish the strategy as the description of
+ * the portfolio's metadata document (what wallets show, and what weavr's site
+ * shows under "Agent strategy"). No transaction: the curator key signs the
+ * metadata service's message instead (metadata.js). The configured tags ride
+ * along on every write. The hard rules of an agent write hold —
+ * PORTFOLIO_NOT_ALLOWED, SELF_LOCKED, PAUSED and the hourly write budget —
+ * but not LOW_SOL or INVARIANTS_UNVERIFIED: the write costs no lamports and
+ * touches no account those reads guard. The same text twice writes once
+ * (`changed: false`).
+ */
+export async function strategy(ctx, args, meta) {
+  meta = normMeta(meta);
+  const deps = depsOf(ctx);
+  const nowSecs = nowSecsOf(ctx);
+  const why = whyOf(args);
+  const raw = typeof args?.text === 'string' ? args.text.trim() : args?.text;
+  const base = {
+    verb: 'strategy',
+    route: 'strategy',
+    caller: meta.caller,
+    session: meta.session,
+    tokenKind: meta.tokenKind,
+    args: { text: raw, why },
+  };
+  ctx.state.ledger.writeAttempts.push(nowSecs);
+  const refuse = (code, message, detail) => {
+    const written = journalAppend(ctx, { kind: 'refusal', ...base, ok: false, code, message: scrubText(message), ...(detail !== undefined ? { detail } : {}) });
+    const error = new Refusal(code, scrubText(message), detail);
+    error.journaled = true;
+    error.journalId = written?.id ?? null;
+    throw error;
+  };
+
+  if (args?.mint !== undefined && args.mint !== ctx.config.mint) refuse('PORTFOLIO_NOT_ALLOWED', 'this signer acts on one portfolio only');
+  const allowed = deps.verbAllowed(ctx.policy, 'strategy', { session: meta.session, tokenKind: meta.tokenKind });
+  if (!allowed?.ok) refuse(allowed?.code ?? 'VERB_DENIED', allowed?.message ?? 'strategy is not allowed');
+  if (ctx.state.selfLocked) {
+    refuse('SELF_LOCKED', `self-locked since ${ctx.state.selfLocked.at}: ${ctx.state.selfLocked.reason}; POST /unlock (ops) once the drift is fixed`);
+  }
+  if (ctx.state.paused) refuse('PAUSED', 'the signer is paused; the strategy can be published again after POST /resume (ops)');
+  // The same count and cap as policy.js evaluateWrite: this attempt is already in the list.
+  const max = ctx.policy?.rate?.maxWriteAttemptsPerHour;
+  const attempts = writeAttemptsLastHour(ctx.state.ledger, nowSecs);
+  if (typeof max === 'number' && attempts >= max) refuse('RATE_LIMITED', `${attempts} write attempts in the last hour reach the cap of ${max}`);
+  if (!ctx.metadata) refuse('UPSTREAM', 'no metadata service is configured (CURATOR_METADATA_URL)');
+
+  let text;
+  try {
+    text = strategyTextOf(args?.text);
+  } catch (error) {
+    refuse(error.code ?? 'BAD_REQUEST', error.message);
+  }
+  // `why` is optional here (the text is its own reason) but bounded like every other.
+  const whyMax = ctx.policy?.reason?.maxChars;
+  if (whyMax && why.length > whyMax) refuse('WHY_REQUIRED', `why must be at most ${whyMax} characters`);
+
+  let snapshot;
+  try {
+    snapshot = await readSnapshot(ctx);
+  } catch (error) {
+    refuse(error instanceof Refusal ? error.code : 'UPSTREAM', `snapshot failed: ${error?.message ?? String(error)}`);
+  }
+  const portfolio = base58Of(snapshot?.portfolioRow?.portfolio);
+  if (!portfolio) refuse('UPSTREAM', 'the portfolio row carries no Portfolio key; the document cannot be named');
+  const curator = base58Of(snapshot?.portfolioAccount?.curator);
+  if (curator && curator !== ctx.signer.wallet) refuse('NOT_CURATOR', `the chain names ${curator} as curator, not this signer`, { curator });
+
+  let out;
+  try {
+    out = await writeDocument(ctx, { portfolio, description: text });
+  } catch (error) {
+    if (error instanceof Refusal) refuse(error.code, error.message, error.detail);
+    refuse('UPSTREAM', `metadata write failed: ${error?.message ?? String(error)}`);
+  }
+  const tags = tagsOf(out.document);
+  const record = journalAppend(ctx, {
+    kind: 'verb',
+    ...base,
+    ok: true,
+    portfolio,
+    changed: out.changed,
+    contentHash: out.contentHash,
+    tags,
+    updatedAt: out.document?.updatedAt ?? null,
+  });
+  const configured = ctx.config.metadata?.tags ?? [];
+  if (configured.length && configured.every((tag) => tags.includes(tag))) {
+    // The document carries the configured tags now, so the loop's stamp is done too.
+    Object.assign(stampStateOf(ctx), { state: 'ok', at: nowSecs, attempts: 0, nextAt: null, error: null, updatedAt: out.document?.updatedAt ?? null });
+  }
+  return {
+    ok: true,
+    verb: 'strategy',
+    changed: out.changed,
+    description: out.document?.description ?? text,
+    tags,
+    updatedAt: out.document?.updatedAt ?? null,
+    updatedBy: out.document?.updatedBy ?? null,
+    journalId: record?.id ?? null,
+  };
+}
+
 /** Route name → verb. */
 export const VERBS = Object.freeze({
   status,
@@ -1396,6 +1535,7 @@ export const VERBS = Object.freeze({
   pause,
   note,
   journal,
+  strategy,
   'hermes-heartbeat': hermesHeartbeat,
   resume,
   unlock,
@@ -1408,7 +1548,7 @@ export const VERBS = Object.freeze({
 /** Verbs the ops token alone may call. */
 export const OPS_VERBS = Object.freeze(new Set(['resume', 'unlock', 'rotate-curator', 'set-delay', 'set-metadata', 'operator-request']));
 
-/** Verbs that sign and send (counted against RATE_LIMITED, refused when paused or self-locked). */
+/** Verbs that sign and send (counted against RATE_LIMITED, refused when paused or self-locked); `strategy` signs a message, not a transaction. */
 export const WRITE_VERBS = Object.freeze(new Set([
-  'propose', 'apply', 'cancel', 'deposit', 'withdraw', 'refresh-nav', 'rotate-curator', 'set-delay', 'set-metadata',
+  'propose', 'apply', 'cancel', 'deposit', 'withdraw', 'refresh-nav', 'rotate-curator', 'set-delay', 'set-metadata', 'strategy',
 ]));

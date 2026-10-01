@@ -35,7 +35,7 @@ export const ROTATE_BYTES = 50 * 1024 * 1024;
 /** Verbs whose attempts (ok or refused) count against the hourly write rate. */
 export const LEDGER_WRITE_VERBS = Object.freeze([
   'propose', 'apply', 'cancel', 'deposit', 'withdraw', 'refreshNav',
-  'rotateCurator', 'setDelay', 'setMetadata',
+  'rotateCurator', 'setDelay', 'setMetadata', 'strategy',
 ]);
 
 const DAY_SECS = 86400;

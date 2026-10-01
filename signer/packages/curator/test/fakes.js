@@ -14,6 +14,7 @@ import { Keypair, PublicKey } from '@solana/web3.js';
 import anchor from '@coral-xyz/anchor';
 import { Journal } from '../src/journal.js';
 import { initialState } from '../src/verbs.js';
+import { contentHashOf } from '../src/metadata.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const { BN } = anchor;
@@ -163,8 +164,10 @@ export function fakeClient({ trace = [] } = {}) {
 
 export function fakeSigner({ trace = [] } = {}) {
   const calls = [];
+  const texts = [];
   return {
     calls,
+    texts,
     wallet: WALLET,
     kind: 'curator',
     async sign(list) {
@@ -172,7 +175,65 @@ export function fakeSigner({ trace = [] } = {}) {
       trace.push('sign');
       return list.map((tx) => `signed:${tx}`);
     },
+    async signText(text) {
+      texts.push(text);
+      trace.push('signText');
+      return Buffer.from(`sig:${text.length}`).toString('base64');
+    },
   };
+}
+
+/**
+ * A metadata service in memory: `document` serves `doc`, `message` builds the
+ * service's own text over the body it is given (`build` overrides it), `put`
+ * stores the body as the editable block. `fail[name]` makes that call throw.
+ */
+export function fakeMetadata({ trace = [], clock, doc = null } = {}) {
+  const calls = [];
+  const service = {
+    calls,
+    trace,
+    fail: {},
+    build: null,
+    curator: WALLET,
+    doc: doc ?? { name: 'Weavr', symbol: 'WEAVR', description: 'A Weavr portfolio of assets.', portfolio: KEYS.portfolio.toBase58(), editable: {}, updatedAt: null, updatedBy: null },
+    async document(portfolio) {
+      calls.push({ name: 'document', portfolio });
+      trace.push('metadata.document');
+      if (service.fail.document) throw service.fail.document;
+      return structuredClone(service.doc);
+    },
+    async message(portfolio, body) {
+      calls.push({ name: 'message', portfolio, body: structuredClone(body) });
+      trace.push('metadata.message');
+      if (service.fail.message) throw service.fail.message;
+      const contentHash = contentHashOf(body.metadata);
+      const issuedAt = new Date(clock ? clock.now() : T0_MS).toISOString();
+      const message = service.build
+        ? service.build({ ...body, portfolio, contentHash, issuedAt })
+        : [
+          'weavr.sh wants you to update portfolio metadata with your Solana account:', body.address, '',
+          `Portfolio: ${portfolio}`, `Action: ${body.action}`, `Content-Hash: ${contentHash}`, `Issued-At: ${issuedAt}`, 'Nonce: 0123456789abcdef',
+        ].join('\n');
+      return { message, action: body.action, contentHash, issuedAt, nonce: '0123456789abcdef', curator: service.curator, isCurator: service.curator === body.address, proof: 'signature' };
+    },
+    async put(portfolio, body) {
+      calls.push({ name: 'put', portfolio, body: structuredClone(body) });
+      trace.push('metadata.put');
+      if (service.fail.put) throw service.fail.put;
+      const editable = structuredClone(body.metadata);
+      service.doc = {
+        ...service.doc,
+        description: editable.description ?? service.doc.description,
+        ...(editable.tags ? { tags: editable.tags } : {}),
+        editable,
+        updatedAt: new Date(clock ? clock.now() : T0_MS).toISOString(),
+        updatedBy: body.address,
+      };
+      return structuredClone(service.doc);
+    },
+  };
+  return service;
 }
 
 /** A ctx wired with the fakes above; call `ctx.cleanup()` to drop the temp journal. */
@@ -185,16 +246,19 @@ export function fakeCtx(over = {}) {
   const deps = over.deps ?? fakeDeps({ snapshot: over.snapshot, trace, ...(over.depsOverrides ?? {}) });
   const client = over.client ?? fakeClient({ trace });
   const signer = over.signer ?? fakeSigner({ trace });
+  const metadata = over.metadata === undefined ? fakeMetadata({ trace, clock }) : over.metadata;
   const logs = [];
   const ctx = {
     policy: over.policy ?? POLICY,
     signer,
     client,
+    metadata,
     journal,
     chain: { connection: {}, programs: new Set(['11111111111111111111111111111111']), lookupTables: new Set(), idls: {} },
     config: {
       mint: MINT, treasury: TREASURY, expectedCurator: WALLET, guardian: GUARDIAN, rebalanceDelaySecs: 86400,
       apiUrl: 'http://api.test', port: 0, tickMs: 30000, journalFile,
+      metadata: { tags: over.metadataTags ?? [], domain: 'weavr.sh' },
     },
     state: initialState({ paused: over.paused ?? false, selfLocked: over.selfLocked ?? null }),
     now: clock.now,

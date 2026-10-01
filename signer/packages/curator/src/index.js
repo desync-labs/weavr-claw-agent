@@ -4,8 +4,9 @@
  * ends the process with exit 1 and a plain reason — never a secret — before
  * a key is read or a port is bound: both tokens present, ≥ 32 bytes and
  * different; keypair readable; mint, treasury, guardian, api URL, RPC URL
- * and policy present; policy valid. Then: ctx, ledger rebuilt from the
- * journal, loop started, server listening on 0.0.0.0:CURATOR_PORT.
+ * and policy present; policy valid; the metadata tags, when set, in the
+ * service's form. Then: ctx, ledger rebuilt from the journal, loop started,
+ * server listening on 0.0.0.0:CURATOR_PORT.
  *
  * Why `readConfig` is a separate pure function: the guards are the test
  * surface ("short token ⇒ boot refused") and must run without a key file,
@@ -33,6 +34,7 @@ import { connect, idlFor, programId, readNavLookupTableAddress } from '@composab
 import { loadPolicy } from './policy.js';
 import { loadSigner } from './keys.js';
 import { weavrClient } from './weavr.js';
+import { metadataClient, parseTagList, DEFAULT_SIGN_DOMAIN } from './metadata.js';
 import { Journal, DEFAULT_JOURNAL_FILE, scrub } from './journal.js';
 import { loadKnownProgramIds } from './errors.js';
 import { createLoop } from './loop.js';
@@ -148,7 +150,17 @@ export function readConfig(env = process.env) {
   const tickMs = integer(env, 'CURATOR_TICK_MS', DEFAULT_TICK_MS, { min: 1000 });
   const startPaused = env.CURATOR_START_PAUSED === '1' || env.CURATOR_PAUSED === '1';
   const rebalanceDelaySecs = integer(env, 'CURATOR_REBALANCE_DELAY_SECS', DEFAULT_REBALANCE_DELAY_SECS, { min: 0 });
-  return { tokens, keypairFile, mint, treasury, guardian, apiUrl, rpcUrl, policyJson, policyFile, journalFile, port, tickMs, startPaused, rebalanceDelaySecs };
+  // The metadata document: the service is on the public api host, which an
+  // in-cluster CURATOR_API_URL may not route to, hence a URL of its own.
+  const metadataUrl = String(env.CURATOR_METADATA_URL ?? '').trim() || apiUrl;
+  if (!/^https?:\/\//.test(metadataUrl)) throw new Error('CURATOR_METADATA_URL must be an http(s) URL');
+  const metadataTags = parseTagList(env.CURATOR_METADATA_TAGS);
+  const metadataDomain = String(env.CURATOR_METADATA_SIGN_DOMAIN ?? '').trim() || DEFAULT_SIGN_DOMAIN;
+  if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(metadataDomain)) throw new Error('CURATOR_METADATA_SIGN_DOMAIN must be a host name');
+  return {
+    tokens, keypairFile, mint, treasury, guardian, apiUrl, rpcUrl, policyJson, policyFile, journalFile, port, tickMs, startPaused, rebalanceDelaySecs,
+    metadataUrl, metadataTags, metadataDomain,
+  };
 }
 
 /** A JSON line per event on stdout; strings URL-scrubbed, secret-shaped keys dropped by the journal's scrubber. */
@@ -215,6 +227,7 @@ export async function boot(opts = {}) {
   await chain.refreshLookupTables();
 
   const client = overrides.client ?? weavrClient({ apiUrl: cfg.apiUrl, fetchImpl: overrides.fetchImpl ?? globalThis.fetch });
+  const metadata = overrides.metadata ?? metadataClient({ baseUrl: cfg.metadataUrl, fetchImpl: overrides.fetchImpl ?? globalThis.fetch });
 
   let journal = overrides.journal;
   if (!journal) {
@@ -237,6 +250,7 @@ export async function boot(opts = {}) {
     policy,
     signer,
     client,
+    metadata,
     journal,
     chain,
     config: {
@@ -249,6 +263,7 @@ export async function boot(opts = {}) {
       port: cfg.port,
       tickMs: cfg.tickMs,
       journalFile: cfg.journalFile,
+      metadata: { tags: cfg.metadataTags, domain: cfg.metadataDomain },
     },
     state,
     now,
@@ -289,6 +304,7 @@ export async function boot(opts = {}) {
     programs: chain.programs.size,
     lookupTables: chain.lookupTables.size,
     lookupTablesResolved: [...chain.lookupTables.values()].filter(Boolean).length,
+    metadataTags: cfg.metadataTags,
   });
   log('info', 'boot', { wallet: signer.wallet, mint: cfg.mint, port: server.address()?.port ?? cfg.port, paused: state.paused, selfLocked: Boolean(state.selfLocked), policyVersion: policy?.version ?? null, policySha256: ctx.policyDigest });
 

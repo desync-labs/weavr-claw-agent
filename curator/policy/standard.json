@@ -118,6 +118,7 @@
       "pause",
       "note",
       "journal",
+      "strategy",
       "hermes-heartbeat"
     ],
     "ops": [
