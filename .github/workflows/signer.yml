@@ -8,12 +8,17 @@
 #   sha-<short> the commit built
 #   latest      the newest build; pin the version tag on a real host
 #
+# A workflow_dispatch from release/alpha-1 publishes exactly one tag,
+# alpha-<full-sha>. That path never pushes latest, a version tag, or a
+# demo tag. Dispatch from any other ref does not publish.
+#
 # Two repository secrets, the same names the backend's workflow uses:
 # DOCKER_USERNAME and DOCKER_PASSWORD (a Docker Hub access token with write
 # on the repository). Nothing else here is secret.
 name: signer
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'signer/**'
@@ -59,7 +64,7 @@ jobs:
 
   publish:
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/release/alpha-1')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -76,6 +81,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Refuse to overwrite a published version
+        if: github.ref != 'refs/heads/release/alpha-1'
         env:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
@@ -101,12 +107,12 @@ jobs:
         with:
           context: signer
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ github.ref == 'refs/heads/release/alpha-1' && format('{0}:alpha-{1}', env.IMAGE, github.sha) || steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Image summary
         env:
-          TAGS: ${{ steps.meta.outputs.tags }}
+          TAGS: ${{ github.ref == 'refs/heads/release/alpha-1' && format('{0}:alpha-{1}', env.IMAGE, github.sha) || steps.meta.outputs.tags }}
         run: |
           {
             echo "## Signer image published"
