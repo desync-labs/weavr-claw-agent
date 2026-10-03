@@ -62,7 +62,7 @@ const DEFAULT_APPLY_POLICY = Object.freeze({
   windowAfterEffectiveSecs: 21600,
   maxSendsPerTick: 3,
   sendFailedTicksBeforeEscalate: 3,
-  refreshNavWhenBookStaleSecs: 900,
+  refreshNavWhenBookStaleSecs: 180,
   applyInFlightMaxAttempts: 3,
   missingCustodyRetries: 1,
   escalateAfterSecs: {},

@@ -1,5 +1,5 @@
 {
-  "address": "",
+  "address": "BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts",
   "metadata": {
     "name": "portfolio_factory",
     "version": "0.1.0",
@@ -52,7 +52,7 @@
           "name": "caller",
           "docs": [
             "The proposed recipient. Signing here is the proof that the destination",
-            "is controlled — the half that used to live on propose."
+            "is controlled \u2014 the half that used to live on propose."
           ],
           "signer": true
         },
@@ -474,7 +474,7 @@
           "docs": [
             "The pool accountant's shares account.",
             "",
-            "Fees are zero here, so it should never hold a balance — but the core's",
+            "Fees are zero here, so it should never hold a balance \u2014 but the core's",
             "`deposit` reads it unconditionally, so a pool without one refuses every",
             "allocation (F12).",
             ""
@@ -733,7 +733,7 @@
     {
       "name": "init_pool_escrow_token_account",
       "docs": [
-        "Creates a per-mint custody ATA on a pool's escrow. Governance only —",
+        "Creates a per-mint custody ATA on a pool's escrow. Governance only \u2014",
         "the escrow manager is `factory_authority`, so this is the only path."
       ],
       "discriminator": [
@@ -1002,7 +1002,7 @@
       "name": "pause_keeper_risk",
       "docs": [
         "Guardian or governance may set the keeper-risk pause. It blocks",
-        "deposits, allocation, unwinds and fees — never fulfilment or return."
+        "deposits, allocation, unwinds and fees \u2014 never fulfilment or return."
       ],
       "discriminator": [
         32,
@@ -1413,7 +1413,7 @@
             "",
             "Boxed, like everything else here that is not a signer or a program.",
             "`VaultConfig`, `AssetManager` and `Pool` together are far past the 4KB",
-            "BPF stack frame, and the overflow does not appear at compile time — it",
+            "BPF stack frame, and the overflow does not appear at compile time \u2014 it",
             "appears on-chain as an access violation with no line number (F11)."
           ]
         },
@@ -2405,7 +2405,7 @@
               "LAYOUT COUPLING (L-5): `huma_adapter::verify_escrow_caller` reads this",
               "field directly from account bytes `[8..16]` (immediately after the",
               "8-byte Anchor discriminator) to re-derive and authenticate the escrow",
-              "caller. `index` MUST remain the first field of this struct — reordering",
+              "caller. `index` MUST remain the first field of this struct \u2014 reordering",
               "it would silently break every adapter handshake."
             ],
             "type": "u64"
@@ -2698,7 +2698,7 @@
             "name": "hook_hash",
             "docs": [
               "SHA-256 of the approved `hook_data` payload for `send_via_cctp_with_hook`",
-              "(H-2). All-zero means \"no hook payload approved\" — the destination is",
+              "(H-2). All-zero means \"no hook payload approved\" \u2014 the destination is",
               "usable for the plain `send_via_cctp` path only. Set via",
               "`set_destination_hook`."
             ],
@@ -2942,7 +2942,7 @@
           {
             "name": "max_idle_buffer",
             "docs": [
-              "Becomes `max_total_idle` — undeployed cash only, not a TVL cap."
+              "Becomes `max_total_idle` \u2014 undeployed cash only, not a TVL cap."
             ],
             "type": "u64"
           },
@@ -3062,7 +3062,7 @@
           {
             "name": "readiness_hash",
             "docs": [
-              "Digest written at probe time — must equal `params.custody_readiness_hash`."
+              "Digest written at probe time \u2014 must equal `params.custody_readiness_hash`."
             ],
             "type": {
               "array": [
@@ -4587,7 +4587,7 @@
       "docs": [
         "Create-time snapshot. `idle_target_bps` and `drift_band_bps` never change",
         "after this. `targets` is the committed set on the inline path; it is empty",
-        "on a paged draft — the last `create_portfolio_page` then emits",
+        "on a paged draft \u2014 the last `create_portfolio_page` then emits",
         "`TargetsApplied` with the full set so drift is event-derivable either way."
       ],
       "type": {

@@ -32,7 +32,7 @@
 #   CURATOR_TREASURY          the portfolio's fee recipient, read from chain by init
 #   CURATOR_EXPECTED_GUARDIAN weavr's guardian key, read from chain by init
 #   CURATOR_API_URL           the weavr api, default https://api.weavr.sh
-#   WEAVR_PROGRAM_IDS         demo, set below: the wallet tools' selector; the signer image carries the demo program ids in its own manifest
+#   WEAVR_PROGRAM_IDS         unset: the signer image bakes the production program ids; demo and alpha are refused
 #   CURATOR_START_PAUSED      default 1: the signer boots paused; resume with the ops token once the doctor is green
 #   CURATOR_METADATA_TAGS     default agent-managed: the tags the signer keeps on the portfolio's metadata document (weavr badges agent-managed books)
 #   HERMES_HOME               the agent's home on the host: the rendered profile plus its .env (0600)
@@ -45,8 +45,9 @@
 # Network: the two services share a private compose network and nothing is
 # published beyond the host. The agent reaches the signer as
 # http://signer:8091, so CURATOR_SIGNER_URL in ${HERMES_HOME}/.env must be
-# exactly that. The signer is also published on 127.0.0.1:8091 for the ops
-# commands you run from the host (never on another interface).
+# exactly that. The signer is also published on 127.0.0.1:8093 for the ops
+# commands you run from the host (never on another interface). 8091 is the
+# demo curator port on this machine.
 name: ${COMPOSE_PROJECT_NAME:-weavr-curator}
 services:
   signer:
@@ -58,7 +59,6 @@ services:
       - CURATOR_KEYPAIR=/keys/curator.json
       - CURATOR_POLICY_FILE=/policy/policy.json
       - CURATOR_API_URL=${CURATOR_API_URL:-https://api.weavr.sh}
-      - WEAVR_PROGRAM_IDS=demo
       - CURATOR_PORTFOLIO_MINT=${CURATOR_PORTFOLIO_MINT:?the portfolio's shares mint (weavr-curator init writes it)}
       - CURATOR_TREASURY=${CURATOR_TREASURY:?the portfolio's fee recipient (weavr-curator init writes it)}
       - CURATOR_EXPECTED_GUARDIAN=${CURATOR_EXPECTED_GUARDIAN:?the guardian key (weavr-curator init writes it)}
@@ -74,7 +74,7 @@ services:
       - ${CURATOR_POLICY_FILE:?the policy document (curator/policy/standard.json or rehearsal.json)}:/policy/policy.json:ro
       - curator-journal:/journal
     ports:
-      - "127.0.0.1:8091:8091"
+      - "127.0.0.1:8093:8091"
   agent:
     image: ${HERMES_IMAGE:-hermes-agent}
     restart: unless-stopped

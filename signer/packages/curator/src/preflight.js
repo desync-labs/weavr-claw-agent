@@ -262,7 +262,7 @@ export function applyGates(snapshot, policy, now, slot = snapshot?.slot ?? null)
   const rowStale = row ? !(rowState === 'fresh' || rowState === 'pending_acceptance' || rowState === 'paused') : false;
   if (chainStale || rowStale) {
     const ageSecs = lastMark == null ? null : now - lastMark;
-    const refreshAfter = apply.refreshNavWhenBookStaleSecs ?? 900;
+    const refreshAfter = apply.refreshNavWhenBookStaleSecs ?? 180;
     const staleFor = ageSecs == null || maxStale == null ? null : ageSecs - maxStale;
     const refreshNav = staleFor != null && staleFor > refreshAfter && keeperOk(snapshot.health) === false;
     blockers.push(blocker('BOOK_NOT_FRESH', 'wait',

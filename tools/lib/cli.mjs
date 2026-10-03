@@ -12,6 +12,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { allowedPrograms, programsFromManifest, EXIT } from './tx-checks.mjs';
+import { refuseForeignProgramId } from '../../signer/packages/chain/src/programIds.js';
 import { finishDeployment, makeDeposit, makeRefreshNav, makeWithdraw, scrub, signChecked, transactionsFromFile, watchDeployment, weavrClient } from './weavr.mjs';
 import { connectionFor, readBalances } from './balance.mjs';
 import { resolveWalletMode } from './wallet-mode.mjs';
@@ -39,18 +40,30 @@ export function signerFor(mode, env = process.env) {
   throw err;
 }
 
-/** The ops manifest, or a WEAVR_PROGRAM_IDS override for installs without the ops checkout. */
+/** This repo's production manifest, or WEAVR_MANIFEST / WEAVR_PROGRAM_IDS. Demo and alpha ids are FOREIGN_PROGRAM. */
 export function resolveAllowed(env = process.env) {
-  if (env.WEAVR_PROGRAM_IDS) return allowedPrograms(env.WEAVR_PROGRAM_IDS.split(',').map((s) => s.trim()).filter(Boolean));
-  // the ops checkout (four levels up) or the standalone weavr-claw-agent repo (two levels up)
-  const candidates = [env.WEAVR_MANIFEST, join(HERE, '../../../../manifest.json'), join(HERE, '../../manifest.json')].filter(Boolean);
+  if (env.WEAVR_PROGRAM_IDS === 'demo' || env.WEAVR_PROGRAM_IDS === 'alpha') {
+    const err = new Error(`FOREIGN_PROGRAM: refusing WEAVR_PROGRAM_IDS=${env.WEAVR_PROGRAM_IDS}`);
+    err.code = 'FOREIGN_PROGRAM';
+    throw err;
+  }
+  if (env.WEAVR_PROGRAM_IDS) {
+    const ids = env.WEAVR_PROGRAM_IDS.split(',').map((s) => s.trim()).filter(Boolean);
+    ids.forEach(refuseForeignProgramId);
+    return allowedPrograms(ids);
+  }
+  const repoManifest = join(HERE, '../../manifest.json');
+  const umbrellaManifest = join(HERE, '../../../../manifest.json');
+  const candidates = [env.WEAVR_MANIFEST, repoManifest, umbrellaManifest].filter(Boolean);
   const found = candidates.find((p) => existsSync(p));
   if (!found) {
     const err = new Error('no manifest.json found; set WEAVR_MANIFEST or WEAVR_PROGRAM_IDS');
     err.code = 'CONFIG';
     throw err;
   }
-  return allowedPrograms(programsFromManifest(found));
+  const ids = programsFromManifest(found);
+  ids.forEach(refuseForeignProgramId);
+  return allowedPrograms(ids);
 }
 
 /**

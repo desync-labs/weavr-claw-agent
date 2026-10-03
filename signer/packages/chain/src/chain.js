@@ -22,6 +22,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { withRpcRetry } from './confirm.js';
 import { observeRpc } from './metrics.js';
 import { configuredMaxRps, rateLimitedFetch, rateLimiter } from './rateLimit.js';
+import { assertProductionManifest, refuseForeignProgramId } from './programIds.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const UMBRELLA =
@@ -53,6 +54,7 @@ function resolveTree() {
 }
 
 const { manifest, idlPath } = resolveTree();
+assertProductionManifest(manifest);
 const idls = new Map();
 const coders = new Map();
 
@@ -113,7 +115,10 @@ function coderFor(program) {
 export function programId(program) {
   for (const entry of Object.values(manifest.repos)) {
     const pinned = entry.deployed_programs?.[program];
-    if (pinned) return new PublicKey(pinned);
+    if (pinned) {
+      refuseForeignProgramId(pinned);
+      return new PublicKey(pinned);
+    }
   }
   throw new Error(`manifest.json pins no program ID for ${program}`);
 }

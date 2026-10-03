@@ -89,7 +89,7 @@
   },
   "invariants": {
     "_comment": "Checked every tick against chain reads: portfolio.curator == expected, pending_curator == None, rebalance_delay_secs == this, accountant.recipient1 == treasury, factory.guardian == expected, composition_locked == false. Drift ⇒ self-lock all writes + alert (SELF_LOCKED / INVARIANT_DRIFT); only POST /unlock (ops) clears it once the drift is gone.",
-    "rebalanceDelaySecs": 86400,
+    "rebalanceDelaySecs": 21600,
     "compositionLocked": false,
     "pendingCuratorMustBeNone": true
   },
@@ -100,7 +100,7 @@
     "windowAfterEffectiveSecs": 21600,
     "maxSendsPerTick": 3,
     "sendFailedTicksBeforeEscalate": 3,
-    "refreshNavWhenBookStaleSecs": 900,
+    "refreshNavWhenBookStaleSecs": 180,
     "applyInFlightWaitSlots": 320,
     "applyInFlightMaxAttempts": 3,
     "missingCustodyRetries": 1,

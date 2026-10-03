@@ -89,6 +89,8 @@ test('boot with a short token rejects before the key file is opened or a port is
 test('the program allowlist is the manifest pins plus the core programs', () => {
   const programs = allowedProgramSet();
   for (const id of Object.values(CORE_PROGRAMS)) assert.ok(programs.has(id), id);
+  assert.ok(programs.has('BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts'), 'production factory is on the allowlist');
+  assert.equal(programs.has('CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn'), false, 'demo factory is not');
   assert.ok(programs.size > Object.keys(CORE_PROGRAMS).length, 'the vendored manifest pins at least one weavr program');
 });
 
@@ -115,7 +117,7 @@ test('a full boot on port 0 with fakes: ctx wired, boot record journaled, first 
     assert.equal(ctx.config.expectedCurator, WALLET);
     assert.equal(ctx.config.treasury, TREASURY);
     assert.equal(ctx.config.guardian, GUARDIAN);
-    assert.equal(ctx.config.rebalanceDelaySecs, 86400);
+    assert.equal(ctx.config.rebalanceDelaySecs, 21600);
     assert.equal(ctx.state.paused, true, 'CURATOR_START_PAUSED');
     assert.equal(ctx.policy.version, 1);
     assert.ok(ctx.chain.idls.portfolio_factory && ctx.chain.idls.stoken && ctx.chain.idls.accountant, 'IDLs loaded from deploy/idls');
@@ -270,6 +272,42 @@ test('boot reads the NAV table\'s contents once and wires the allowlist, the con
     assert.equal(boot0.kind, 'boot');
     assert.equal(boot0.lookupTables, 1);
     assert.equal(boot0.lookupTablesResolved, 1);
+  } finally {
+    await stop();
+  }
+});
+
+test('boot admits a second NAV lookup-table shard', async () => {
+  const a = Keypair.generate().publicKey;
+  const b = Keypair.generate().publicKey;
+  const accountA = tableAccount(a, [Keypair.generate().publicKey]);
+  const accountB = tableAccount(b, [Keypair.generate().publicKey]);
+  const connection = {
+    getSlot: async () => 1,
+    getAddressLookupTable: async (key) => ({
+      value: key.equals(a) ? accountA : key.equals(b) ? accountB : null,
+    }),
+  };
+  const dir = mkdtempSync(join(tmpdir(), 'curator-boot-shards-'));
+  dirs.push(dir);
+  const previous = { tables: process.env.NAV_LOOKUP_TABLES, table: process.env.NAV_LOOKUP_TABLE };
+  process.env.NAV_LOOKUP_TABLES = `${a.toBase58()},${b.toBase58()}`;
+  delete process.env.NAV_LOOKUP_TABLE;
+  let started;
+  try {
+    started = await boot({
+      env: fullEnv({ CURATOR_JOURNAL: join(dir, 'journal.jsonl'), CURATOR_START_PAUSED: '1' }),
+      overrides: { signer: fakeSigner(), client: fakeClient(), deps: fakeDeps(), connection, log: () => {}, signals: false, journal: quietJournal(join(dir, 'journal.jsonl')) },
+    });
+  } finally {
+    if (previous.tables === undefined) delete process.env.NAV_LOOKUP_TABLES; else process.env.NAV_LOOKUP_TABLES = previous.tables;
+    if (previous.table === undefined) delete process.env.NAV_LOOKUP_TABLE; else process.env.NAV_LOOKUP_TABLE = previous.table;
+  }
+  const { ctx, stop } = started;
+  try {
+    assert.deepEqual([...ctx.chain.lookupTableAllowlist], [a.toBase58(), b.toBase58()]);
+    assert.equal(ctx.chain.lookupTables.get(a.toBase58()), accountA);
+    assert.equal(ctx.chain.lookupTables.get(b.toBase58()), accountB);
   } finally {
     await stop();
   }

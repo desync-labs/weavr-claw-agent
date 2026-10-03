@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 const OPS_ROOT = fileURLToPath(new URL('..', import.meta.url));
 import { createPublicKey, verify as verifyEd25519 } from 'node:crypto';
 import { CORE_PROGRAMS, EXIT, LEGACY_ONLY_DETAIL, PROGRAM_FROM_LOOKUP_TABLE, allowedPrograms, checkAll, checkTransaction, isVersioned, programsFromManifest } from '../tools/lib/tx-checks.mjs';
+import { resolveAllowed } from '../tools/lib/cli.mjs';
 import { localSigner } from '../tools/lib/local-signer.mjs';
 import { makeRefreshNav, makeWithdraw, weavrClient } from '../tools/lib/weavr.mjs';
 
@@ -20,7 +21,7 @@ const require = createRequire(import.meta.url);
 const { AddressLookupTableAccount, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction } = require('@solana/web3.js');
 
 const MANIFEST = join(OPS_ROOT, 'manifest.json');
-const FACTORY = 'CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn';
+const FACTORY = 'BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts';
 const TOOL = join(OPS_ROOT, 'tools/sign-solana.mjs');
 const LOCAL_TOOL = join(OPS_ROOT, 'tools/sign-local.mjs');
 const FAKE_CLI = join(OPS_ROOT, 'tests/fixtures/fake-paybox-cli.mjs');
@@ -486,6 +487,17 @@ test('sign-local.mjs --withdraw and --refresh-nav check their arguments before a
     assert.equal(r.json.error, 'USAGE');
   }
   rmSync(dir, { recursive: true, force: true });
+});
+
+test('WEAVR_PROGRAM_IDS=demo and a demo pubkey are FOREIGN_PROGRAM', () => {
+  assert.throws(() => resolveAllowed({ WEAVR_PROGRAM_IDS: 'demo' }), /FOREIGN_PROGRAM: refusing WEAVR_PROGRAM_IDS=demo/);
+  assert.throws(() => resolveAllowed({ WEAVR_PROGRAM_IDS: 'alpha' }), /FOREIGN_PROGRAM: refusing WEAVR_PROGRAM_IDS=alpha/);
+  assert.throws(
+    () => resolveAllowed({ WEAVR_PROGRAM_IDS: 'CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn' }),
+    /refusing demo program/,
+  );
+  const allowed = resolveAllowed({ WEAVR_PROGRAM_IDS: FACTORY });
+  assert.equal(allowed.has(FACTORY), true);
 });
 
 // The money gate is a Hermes plugin (Python). Its planted cases run here too,

@@ -755,7 +755,7 @@ describe('evaluateInvariants', () => {
   const chain = (overrides = {}) => ({
     curator: new PublicKey(CURATOR),
     pendingCurator: null,
-    rebalanceDelaySecs: bn(86_400),
+    rebalanceDelaySecs: bn(21_600),
     recipient1: new PublicKey(TREASURY),
     guardian: GUARDIAN,
     compositionLocked: false,
@@ -766,7 +766,7 @@ describe('evaluateInvariants', () => {
 
   it('passes when every fact matches, PublicKey or base58, BN or number', () => {
     assert.deepEqual(check(), { ok: true, drift: [] });
-    assert.deepEqual(check({ curator: CURATOR, rebalanceDelaySecs: 86_400 }), { ok: true, drift: [] });
+    assert.deepEqual(check({ curator: CURATOR, rebalanceDelaySecs: 21_600 }), { ok: true, drift: [] });
   });
 
   it('INVARIANT_DRIFT: each invariant planted', () => {

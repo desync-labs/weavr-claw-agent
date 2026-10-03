@@ -37,15 +37,24 @@ export function navLookupTableCachePath() {
   return process.env.NAV_LOOKUP_TABLE_CACHE ?? CACHE;
 }
 
-/** `NAV_LOOKUP_TABLE`, else the cached address, else null. */
-export function readNavLookupTableAddress() {
-  if (process.env.NAV_LOOKUP_TABLE) return process.env.NAV_LOOKUP_TABLE;
+/** `NAV_LOOKUP_TABLES` (comma/space list), else exclusive `NAV_LOOKUP_TABLE`, else the cache shards, else []. */
+export function readNavLookupTableAddresses() {
+  if (process.env.NAV_LOOKUP_TABLES) {
+    return process.env.NAV_LOOKUP_TABLES.split(/[\s,]+/).filter(Boolean);
+  }
+  if (process.env.NAV_LOOKUP_TABLE) return [process.env.NAV_LOOKUP_TABLE];
   const path = navLookupTableCachePath();
-  if (!existsSync(path)) return null;
+  if (!existsSync(path)) return [];
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf8'));
-    return parsed.address ?? null;
+    if (Array.isArray(parsed.shards) && parsed.shards.length > 0) return parsed.shards.map(String);
+    return parsed.address ? [String(parsed.address)] : [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+/** First NAV lookup table, else null. Prefer `readNavLookupTableAddresses` for shards. */
+export function readNavLookupTableAddress() {
+  return readNavLookupTableAddresses()[0] ?? null;
 }

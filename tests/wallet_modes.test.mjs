@@ -34,7 +34,7 @@ const SIGN_SOLANA = join(ROOT, 'tools/sign-solana.mjs');
 const SIGN_CHECK = join(ROOT, 'tools/sign-check.mjs');
 const FAKE_CLI = join(ROOT, 'tests/fixtures/fake-paybox-cli.mjs');
 const MANIFEST = join(ROOT, 'manifest.json');
-const FACTORY = 'CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn';
+const FACTORY = 'BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts';
 const BLOCKHASH = '11111111111111111111111111111111';
 
 const wallet = Keypair.generate();

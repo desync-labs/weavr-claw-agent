@@ -1,18 +1,23 @@
 {
-  "profile": "demo",
+  "profile": "production",
   "repos": {
     "splyce-composable-core": {
       "deployed_programs": {
-        "stoken": "84iktrtfvLZm5zD5puEPhVdYRWg8G7sJjqsLqnufDhAk",
-        "accountant": "GaJ8eAA2sDsUjU9Cy2di1vbTfc676o5McC48w1uAHorR",
-        "asset_manager_escrow": "2CwNQT3gDQ3c3iZCpofKGnC81FMwRAzbKHDEQZ3WQhjq"
+        "stoken": "DU83bnLZvD1GrRwXXYr5cGJ17RnZ1c7WJeNzxt3hh33r",
+        "accountant": "AzVpJT7fWpnuFCTjkbtBi8P46zniPuAdMPtPL8g69wUn",
+        "asset_manager_escrow": "Cay4w3Z3umsG7qUgTB55PT5N4tRsUvBY7LFseqErz6K"
       }
     },
     "composable-portfolios-programs": {
       "deployed_programs": {
-        "portfolio_factory": "CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn",
-        "portfolio_allocator": "AUsqh1WMuRJqXAR4pc5JJ2PVp96a7WVnv4pq4Z5t2KV7",
-        "portfolio_nav": "GWVnx75Sk46CbMT6jPmY2dKnCeEM3G7MNWK2hCf3ePky"
+        "portfolio_factory": "BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts",
+        "portfolio_allocator": "Az9Mg3XFPPBimxHEYSSuEKpGXmohKEtcPnK6pkzCdh4D",
+        "portfolio_nav": "GduZJt22NSJmdJ4yZdJjLb4QQXCVtzW86zALcGSddyXf",
+        "pyth_price_adapter": "C34PzDzoMHYjPUUfgk5A7BAcuKPBtV81mX1CDcoqKQ4N",
+        "titan_adapter": "7PW4FpqwGa5T3tgUUGNzZLBKHBGP34GB6hrcBNj1aT78",
+        "jupiter_adapter": "G7sny8vHv4YwWaMBYYg6oyHckwCBaTxsuftR1sDNNyZW",
+        "kamino_adapter": "B7DFnGQUDM1zTVmGjuDkqDQHSjRYBNd26wAx7mwBy3CS",
+        "cctp_adapter": "AtjgCQuvtCpzsGbN4uNyMieYkjsNy2ky5QVvyDcqnGJg"
       }
     }
   }
