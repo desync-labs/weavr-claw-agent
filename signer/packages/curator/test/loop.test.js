@@ -97,16 +97,16 @@ test('a different wait code restarts the wait clock', () => {
   assert.equal(a.next.lastBlocker.since, EFF + 1700);
 });
 
-test('BOOK_NOT_FRESH with the keeper down and the book stale > 15 min asks for one refresh-nav, only once', () => {
-  const gate = gateWait('BOOK_NOT_FRESH', { keeperOk: false }, { staleSecs: 900 });
+test('BOOK_NOT_FRESH with the keeper down and the book stale past refreshNavWhenBookStaleSecs asks for one refresh-nav, only once', () => {
+  const gate = gateWait('BOOK_NOT_FRESH', { keeperOk: false }, { staleSecs: 180 });
   const first = stepApply(armed({ state: 'PREFLIGHT' }), gate, EFF + 10, POLICY);
   assert.ok(first.actions.includes('refresh-nav'));
   assert.equal(first.next.refreshNavSent, true);
   const second = stepApply(first.next, gate, EFF + 40, POLICY);
   assert.ok(!second.actions.includes('refresh-nav'));
-  const keeperUp = stepApply(armed({ state: 'PREFLIGHT' }), gateWait('BOOK_NOT_FRESH', { keeperOk: true }, { staleSecs: 900 }), EFF + 10, POLICY);
+  const keeperUp = stepApply(armed({ state: 'PREFLIGHT' }), gateWait('BOOK_NOT_FRESH', { keeperOk: true }, { staleSecs: 180 }), EFF + 10, POLICY);
   assert.ok(!keeperUp.actions.includes('refresh-nav'), 'the keeper cranks; the signer does not spend a refresh');
-  const fresh = stepApply(armed({ state: 'PREFLIGHT' }), gateWait('BOOK_NOT_FRESH', { keeperOk: false }, { staleSecs: 899 }), EFF + 10, POLICY);
+  const fresh = stepApply(armed({ state: 'PREFLIGHT' }), gateWait('BOOK_NOT_FRESH', { keeperOk: false }, { staleSecs: 179 }), EFF + 10, POLICY);
   assert.ok(!fresh.actions.includes('refresh-nav'));
 });
 

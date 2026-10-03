@@ -129,10 +129,10 @@ test('init: a funded key that already curates renders the whole home with the ri
   // The preset notice was rewritten and said so on its own line.
   const policy = JSON.parse(readFileSync(paths.policyFile, 'utf8'));
   assert.equal(policy.invariants.rebalanceDelaySecs, 60);
-  assert.equal(STANDARD.invariants.rebalanceDelaySecs, 86400, 'the standard preset ships a day-long notice; this test rewrites it');
+  assert.equal(STANDARD.invariants.rebalanceDelaySecs, 21600, 'the standard preset ships the production policy minimum; this test rewrites it');
   const notice = step(r, 'policy notice');
   assert.ok(notice, 'the rewrite is reported as its own step');
-  assert.match(notice.text, /expects a 86400s notice; CLAWA1 announces 60s/);
+  assert.match(notice.text, /expects a 21600s notice; CLAWA1 announces 60s/);
   assert.ok(r.lines.some((l) => /^  · policy notice: /.test(l)), 'on its own line');
   assert.ok(policy._comment, 'the preset comments are kept for the owner');
   assert.equal(policy.universe._comment, STANDARD.universe._comment);

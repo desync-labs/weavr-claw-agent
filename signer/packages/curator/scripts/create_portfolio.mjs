@@ -327,6 +327,14 @@ async function defaultLookupTables(env, navLookupTable) {
   let allowlist;
   if (navLookupTable) {
     allowlist = new Set([navLookupTable]);
+  } else if (typeof env.NAV_LOOKUP_TABLES === 'string' && env.NAV_LOOKUP_TABLES.trim() !== '') {
+    try {
+      allowlist = new Set(
+        env.NAV_LOOKUP_TABLES.split(/[\s,]+/).filter(Boolean).map((value) => new PublicKey(value.trim()).toBase58()),
+      );
+    } catch {
+      throw new Refusal('CONFIG', 'NAV_LOOKUP_TABLES must be base58 addresses');
+    }
   } else if (typeof env.NAV_LOOKUP_TABLE === 'string' && env.NAV_LOOKUP_TABLE.trim() !== '') {
     try {
       allowlist = new Set([new PublicKey(env.NAV_LOOKUP_TABLE.trim()).toBase58()]);

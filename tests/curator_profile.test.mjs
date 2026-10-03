@@ -444,7 +444,7 @@ test('the compose file publishes the signer on loopback only and takes every sec
   const text = readFileSync(COMPOSE, 'utf8');
   const doc = yamlLoad(text);
   assert.deepEqual(Object.keys(doc.services).sort(), ['agent', 'signer']);
-  assert.deepEqual(doc.services.signer.ports, ['127.0.0.1:8091:8091']);
+  assert.deepEqual(doc.services.signer.ports, ['127.0.0.1:8093:8091']);
   assert.equal(doc.services.agent.ports, undefined, 'the agent publishes nothing');
   assert.equal(doc.services.agent.network_mode, undefined, 'the agent reaches the signer by service name on the compose network');
   assert.deepEqual(doc.services.agent.command, ['gateway', 'run']);
@@ -465,6 +465,7 @@ test('the compose file publishes the signer on loopback only and takes every sec
   assert.doesNotMatch(text, /weavr-backend:curator-local|pending|checkout of the weavr backend/, 'the private build is gone from the header');
   assert.match(text, /HERMES_IMAGE:-hermes-agent/);
   assert.match(text, /http:\/\/signer:8091/, 'the header tells the self-hoster what CURATOR_SIGNER_URL must be');
+  assert.doesNotMatch(text, /WEAVR_PROGRAM_IDS=demo/, 'the production image bakes ids; compose must not select demo');
   assert.doesNotMatch(text, /\b[0-9a-f]{64}\b|Bearer\s+\S{20,}/);
 });
 

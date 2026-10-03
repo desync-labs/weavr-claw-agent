@@ -30,7 +30,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { PublicKey } from '@solana/web3.js';
-import { connect, idlFor, programId, readNavLookupTableAddress } from '@composable-portfolios/chain';
+import { connect, idlFor, programId, readNavLookupTableAddresses } from '@composable-portfolios/chain';
 import { loadPolicy } from './policy.js';
 import { loadSigner } from './keys.js';
 import { weavrClient } from './weavr.js';
@@ -43,7 +43,7 @@ import { initialState, policyDigestOf, scrubText } from './verbs.js';
 
 export const DEFAULT_PORT = 8091;
 export const DEFAULT_TICK_MS = 30000;
-export const DEFAULT_REBALANCE_DELAY_SECS = 86400;
+export const DEFAULT_REBALANCE_DELAY_SECS = 21600;
 
 /** Core Solana programs a weavr transaction may touch (api `sendSigned.js CORE_PROGRAMS`). */
 export const CORE_PROGRAMS = Object.freeze({
@@ -56,7 +56,10 @@ export const CORE_PROGRAMS = Object.freeze({
 });
 
 /** The programs manifest.json pins for this deployment (those it does pin). */
-const WEAVR_PROGRAMS = ['stoken', 'accountant', 'asset_manager_escrow', 'portfolio_factory', 'portfolio_allocator', 'portfolio_nav', 'pyth_price_adapter'];
+const WEAVR_PROGRAMS = [
+  'stoken', 'accountant', 'asset_manager_escrow', 'portfolio_factory', 'portfolio_allocator',
+  'portfolio_nav', 'pyth_price_adapter', 'titan_adapter', 'jupiter_adapter', 'kamino_adapter', 'cctp_adapter',
+];
 
 /** The manifest's programs plus the core ones — the same set the api's send guard uses. */
 export function allowedProgramSet() {
@@ -71,10 +74,9 @@ export function allowedProgramSet() {
   return ids;
 }
 
-/** The lookup tables a v0 message may load from: the published NAV table, when this host knows it. */
+/** The lookup tables a v0 message may load from: every published NAV shard. */
 export function allowedLookupTableSet() {
-  const address = readNavLookupTableAddress();
-  return new Set(address ? [String(address)] : []);
+  return new Set(readNavLookupTableAddresses().map(String));
 }
 
 /**

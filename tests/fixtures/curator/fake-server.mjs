@@ -16,7 +16,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { PublicKey, Transaction, TransactionInstruction } = require('@solana/web3.js');
 
-export const FACTORY = 'CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn';
+export const FACTORY = 'BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts';
 export const BLOCKHASH = '11111111111111111111111111111111';
 export const SIGNER_ROUTES = ['/healthz', '/metrics', '/status', '/policy', '/resume', '/unlock', '/rotate-curator', '/set-delay', '/operator-request', '/pause', '/hermes-heartbeat'];
 export const OPS_ROUTES = ['/resume', '/unlock', '/rotate-curator', '/set-delay', '/operator-request'];

@@ -17,10 +17,10 @@ const PROGRAMS = ['portfolio_factory', 'portfolio_allocator', 'stoken', 'account
 /** The names packages/curator imports: index.js, decode.js, errors.js and preflight.js. */
 const SIGNER_NAMES = [
   'connect', 'idlFor', 'programId', 'fetchDecoded', 'factoryConfigKey', 'tokenBalanceMany',
-  'associatedTokenAddress', 'PAGE_LEGS', 'applyScratchPda', 'readNavLookupTableAddress',
+  'associatedTokenAddress', 'PAGE_LEGS', 'applyScratchPda', 'readNavLookupTableAddress', 'readNavLookupTableAddresses',
 ];
 const SYSTEM_PROGRAM = '11111111111111111111111111111111';
-const SCRATCH_OF_SYSTEM_PROGRAM = '89Mw9ebTAje1zbdxh3Reg8UR1kJmMJT6CRzxZj3vZGXZ';
+const SCRATCH_OF_SYSTEM_PROGRAM = 'FFYPEP1Tt7MM8MytV1XYrfy1c3WhwUqsQiPt3VEeTB6M';
 
 describe('the chain subset', () => {
   it('exports every name the signer imports', () => {
@@ -35,6 +35,7 @@ describe('the chain subset', () => {
       assert.match(id, /^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
       if (idl.address) assert.equal(idl.address, id, `${program}: the IDL names a different program than the manifest`);
     }
+    assert.equal(chain.programId('portfolio_factory').toBase58(), 'BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts');
     assert.throws(() => chain.idlFor('portfolio_nav'), /no IDL registered/);
     assert.throws(() => chain.programId('not_a_program'), /pins no program ID/);
   });
@@ -71,6 +72,32 @@ describe('the chain subset', () => {
       if (saved.cache === undefined) delete process.env.NAV_LOOKUP_TABLE_CACHE; else process.env.NAV_LOOKUP_TABLE_CACHE = saved.cache;
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('readNavLookupTableAddresses accepts a second shard', () => {
+    const saved = { tables: process.env.NAV_LOOKUP_TABLES, table: process.env.NAV_LOOKUP_TABLE };
+    try {
+      delete process.env.NAV_LOOKUP_TABLE;
+      process.env.NAV_LOOKUP_TABLES = 'Tab1e11111111111111111111111111111111111111,Tab2e11111111111111111111111111111111111111';
+      assert.deepEqual(chain.readNavLookupTableAddresses(), [
+        'Tab1e11111111111111111111111111111111111111',
+        'Tab2e11111111111111111111111111111111111111',
+      ]);
+    } finally {
+      if (saved.tables === undefined) delete process.env.NAV_LOOKUP_TABLES; else process.env.NAV_LOOKUP_TABLES = saved.tables;
+      if (saved.table === undefined) delete process.env.NAV_LOOKUP_TABLE; else process.env.NAV_LOOKUP_TABLE = saved.table;
+    }
+  });
+
+  it('refuses a demo program id', () => {
+    assert.throws(
+      () => chain.refuseForeignProgramId('CB1Tw9aB8ju66q9ZVcezyfCbwNJDVLAMn2RpU3K1tVn'),
+      /refusing demo program/,
+    );
+    assert.throws(
+      () => chain.refuseForeignProgramId('239NnyAR7QEEc3okZJSoUHa5aBQHdJdfpnYv3G2mA8qC'),
+      /retired alpha/,
+    );
   });
 
   it('connect binds the endpoint without touching the network', () => {

@@ -109,7 +109,7 @@ test('ops: each command sends exactly its method, path, body and headers', async
     assert.doesNotMatch(r.text, /Bearer/);
   }
   assert.deepEqual([...COMMANDS].sort(), ['request-review', 'resume', 'rotate-curator', 'set-delay', 'status', 'unlock']);
-  assert.equal(DEFAULT_URL, 'http://127.0.0.1:8091');
+  assert.equal(DEFAULT_URL, 'http://127.0.0.1:8093');
 });
 
 test('ops: buildRequest refuses a missing --why, a bad key, a bad delay and an oversize text', () => {

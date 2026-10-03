@@ -126,7 +126,7 @@
     "windowAfterEffectiveSecs": 21600,
     "maxSendsPerTick": 3,
     "sendFailedTicksBeforeEscalate": 3,
-    "refreshNavWhenBookStaleSecs": 900,
+    "refreshNavWhenBookStaleSecs": 180,
     "applyInFlightWaitSlots": 320,
     "applyInFlightMaxAttempts": 3,
     "missingCustodyRetries": 1,

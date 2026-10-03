@@ -10,3 +10,4 @@ export * from './spl.js';
 export * from './confirm.js';
 export * from './rateLimit.js';
 export * from './subset.js';
+export * from './programIds.js';
