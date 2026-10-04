@@ -2,7 +2,7 @@
 
 The pieces a self-hosted [Claw Agent](https://github.com/Clawpump/claw-agent) (ClawPump's agent, built on Hermes) needs to create and manage [weavr](https://www.weavr.sh) portfolios from a thesis. weavr creates the portfolio from the thesis; the agent needs a wallet only to create it and to deposit, and there are three ways to sign: the sign link, with no setup, where the owner signs in a browser; the wallet tool with the PayBox CLI, a real wallet a human approves and a key that stays off the box; or the wallet tool with a local keypair file, a dedicated small key on the box.
 
-weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulations need nothing from this repo. Creating a portfolio and depositing need a wallet, and that is what is here, plus an autonomous curator for a portfolio you already created (the section near the end).
+weavr itself is an MCP server at `https://mcp.weavr.sh` (same server: `https://api.weavr.sh/mcp`). Reads and simulations need nothing from this repo. Creating a portfolio and depositing need a wallet, and that is what is here, plus an autonomous curator for a portfolio you already created (the section near the end). To attach the same MCP by hand to Claude, ChatGPT, Grok, Gemini, Cursor or any other host, see `MCP.md` — those hosts sign through the sign link, not the wallet tool.
 
 | Path | What |
 |---|---|
@@ -16,11 +16,18 @@ weavr itself is an MCP server at `https://api.weavr.sh/mcp`. Reads and simulatio
 | `plugins/weavr-curator/` | a Hermes plugin for the curator: the `weavr_curator` tool, its approval gate and the `/weavr-curator` command; an HTTP client of the signer that never sees a key |
 | `curator/` | the autonomous curator: the Hermes profile, the policy presets and the compose stack; `curator/README.md` is its page |
 | `signer/` | the curator signer itself: the process that holds the curator key, refuses under the policy document, verifies what the api built, signs and journals; `signer/README.md` is its page and `intothefathom/curator-public` its published image |
+| `MCP.md` | add the weavr MCP by hand to Claude, ChatGPT, Grok, Gemini, Cursor, or any other remote-MCP host (URL, no auth, sign link) |
 | `WALKTHROUGH.md` | the whole path on one page, from a clean machine to a portfolio created in chat, a deposit, a curator reviewing it on a schedule and a withdrawal, with the waits and the checks between the steps |
 | `AGENT-WALKTHROUGH.md` | the same path for an agent to run: every step as a non-interactive command with the output to check, and the points where only the operator can act |
 | `patches/` | a one-line fix for Claw Agent releases whose trust gate asks before read-only tools too |
 | `manifest.json` | weavr's onchain programs, the allowlist the wallet tool signs for |
 | `config.yaml`, `env.example` | the Hermes config block and the environment names |
+
+## Another host (Claude, ChatGPT, Grok, Gemini, Cursor, …)
+
+The MCP is public: paste `https://mcp.weavr.sh`, pick **no authentication**, enable the server in the chat. Reads work at once. Creates on those hosts use the sign link (the agent sends you `https://www.weavr.sh/sign/…` in a private chat; you sign in a browser). `MCP.md` is the page, with the clicks for each vendor and the generic JSON for everything else.
+
+This README below is the Claw Agent install, with a wallet on the box.
 
 ## Setup
 
