@@ -56,6 +56,7 @@ read, the first named wins.
 | `CURATOR_START_PAUSED` or `CURATOR_PAUSED` | no | `1` boots paused (launch procedure, plan §7.5); it adds a pause, it never clears one the journal recorded |
 | `CURATOR_REBALANCE_DELAY_SECS` | no | default `86400`: the expected `portfolio.rebalanceDelaySecs` invariant; `policy.invariants.rebalanceDelaySecs` overrides it |
 | `CURATOR_METADATA_TAGS` | no | the tags this signer keeps on the portfolio's metadata document (§2.1), comma- or space-separated, each `^[a-z0-9][a-z0-9-]{0,31}$` (a colon is refused: `agent-thesis`, not `agent:thesis`), at most 10. Unset ⇒ no stamp; the `strategy` verb still works. weavr's site badges a book tagged `agent-managed` |
+| `CURATOR_METADATA_LINKS` | no | the links this signer keeps on the portfolio's metadata document (§2.1): `name=https-url` entries, comma- or space-separated, each name `^[a-z][a-z0-9_]{0,23}$`, each URL `https://`, parseable, ≤ 512 characters and without credentials (the service's own rule), at most 8. A THESIS unit sets `policy=https://www.weavr.sh/policies/thesis/v1.json`. A stored link of the same name is overwritten; every other stored link is kept. Unset ⇒ no links. A bad value refuses boot, naming the link, never its URL |
 | `CURATOR_METADATA_URL` | no, `http(s)://` | the metadata service's base, default `CURATOR_API_URL`. An in-cluster api URL does not route `/v1/metadata` (it is its own service); point this at the public api host, e.g. `https://api.weavr.sh` |
 | `CURATOR_METADATA_SIGN_DOMAIN` | no | default `weavr.sh`: the first word of the message the service asks the curator to sign (its `METADATA_SIGN_DOMAIN`); a message naming another domain is not signed |
 | `NAV_LOOKUP_TABLE` | no | the one v0 lookup table a built transaction may load from (`readNavLookupTableAddress()` from `@composable-portfolios/chain`: this env, else the chain package's cache file). Its contents are read from the chain at boot and every tick so the decoder can resolve a v0 apply page. Unset ⇒ no table is allowed and a v0 apply is refused `FOREIGN_LOOKUP_TABLE` |
@@ -91,7 +92,7 @@ called with the ops token are allowed (ops is a superset).
 
 | Method | Path | Request body | 200 response |
 |---|---|---|---|
-| GET | `/status` | — | `{ ok, at, error?, paused, selfLocked:{at,reason}\|null, apply:{state,deploymentId,effectiveAt,attempts,since,lastBlocker}, portfolio:{mint,symbol,state,priceState,pendingPrice,withdrawalsPending,curator,pendingCurator,rebalanceDelaySecs,lastRebalanceAt,applyNextPage,compositionLocked,pendingTargets}\|null, signer:{wallet,lamports,usdcBaseUnits,shares}, invariants:{ok,drift:[{invariant,expected,actual}]}, ledger:{lastProposalAt,proposalsLast30d,depositsTodayUsd,withdrawalsTodayUsd,writeAttemptsLastHour,lastDepositAt,topUpBudgetSpent}, metadata:{tags,state,at?,updatedAt?,error?}, policy:{version,sha256,review}, lastTick:{at,ok,error} }` — `metadata.state` is `off` (no `CURATOR_METADATA_TAGS`), `pending`, `ok`, `failed` (retrying, `error` says why) or `full` (no room for the tags, §2.1); when the snapshot read fails the last good one is answered with `ok:false` and `error` set; `invariants.ok` is `null` with no snapshot. `ledger.lastDepositAt` is the newest ok deposit in the journal, whatever its day (`null` when there never was one); `ledger.topUpBudgetSpent` is true when the policy denies `deposit`, when the day's cap is zero, or when today's deposits have reached it (the day's cap is `deposit.launchDayCapUsd` on `deposit.launchDay` and `deposit.dailyCapUsd` otherwise, the same switch `evaluateDeposit` makes); `policy.sha256` is the digest `GET /policy` serves and `policy.review` is the loaded `review` section whole, which is how `deriveReview` gets the thresholds in force (it reads `status.policy.review` and falls back to constants of its own without it, so the counts the agent reads from `GET /policy` are the ones that wake it) |
+| GET | `/status` | — | `{ ok, at, error?, paused, selfLocked:{at,reason}\|null, apply:{state,deploymentId,effectiveAt,attempts,since,lastBlocker}, portfolio:{mint,symbol,state,priceState,pendingPrice,withdrawalsPending,curator,pendingCurator,rebalanceDelaySecs,lastRebalanceAt,applyNextPage,compositionLocked,pendingTargets}\|null, signer:{wallet,lamports,usdcBaseUnits,shares}, invariants:{ok,drift:[{invariant,expected,actual}]}, ledger:{lastProposalAt,proposalsLast30d,depositsTodayUsd,withdrawalsTodayUsd,writeAttemptsLastHour,lastDepositAt,topUpBudgetSpent}, metadata:{tags,links,state,at?,updatedAt?,error?}, policy:{version,sha256,review}, lastTick:{at,ok,error} }` — `metadata.links` is the configured `name → URL`; `metadata.state` is `off` (neither `CURATOR_METADATA_TAGS` nor `CURATOR_METADATA_LINKS`), `pending` (not tried yet, or held by a self-lock or an unverified invariant), `ok` (the document carries every tag and every link at its configured URL), `failed` (retrying, `error` says why) or `full` (no room for the tags or links, §2.1); when the snapshot read fails the last good one is answered with `ok:false` and `error` set; `invariants.ok` is `null` with no snapshot. `ledger.lastDepositAt` is the newest ok deposit in the journal, whatever its day (`null` when there never was one); `ledger.topUpBudgetSpent` is true when the policy denies `deposit`, when the day's cap is zero, or when today's deposits have reached it (the day's cap is `deposit.launchDayCapUsd` on `deposit.launchDay` and `deposit.dailyCapUsd` otherwise, the same switch `evaluateDeposit` makes); `policy.sha256` is the digest `GET /policy` serves and `policy.review` is the loaded `review` section whole, which is how `deriveReview` gets the thresholds in force (it reads `status.policy.review` and falls back to constants of its own without it, so the counts the agent reads from `GET /policy` are the ones that wake it) |
 | GET | `/review` | `?mode=universe` or `?mode=weekly`, else the plain review | `{ brief, triggers:[{code,detail}], wakeAgent, holdReason }` — `brief` ≤ `policy.review.briefMaxChars` (4096) plain text whose last line is `{"wakeAgent":<bool>}` for the Hermes wake gate; `holdReason:'STATUS_UNAVAILABLE'` when no snapshot exists. Every mode reads the review state (§4.5); only the plain review consumes an operator request, and only the first cron plain review of a UTC day on a fresh snapshot advances the drift streak, stores the risk tiers and journals a `review` record |
 | GET | `/policy` | — | `{ version, sha256, policy }`: the policy document as loaded (`loadPolicy`, comments stripped), whole, with its version and the sha256 hex of its canonical JSON (keys sorted at every level, `journal.canonicalSha256`). The document holds no secret: no key, no URL, no token. A read: never journaled, never a write attempt. The digest is the one `/status` quotes as `policy.sha256` and the boot record as `policySha256`, so an agent that reads a threshold here can name the document it read it from |
 | GET | `/alerts` | — | `{ since, alerts:[{key,code,at,message,count?,resolved?}] }` — anomalies not yet delivered since the last `/alerts` call; a `key` is delivered once, again after 6 h if still raised (`count`), and once more as `resolved: …` when it clears; `alerts:[]` means silent |
@@ -104,7 +105,7 @@ called with the ops token are allowed (ops is a superset).
 | POST | `/refresh-nav` | `{}` | `{ ok:true, verb:'refresh-nav', pages, signatures:[...] }` |
 | POST | `/pause` | `{ why? }` | `{ ok:true, paused:true }` — disarms apply, refuses every write except `cancel`; idempotent |
 | POST | `/note` | `{ text }` (≤ 2048 bytes) | `{ ok:true, journalId }` |
-| POST | `/strategy` | `{ text, why? }` | `{ ok:true, verb:'strategy', changed, description, tags, updatedAt, updatedBy, journalId }` — publishes `text` as the description of the portfolio's metadata document (§2.1) with the configured tags merged in; no transaction. Plain text: no links, no control characters, ≤ 2000 characters (`STRATEGY_REFUSED`). Refused `PAUSED`, `SELF_LOCKED`, `RATE_LIMITED` (it counts as a write attempt), `NOT_CURATOR` (the chain names another curator), `VERB_DENIED` unless the policy lists `strategy` in `verbs.agent`; not held by `LOW_SOL` or `INVARIANTS_UNVERIFIED`. The same text again is `changed:false` and writes nothing |
+| POST | `/strategy` | `{ text, why? }` | `{ ok:true, verb:'strategy', changed, description, tags, links, updatedAt, updatedBy, journalId }` — publishes `text` as the description of the portfolio's metadata document (§2.1) with the configured tags and links merged in; no transaction. Plain text: no links, no control characters, ≤ 2000 characters (`STRATEGY_REFUSED`). Refused `PAUSED`, `SELF_LOCKED`, `RATE_LIMITED` (it counts as a write attempt), `NOT_CURATOR` (the chain names another curator), `VERB_DENIED` unless the policy lists `strategy` in `verbs.agent`; never held by `LOW_SOL` or `INVARIANTS_UNVERIFIED`: the configured links ride along only when the last tick verified the invariants, and otherwise wait for the loop's stamp (§2.1), links already stored kept. The same text again is `changed:false` and writes nothing |
 | GET | `/journal?n=` | — | `{ records:[...] }` oldest first (newest last), `n` default 50, max 500, `BAD_REQUEST` when not a non-negative integer |
 | POST | `/hermes-heartbeat` | `{}` | `{ ok:true, at }` — sets `curator_hermes_heartbeat_ts` |
 
@@ -139,7 +140,7 @@ status from `REFUSAL_STATUS` (errors.js). Default `422`; overrides:
 | 401 | `UNAUTHORIZED` |
 | 403 | `OPS_ONLY`, `VERB_DENIED`, `WITHDRAW_CRON_BLOCKED`, `PORTFOLIO_NOT_ALLOWED` |
 | 404 | `NOT_FOUND` |
-| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`, `NOT_CURATOR`, `METADATA_TAGS_FULL`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
+| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`, `NOT_CURATOR`, `METADATA_TAGS_FULL`, `METADATA_LINKS_FULL`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
 | 429 | `RATE_LIMITED`, `PROPOSAL_QUOTA`, `DEPOSIT_DAILY_CAP`, `WITHDRAW_DAILY_CAP` |
 | 502 | `UPSTREAM` (api HTTP ≥ 500, unreachable, timed out or non-JSON), `BUILD_REFUSED` (api 4xx on a build — its `error.code` is in `detail`), `SEND_FAILED`, and the decode.js codes `NOT_A_TRANSACTION`, `WRONG_PAYER`, `FOREIGN_PROGRAM`, `FOREIGN_LOOKUP_TABLE`, `UNKNOWN_INSTRUCTION`, `UNEXPECTED_INSTRUCTIONS`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH`, `UNEXPECTED_STEP`, `PAGED_PROPOSE_UNSUPPORTED` — the api built something the signer would not sign; `METADATA_REFUSED` (the metadata service's 4xx, its `error.code` in `detail`), `METADATA_MESSAGE_MISMATCH` (the service asked for a signature over a text that is not the expected one), `NOT_TEXT` |
 | 503 | `LOW_SOL`, `INVARIANT_DRIFT`, `INVARIANTS_UNVERIFIED` (writes held while the accountant or FactoryConfig could not be read on the last tick), `BOOK_NOT_FRESH`, `MISSING_CUSTODY` |
@@ -161,19 +162,26 @@ strategy". Only the key the `Portfolio` account names as curator may change
 it, by signing a message the service builds. This process holds that key, so
 it writes the document for the agent, two ways, one path (`writeDocument`):
 
-- **the stamp**: with `CURATOR_METADATA_TAGS` set, each tick (after the
-  apply machine) until one read shows the tags or one write adds them, then
-  never again in this process. It runs while paused (the tags say what runs
-  the book, not what the agent decided), not while self-locked. A failure
-  retries on a doubling interval capped at an hour, journals its first
-  failure (`kind:'metadata'`) and raises alert `metadata` from the third in a
-  row; a document with no room for the tags (`METADATA_TAGS_FULL`) stops
-  retrying and stays alerted.
+- **the stamp**: with `CURATOR_METADATA_TAGS` or `CURATOR_METADATA_LINKS`
+  set, each tick (after the apply machine) until one read shows every tag
+  and every link at its configured URL, or one write sets them, then never
+  again in this process; a restart checks once more, so a link whose URL
+  changed in the environment (a new policy version) is rewritten on the next
+  boot. It runs while paused (the tags and links say what runs the book and
+  under which policy, not what the agent decided), not while self-locked,
+  and not on a tick whose invariants could not be read (`invariantsUnverified`):
+  a policy link states the book's fee recipient, curator and notice, and an
+  unread accountant is not proof of them. A failure retries on a doubling
+  interval capped at an hour, journals its first failure (`kind:'metadata'`)
+  and raises alert `metadata` from the third in a row; a document with no
+  room for the tags or links (`METADATA_TAGS_FULL`, `METADATA_LINKS_FULL`)
+  stops retrying and stays alerted.
 - **`strategy`**, the agent's verb (§2): the description.
 
-Every write reads the stored document, merges (stored fields and tags kept,
-the configured tags appended, the description replaced) and sends the block
-back whole, because the service replaces it on every write. The tags come
+Every write reads the stored document, merges (stored fields, tags and
+links kept, the configured tags appended, each configured link set to its
+configured URL, the description replaced) and sends the block back whole,
+because the service replaces it on every write. The tags and links come
 from the deployment only, so no description the agent publishes can drop
 one. Before signing, `checkMessage` holds the text to the service's exact
 eight lines: this domain, this wallet, this `Portfolio` PDA, `set-metadata`,
@@ -262,7 +270,7 @@ Which module raises which:
 | `preflight.proposeGates` | six blocker codes: `COMPOSITION_LOCKED`, `WRONG_PORTFOLIO_STATE`, `TARGETS_PENDING`, `REBALANCE_TOO_SOON`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED` |
 | `decode.verifyBuilt` | `NOT_A_TRANSACTION`, `FOREIGN_LOOKUP_TABLE`, `FOREIGN_PROGRAM`, `UNKNOWN_INSTRUCTION`, `WRONG_PAYER`, `UNEXPECTED_STEP`, `UNEXPECTED_INSTRUCTIONS`, `PAGED_PROPOSE_UNSUPPORTED`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH` — §6 below |
 | `keys.loadSigner` | `CONFIG` at load; `NOT_A_TRANSACTION` from `sign()`; `NOT_TEXT` from `signText()` |
-| `metadata` | `METADATA_TAGS_FULL` (merge), `METADATA_MESSAGE_MISMATCH` (`checkMessage`), `NOT_CURATOR` (the service says another key is curator), `METADATA_REFUSED` / `UPSTREAM` (the client); the stamp turns them into alert `metadata` |
+| `metadata` | `METADATA_TAGS_FULL` / `METADATA_LINKS_FULL` (merge), `METADATA_MESSAGE_MISMATCH` (`checkMessage`), `NOT_CURATOR` (the service says another key is curator), `METADATA_REFUSED` / `UPSTREAM` (the client); the stamp turns them into alert `metadata` |
 | `weavr.weavrClient` | `CONFIG`, `BAD_REQUEST`, `UPSTREAM`, `BUILD_REFUSED`, `SEND_FAILED` |
 | `verbs` | the four hard rules re-checked before the policy (`PORTFOLIO_NOT_ALLOWED`, `WITHDRAW_CRON_BLOCKED`, `SELF_LOCKED`, `PAUSED`), `WHY_REQUIRED`, `BAD_REQUEST`, `STRATEGY_REFUSED` / `RATE_LIMITED` / `NOT_CURATOR` and the `metadata` passthroughs (`strategy`), `NO_PENDING_CHANGE`, `MISSING_CUSTODY`, `INVARIANT_DRIFT` (`/unlock`), `expectFor`'s `UPSTREAM` (row without keys) / `INPUTS_INCOMPLETE` (a targeted pool with no Pool key), and the passthroughs `UPSTREAM`, `BUILD_REFUSED`, `NOT_A_TRANSACTION`, `UNKNOWN_INSTRUCTION` (a decode crash), `SEND_FAILED` (named by program error where possible) |
 | `loop` | alerts, not refusals: `INVARIANT_DRIFT`, `LOW_SOL`, `SEND_FAILED`, `WINDOW_CLOSED`, `APPLIED_MISMATCH`, `MISSING_CUSTODY`, and any blocker or decode code the machine escalates or blocks on (`alert:<code>`) |
@@ -403,7 +411,7 @@ ledger = {
 { id, at, kind, caller?, session?, tokenKind?, ...fields }
 // kind: 'boot' | 'verb' | 'refusal' | 'apply' | 'tick' | 'alert' | 'note' | 'lock' | 'unlock' | 'pause' | 'resume' | 'heartbeat'
 //     | 'operator-request' | 'operator-request-consumed' | 'review' | 'metadata'
-// boot:    { wallet, mint, policyVersion, policySha256, paused, selfLocked, reviewState: { at } | null, port, tickMs, programs, lookupTables, lookupTablesResolved, metadataTags }
+// boot:    { wallet, mint, policyVersion, policySha256, paused, selfLocked, reviewState: { at } | null, port, tickMs, programs, lookupTables, lookupTablesResolved, metadataTags, metadataLinks }
 // verb:    { verb (camelCase: refreshNav, setDelay, …), route, ok:true, args (targets/amountUsd/why/newCurator/uri only),
 //            signatures, deploymentId, steps, + the verb's own fields (effectiveAt, summary, amountBaseUnits, shares, …) }
 // refusal: { verb, route, ok:false, code, message, args, detail? }
@@ -411,8 +419,8 @@ ledger = {
 // alert:   { key, code, message, state: 'raised' | 're-raised' | 'resolved' }
 // lock:    { reason:'INVARIANT_DRIFT', drift }      tick: { ok:false, error } (a failed tick, once until it recovers)
 // review:  { driftStreak: { poolId: reviews }, riskTiers: { poolId: tier }, triggers: [code] }   written by the cron plain review only, at most once a UTC day, on a fresh snapshot (§4.5)
-// metadata: { action:'tags', ok, portfolio, added?, tags?, contentHash?, updatedAt?, code?, message? }   the loop's stamp (§2.1): a write that added tags, or its first failure
-// verb 'strategy': { args: { text, why }, portfolio, changed, contentHash, tags, updatedAt }   no signatures: a message was signed, not a transaction
+// metadata: { action:'stamp', ok, portfolio, added?, linked?, tags?, links?, contentHash?, updatedAt?, code?, message? }   the loop's stamp (§2.1): a write that added tags or set links, or its first failure
+// verb 'strategy': { args: { text, why }, portfolio, changed, contentHash, tags, links, updatedAt }   no signatures: a message was signed, not a transaction
 ```
 
 `journal.scrub` redacts, whatever the record: the keys `tx`, `signed`,
@@ -835,13 +843,16 @@ export function gaugesOf(ctx) → { curator_last_tick_ts, curator_hermes_heartbe
 
 ```js
 export function metadataClient({ baseUrl, fetchImpl?, timeoutMs? }) → { document(portfolio), message(portfolio, body), put(portfolio, body) }   // /v1/metadata; 4xx ⇒ METADATA_REFUSED, 5xx ⇒ UPSTREAM, no URL in a message
-export async function writeDocument(ctx, { portfolio, description? }) → { document, metadata, changed, added, contentHash }   // read → merge → message → checkMessage → signText → put; no change ⇒ no write
-export async function stampTags(ctx, snapshot, { raiseAlert, clearAlert, journal }) → { state, attempts, error, alert } | null   // the loop's step (§2.1)
+export async function writeDocument(ctx, { portfolio, description? }) → { document, metadata, changed, added, linked, contentHash }   // read → merge → message → checkMessage → signText → put; no change ⇒ no write
+export async function stampMetadata(ctx, snapshot, { raiseAlert, clearAlert, journal }) → { state, attempts, error, alert } | null   // the loop's step (§2.1); held while self-locked or invariants unverified
 export function checkMessage(text, { domain, address, portfolio, contentHash, nowSecs }) → { issuedAt, nonce }   // the service's eight lines exactly, else METADATA_MESSAGE_MISMATCH
-export function mergeEditable(editable, { tags, description? }) → { metadata, changed, added }   // METADATA_TAGS_FULL past 10 tags
+export function mergeEditable(editable, { tags, links?, description? }) → { metadata, changed, added, linked }   // METADATA_TAGS_FULL past 10 tags, METADATA_LINKS_FULL past 8 links
+export function carriesConfigured(document, { tags, links }) → boolean   // every tag, every link at its configured URL
+export function tagsOf(document), linksOf(document)   // what a stored document carries (top level, else the editable block)
 export function canonicalJson(value), contentHashOf(metadata) → 'sha256:<hex>'   // the service's canonical form (undefined members dropped)
 export function parseTagList(raw) → string[]   // CURATOR_METADATA_TAGS; throws a plain Error naming the variable
-export const DEFAULT_SIGN_DOMAIN ('weavr.sh'), DESCRIPTION_MAX_CHARS (2000), MAX_TAGS (10), TAG_RE, MESSAGE_MAX_SKEW_SECS (300), STAMP_RETRY_MAX_SECS (3600), STAMP_ALERT_AFTER (3)
+export function parseLinkList(raw) → { [name]: url }   // CURATOR_METADATA_LINKS; throws a plain Error naming the variable and the link, never the URL
+export const DEFAULT_SIGN_DOMAIN ('weavr.sh'), DESCRIPTION_MAX_CHARS (2000), MAX_TAGS (10), TAG_RE, MESSAGE_MAX_SKEW_SECS (300), STAMP_RETRY_MAX_SECS (3600), STAMP_ALERT_AFTER (3), MAX_LINKS (8), LINK_KEY_RE, LINK_URL_MAX_CHARS (512)
 ```
 
 ### `src/server.js`

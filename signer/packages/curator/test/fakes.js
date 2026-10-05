@@ -225,6 +225,7 @@ export function fakeMetadata({ trace = [], clock, doc = null } = {}) {
       service.doc = {
         ...service.doc,
         description: editable.description ?? service.doc.description,
+        ...(editable.links ? { links: editable.links } : {}),
         ...(editable.tags ? { tags: editable.tags } : {}),
         editable,
         updatedAt: new Date(clock ? clock.now() : T0_MS).toISOString(),
@@ -258,7 +259,7 @@ export function fakeCtx(over = {}) {
     config: {
       mint: MINT, treasury: TREASURY, expectedCurator: WALLET, guardian: GUARDIAN, rebalanceDelaySecs: 86400,
       apiUrl: 'http://api.test', port: 0, tickMs: 30000, journalFile,
-      metadata: { tags: over.metadataTags ?? [], domain: 'weavr.sh' },
+      metadata: { tags: over.metadataTags ?? [], links: over.metadataLinks ?? {}, domain: 'weavr.sh' },
     },
     state: initialState({ paused: over.paused ?? false, selfLocked: over.selfLocked ?? null }),
     now: clock.now,

@@ -4,8 +4,8 @@
  * ends the process with exit 1 and a plain reason — never a secret — before
  * a key is read or a port is bound: both tokens present, ≥ 32 bytes and
  * different; keypair readable; mint, treasury, guardian, api URL, RPC URL
- * and policy present; policy valid; the metadata tags, when set, in the
- * service's form. Then: ctx, ledger rebuilt from the journal, loop started,
+ * and policy present; policy valid; the metadata tags and links, when set, in
+ * the service's form. Then: ctx, ledger rebuilt from the journal, loop started,
  * server listening on 0.0.0.0:CURATOR_PORT.
  *
  * Why `readConfig` is a separate pure function: the guards are the test
@@ -34,7 +34,7 @@ import { connect, idlFor, programId, readNavLookupTableAddress } from '@composab
 import { loadPolicy } from './policy.js';
 import { loadSigner } from './keys.js';
 import { weavrClient } from './weavr.js';
-import { metadataClient, parseTagList, DEFAULT_SIGN_DOMAIN } from './metadata.js';
+import { metadataClient, parseTagList, parseLinkList, DEFAULT_SIGN_DOMAIN } from './metadata.js';
 import { Journal, DEFAULT_JOURNAL_FILE, scrub } from './journal.js';
 import { loadKnownProgramIds } from './errors.js';
 import { createLoop } from './loop.js';
@@ -155,11 +155,12 @@ export function readConfig(env = process.env) {
   const metadataUrl = String(env.CURATOR_METADATA_URL ?? '').trim() || apiUrl;
   if (!/^https?:\/\//.test(metadataUrl)) throw new Error('CURATOR_METADATA_URL must be an http(s) URL');
   const metadataTags = parseTagList(env.CURATOR_METADATA_TAGS);
+  const metadataLinks = parseLinkList(env.CURATOR_METADATA_LINKS);
   const metadataDomain = String(env.CURATOR_METADATA_SIGN_DOMAIN ?? '').trim() || DEFAULT_SIGN_DOMAIN;
   if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(metadataDomain)) throw new Error('CURATOR_METADATA_SIGN_DOMAIN must be a host name');
   return {
     tokens, keypairFile, mint, treasury, guardian, apiUrl, rpcUrl, policyJson, policyFile, journalFile, port, tickMs, startPaused, rebalanceDelaySecs,
-    metadataUrl, metadataTags, metadataDomain,
+    metadataUrl, metadataTags, metadataLinks, metadataDomain,
   };
 }
 
@@ -263,7 +264,7 @@ export async function boot(opts = {}) {
       port: cfg.port,
       tickMs: cfg.tickMs,
       journalFile: cfg.journalFile,
-      metadata: { tags: cfg.metadataTags, domain: cfg.metadataDomain },
+      metadata: { tags: cfg.metadataTags, links: cfg.metadataLinks, domain: cfg.metadataDomain },
     },
     state,
     now,
@@ -305,6 +306,7 @@ export async function boot(opts = {}) {
     lookupTables: chain.lookupTables.size,
     lookupTablesResolved: [...chain.lookupTables.values()].filter(Boolean).length,
     metadataTags: cfg.metadataTags,
+    metadataLinks: cfg.metadataLinks,
   });
   log('info', 'boot', { wallet: signer.wallet, mint: cfg.mint, port: server.address()?.port ?? cfg.port, paused: state.paused, selfLocked: Boolean(state.selfLocked), policyVersion: policy?.version ?? null, policySha256: ctx.policyDigest });
 

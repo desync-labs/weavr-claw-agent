@@ -527,3 +527,26 @@ test('a tick stamps the configured tags after the machine, once; a held tick (pa
   assert.equal(down.state.metadata.state, 'failed');
   assert.equal(down.state.lastTick.ok, true);
 });
+
+test('a tick whose invariants are unverified does not stamp the metadata; the next verified tick does', async () => {
+  const policy = 'https://www.weavr.sh/policies/thesis/v1.json';
+  const withoutAccountant = { ...fakeSnapshot(), accountantAccount: null };
+  const ctx = mk({
+    snapshot: withoutAccountant,
+    metadataTags: ['agent-managed'],
+    metadataLinks: { policy },
+    depsOverrides: { checkInvariants: (snapshot) => ({ ok: true, unverified: snapshot.accountantAccount ? [] : ['accountant.recipient1'] }) },
+  });
+  const loop = createLoop({ ctx });
+  await loop.tick();
+  assert.deepEqual(ctx.state.invariantsUnverified, ['accountant.recipient1']);
+  assert.equal(ctx.state.invariantsVerifiedAt, null);
+  assert.equal(ctx.metadata.calls.length, 0, 'an unverified tick neither reads nor writes the document');
+  ctx.deps.setSnapshot(fakeSnapshot());
+  ctx.clock.advance(30);
+  await loop.tick();
+  assert.equal(ctx.state.invariantsVerifiedAt, Math.floor(ctx.clock.now() / 1000));
+  assert.equal(ctx.state.metadata.state, 'ok');
+  assert.deepEqual(ctx.metadata.doc.links, { policy });
+  assert.deepEqual(ctx.metadata.doc.tags, ['agent-managed']);
+});
