@@ -107,8 +107,8 @@ transaction: report it.
 | 6038 | RequiredPoolPaused | a required pool is paused or halted | risk exit; re-propose without it |
 | 6039 | AlreadyInThatPauseState | pause/unpause no-op | ops matter |
 | 6040 | PendingWithdrawalsBlockTargets | withdrawals queued | wait for the keeper (FIFO) |
-| 6064 | Unauthorized | wrong signer for the instruction | invariant drift (curator changed); report |
-| 6063 | MathOverflow | arithmetic overflow | report; never retry |
+| 6065 | Unauthorized | wrong signer for the instruction | invariant drift (curator changed); report |
+| 6064 | MathOverflow | arithmetic overflow | report; never retry |
 | 6000 | CreationPaused | factory creation paused | create-time only |
 | 6008 | FeeExceedsCap | fee above the factory cap | create-time only |
 | 6009 | SpreadTooLow | entry + exit spread below minimum | create-time only |
@@ -128,18 +128,19 @@ transaction: report it.
 | 6048 | RiskTierOutOfRange | risk tier out of range | pool registration only |
 | 6049 | RiskDisclosureHashMissing | disclosure hash zero | pool registration only |
 | 6050 | ExecutionLossPolicyExceeded | pool loss bound above policy | pool registration only |
-| 6051 | InvalidSymbol | symbol empty or too long | create / pool registration only |
-| 6052 | EscrowMismatch | escrow account or manager wrong | pool registration only |
-| 6053 | TokenExtensionMismatch | Token-2022 snapshot wrong | pool registration only |
-| 6054 | CustodyPathNotReady | custody readiness proof missing | pool registration only |
-| 6055 | ServiceNotPaused | service must be paused before a key change | governance only |
-| 6056 | DefaultKeyNotAllowed | default pubkey | governance only |
-| 6057 | RoleUnchanged | role already holds the key | governance only |
-| 6058 | ServiceRoleCollision | service roles must differ | governance only |
-| 6059 | GovernanceIsTreasury | governance equals the treasury | governance only |
-| 6060 | InvalidPolicyValue | bad policy value | governance only |
-| 6061 | RentMarginNotSet | rent margins zero | governance only |
-| 6062 | InvalidAuthorityPda | authority PDA not system-owned | governance only |
+| 6051 | DownsideCapExceedsExecutionLoss | downside cap above execution-loss bound | pool registration only |
+| 6052 | InvalidSymbol | symbol empty or too long | create / pool registration only |
+| 6053 | EscrowMismatch | escrow account or manager wrong | pool registration only |
+| 6054 | TokenExtensionMismatch | Token-2022 snapshot wrong | pool registration only |
+| 6055 | CustodyPathNotReady | custody readiness proof missing | pool registration only |
+| 6056 | ServiceNotPaused | service must be paused before a key change | governance only |
+| 6057 | DefaultKeyNotAllowed | default pubkey | governance only |
+| 6058 | RoleUnchanged | role already holds the key | governance only |
+| 6059 | ServiceRoleCollision | service roles must differ | governance only |
+| 6060 | GovernanceIsTreasury | governance equals the treasury | governance only |
+| 6061 | InvalidPolicyValue | bad policy value | governance only |
+| 6062 | RentMarginNotSet | rent margins zero | governance only |
+| 6063 | InvalidAuthorityPda | authority PDA not system-owned | governance only |
 
 Core `stoken` errors (deposit, withdraw, NAV) are named the same way by the
 signer (`STOKEN_ERRORS`); the ones a curator verb can meet are the vault

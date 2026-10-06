@@ -341,7 +341,7 @@ test('the skill never quotes a policy threshold, and names the signer as the aut
   assert.match(policy, /states \*\*no values on purpose\*\*/);
 });
 
-test('ERRORS.md names every refusal code of the signer and all 65 factory error codes', () => {
+test('ERRORS.md names every refusal code of the signer and all 66 factory error codes', () => {
   const errors = readFileSync(join(SKILL, 'references/ERRORS.md'), 'utf8');
   const codes = `PORTFOLIO_NOT_ALLOWED CHAIN_DENIED POOL_DENIED POOL_NOT_ACTIVE POOL_COST_TOO_HIGH MIN_LEGS MAX_LEGS PAGE_LIMIT
     LEG_WEIGHT_CAP CATEGORY_CAP WEIGHTS_SUM TURNOVER_CAP COST_CAP PROPOSAL_TOO_SOON PROPOSAL_QUOTA TARGETS_PENDING
@@ -350,11 +350,11 @@ test('ERRORS.md names every refusal code of the signer and all 65 factory error 
     PAGED_PROPOSE_UNSUPPORTED UPSTREAM BUILD_REFUSED SEND_FAILED`.split(/\s+/).filter(Boolean);
   for (const code of codes) assert.ok(errors.includes(code), `ERRORS.md lacks ${code}`);
   // No programs repo here to cross-check names against errors.rs; the table
-  // must still carry every code 6000..6064 exactly once, in the row shape.
+  // must still carry every code 6000..6065 exactly once, in the row shape.
   const rows = [...errors.matchAll(/^\| (60\d\d) \| ([A-Z][A-Za-z0-9]+) \|/gm)].map((m) => [Number(m[1]), m[2]]);
-  assert.equal(rows.length, 65, 'one row per factory error');
-  assert.deepEqual([...new Set(rows.map(([c]) => c))].sort((a, b) => a - b), Array.from({ length: 65 }, (_, i) => 6000 + i));
-  assert.ok(rows.some(([c, n]) => c === 6020 && n === 'RebalanceTooSoon') && rows.some(([c, n]) => c === 6064 && n === 'Unauthorized'));
+  assert.equal(rows.length, 66, 'one row per factory error');
+  assert.deepEqual([...new Set(rows.map(([c]) => c))].sort((a, b) => a - b), Array.from({ length: 66 }, (_, i) => 6000 + i));
+  assert.ok(rows.some(([c, n]) => c === 6020 && n === 'RebalanceTooSoon') && rows.some(([c, n]) => c === 6065 && n === 'Unauthorized'));
 });
 
 test('SOUL.md and the memories fit the Hermes memory tool limits and its § delimiter', () => {
