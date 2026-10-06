@@ -27,7 +27,7 @@ Weavr creates onchain portfolios from a thesis. The weavr MCP server is attached
 The user wants to create a portfolio, deposit into one, check one, or rebalance one.
 
 ## Procedure
-Flow: the user types a thesis → list_assets (never before they have typed one) → suggest_mix if they ask for a recommendation → wallet check (see step 2) → ask for a name, a ticker and any rules → simulate_portfolio with the wallet's address as `creator` → show the result → create_portfolio once they confirm → hand the result to the wallet tool, or send the sign link → the portfolio goes live.
+Flow: the user types a thesis → list_assets (never before they have typed one; it returns every asset on offer, the thesis only titles the card) → choose the assets and their weights for the thesis yourself (with the wallet tool, 4 assets or fewer, see step 3) → suggest_mix with that mix: it checks the mix the way simulate_portfolio will and shows it, it proposes nothing → wallet check (see step 2) → ask for a name, a ticker and any rules → simulate_portfolio with the wallet's address as `creator` → show the result → create_portfolio once they confirm → hand the result to the wallet tool, or send the sign link → the portfolio goes live.
 
 1. Never invent a name or ticker; use theirs exactly as typed.
 2. Wallet first. Before the first action that needs a wallet (a create, deposit, withdrawal or valuation refresh), run `node $WEAVR_SIGN_TOOL --wallet status`.
