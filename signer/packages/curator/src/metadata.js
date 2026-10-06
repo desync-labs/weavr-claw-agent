@@ -8,13 +8,15 @@
  * here, so this process is the one writer an agent-run book has.
  *
  * Two writes, one path (`writeDocument`): the loop stamps the configured tags
- * (`CURATOR_METADATA_TAGS`) once, and the `strategy` verb replaces the
+ * (`CURATOR_METADATA_TAGS`) and links (`CURATOR_METADATA_LINKS`, e.g. the
+ * portfolio's policy) once, and the `strategy` verb replaces the
  * description. Both read the stored document first and send it back whole
  * with their change merged in, because the service replaces the editable
  * block on every write: a write that sent only its own field would erase the
- * others. The tags are the deployment's, never the model's: every write
- * carries them, so a description the agent publishes can never drop the
- * badge, and the agent has no argument that could add or remove one.
+ * others. The tags and links are the deployment's, never the model's: every
+ * write carries them, so a description the agent publishes can never drop
+ * the badge or the policy link, and the agent has no argument that could add
+ * or remove one.
  *
  * Why the message is checked line by line before it is signed: the service
  * builds the text and this process signs whatever it is handed, so the text
@@ -42,6 +44,9 @@ export const ACTION = 'set-metadata';
 export const DESCRIPTION_MAX_CHARS = 2000;
 export const MAX_TAGS = 10;
 export const TAG_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
+export const MAX_LINKS = 8;
+export const LINK_KEY_RE = /^[a-z][a-z0-9_]{0,23}$/;
+export const LINK_URL_MAX_CHARS = 512;
 /** The service refuses a message older than this (`METADATA_SIGN_MAX_AGE_SECS`); one further from this clock is not signed. */
 export const MESSAGE_MAX_SKEW_SECS = 300;
 /** Retry ceiling for a tag stamp that keeps failing. */
@@ -98,11 +103,58 @@ export function parseTagList(raw) {
   return tags;
 }
 
+/**
+ * `CURATOR_METADATA_LINKS` as an object: `name=https-url` entries, comma- or
+ * space-separated, each held to the service's own link rule (`metadata/src/
+ * schema.js`): a name of 1–24 lowercase letters, digits or underscores
+ * starting with a letter, an `https://` URL that parses, at most 512
+ * characters, no credentials. At most 8, no name twice. Empty or unset is
+ * `{}` (no links). Throws `Error` naming the variable and the link's name,
+ * never its URL.
+ * @param {string | undefined} raw
+ * @returns {Record<string, string>}
+ */
+export function parseLinkList(raw) {
+  const text = String(raw ?? '').trim();
+  if (text === '') return {};
+  const links = {};
+  for (const part of text.split(/[\s,]+/)) {
+    if (part === '') continue;
+    const at = part.indexOf('=');
+    if (at <= 0) throw new Error('CURATOR_METADATA_LINKS: each link is name=https-url');
+    const name = part.slice(0, at);
+    const url = part.slice(at + 1);
+    if (!LINK_KEY_RE.test(name)) throw new Error(`CURATOR_METADATA_LINKS: ${JSON.stringify(name.slice(0, 40))} is not a link name (1–24 lowercase letters, digits or underscores, starting with a letter)`);
+    if (Object.hasOwn(links, name)) throw new Error(`CURATOR_METADATA_LINKS: ${name} is named twice`);
+    if (url.length > LINK_URL_MAX_CHARS) throw new Error(`CURATOR_METADATA_LINKS: ${name} is longer than ${LINK_URL_MAX_CHARS} characters`);
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error(`CURATOR_METADATA_LINKS: ${name} is not a URL`);
+    }
+    if (parsed.protocol !== 'https:') throw new Error(`CURATOR_METADATA_LINKS: ${name} must use https`);
+    if (parsed.username || parsed.password) throw new Error(`CURATOR_METADATA_LINKS: ${name} must not carry credentials`);
+    links[name] = url;
+  }
+  if (Object.keys(links).length > MAX_LINKS) throw new Error(`CURATOR_METADATA_LINKS: at most ${MAX_LINKS} links`);
+  return links;
+}
+
 /** The tags a stored document carries (top level, else the editable block). */
 export function tagsOf(document) {
   const tags = Array.isArray(document?.tags) ? document.tags : document?.editable?.tags;
   return Array.isArray(tags) ? tags.map(String) : [];
 }
+
+/** The links a stored document carries (top level, else the editable block), empty entries dropped. */
+export function linksOf(document) {
+  const links = isLinkObject(document?.links) ? document.links : document?.editable?.links;
+  if (!isLinkObject(links)) return {};
+  return Object.fromEntries(Object.entries(links).filter(([, url]) => url != null && url !== '').map(([name, url]) => [name, String(url)]));
+}
+
+const isLinkObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /** The editable block the service last stored, as the four keys it accepts and nothing else. */
 export function editableOf(document) {
@@ -116,24 +168,41 @@ export function editableOf(document) {
 
 /**
  * The body to write: the stored block, the configured tags appended where
- * missing (stored order kept), the description replaced when one is given.
- * `changed` is false when the write would store what is already there.
+ * missing (stored order kept), each configured link set to its configured
+ * URL (a stored link of the same name is overwritten; every other stored
+ * link is kept), the description replaced when one is given. `changed` is
+ * false when the write would store what is already there; `linked` names
+ * the links this write sets or changes.
  * @param {object} editable from `editableOf`
- * @param {{ tags?: string[], description?: string }} change
- * @returns {{ metadata: object, changed: boolean, added: string[] }}
- * @throws {Refusal} METADATA_TAGS_FULL when the configured tags do not fit beside the stored ones
+ * @param {{ tags?: string[], links?: Record<string, string>, description?: string }} change
+ * @returns {{ metadata: object, changed: boolean, added: string[], linked: string[] }}
+ * @throws {Refusal} METADATA_TAGS_FULL / METADATA_LINKS_FULL when the configured tags or links do not fit beside the stored ones
  */
-export function mergeEditable(editable, { tags = [], description } = {}) {
+export function mergeEditable(editable, { tags = [], links = {}, description } = {}) {
   const stored = Array.isArray(editable?.tags) ? editable.tags.map(String) : [];
   const added = tags.filter((tag) => !stored.includes(tag));
   if (stored.length + added.length > MAX_TAGS) {
     throw new Refusal('METADATA_TAGS_FULL', `the document already carries ${stored.length} tags; ${added.join(', ')} would exceed the service's ${MAX_TAGS}`, { stored, missing: added });
   }
+  const storedLinks = linksOf({ editable });
+  const linked = Object.keys(links).filter((name) => storedLinks[name] !== links[name]);
+  const mergedLinks = { ...storedLinks, ...links };
+  if (linked.length && Object.keys(mergedLinks).length > MAX_LINKS) {
+    throw new Refusal('METADATA_LINKS_FULL', `the document already carries ${Object.keys(storedLinks).length} links; ${linked.join(', ')} would exceed the service's ${MAX_LINKS}`, { stored: Object.keys(storedLinks), missing: linked });
+  }
   const metadata = { ...editable };
   if (added.length) metadata.tags = [...stored, ...added];
+  if (linked.length) metadata.links = mergedLinks;
   const describe = description !== undefined && description !== editable?.description;
   if (describe) metadata.description = description;
-  return { metadata, changed: added.length > 0 || describe, added };
+  return { metadata, changed: added.length > 0 || linked.length > 0 || describe, added, linked };
+}
+
+/** True when a stored document carries every configured tag and every configured link at its configured URL. */
+export function carriesConfigured(document, { tags = [], links = {} } = {}) {
+  const stored = tagsOf(document);
+  const storedLinks = linksOf(document);
+  return tags.every((tag) => stored.includes(tag)) && Object.entries(links).every(([name, url]) => storedLinks[name] === url);
 }
 
 /**
@@ -206,10 +275,11 @@ export function metadataClient(opts = {}) {
  * One write, end to end: read the stored document, merge, ask the service
  * for the text, check it, sign it, put the body. A merge that changes
  * nothing writes nothing (`changed: false`, the stored document returned).
- * @param {object} ctx `ctx.metadata` (the client), `ctx.signer` (`wallet`, `signText`), `ctx.config.metadata` (`tags`, `domain`)
- * @param {{ portfolio: string, description?: string }} input `portfolio` is the Portfolio PDA, never the mint
- * @returns {Promise<{ document: object, metadata: object, changed: boolean, added: string[], contentHash: string | null }>}
- * @throws {Refusal} METADATA_TAGS_FULL, METADATA_MESSAGE_MISMATCH, NOT_CURATOR, METADATA_REFUSED, UPSTREAM
+ * @param {object} ctx `ctx.metadata` (the client), `ctx.signer` (`wallet`, `signText`), `ctx.config.metadata` (`tags`, `links`, `domain`)
+ * @param {{ portfolio: string, description?: string, withLinks?: boolean }} input `portfolio` is the Portfolio PDA, never the mint;
+ *   `withLinks: false` leaves the configured links out of the merge (stored links are kept as they are)
+ * @returns {Promise<{ document: object, metadata: object, changed: boolean, added: string[], linked: string[], contentHash: string | null }>}
+ * @throws {Refusal} METADATA_TAGS_FULL, METADATA_LINKS_FULL, METADATA_MESSAGE_MISMATCH, NOT_CURATOR, METADATA_REFUSED, UPSTREAM
  */
 export async function writeDocument(ctx, input) {
   // One write at a time per signer: the loop's stamp and a `strategy` call
@@ -232,12 +302,13 @@ export async function writeDocument(ctx, input) {
 /** The tail of each signer's write queue (`writeDocument`). */
 const WRITES = new WeakMap();
 
-async function writeOnce(ctx, { portfolio, description }) {
-  const { tags = [], domain = DEFAULT_SIGN_DOMAIN } = ctx.config.metadata ?? {};
+async function writeOnce(ctx, { portfolio, description, withLinks = true }) {
+  const { tags = [], links: configured = {}, domain = DEFAULT_SIGN_DOMAIN } = ctx.config.metadata ?? {};
+  const links = withLinks ? configured : {};
   const address = ctx.signer.wallet;
   const stored = await ctx.metadata.document(portfolio);
-  const { metadata, changed, added } = mergeEditable(editableOf(stored), { tags, description });
-  if (!changed) return { document: stored, metadata, changed: false, added, contentHash: null };
+  const { metadata, changed, added, linked } = mergeEditable(editableOf(stored), { tags, links, description });
+  if (!changed) return { document: stored, metadata, changed: false, added, linked, contentHash: null };
 
   const contentHash = contentHashOf(metadata);
   const ask = await ctx.metadata.message(portfolio, { address, action: ACTION, metadata });
@@ -247,7 +318,7 @@ async function writeOnce(ctx, { portfolio, description }) {
   checkMessage(ask?.message, { domain, address, portfolio, contentHash, nowSecs: Math.floor(ctx.now() / 1000) });
   const signature = await ctx.signer.signText(ask.message);
   const document = await ctx.metadata.put(portfolio, { address, message: ask.message, signature, metadata });
-  return { document, metadata, changed: true, added, contentHash };
+  return { document, metadata, changed: true, added, linked, contentHash };
 }
 
 /** `ctx.state.metadata`, created on first use. */
@@ -257,30 +328,39 @@ export function stampStateOf(ctx) {
 }
 
 /**
- * The loop's step: make sure the document carries the configured tags.
- * Runs until one read shows them (or one write adds them), then never again
- * in this process; a restart checks once more. A failure retries on a
- * doubling interval capped at an hour and raises `metadata` after
- * STAMP_ALERT_AFTER failures in a row; a document with no room for the tags
- * (METADATA_TAGS_FULL) stops retrying and stays alerted.
+ * The loop's step: make sure the document carries the configured tags and
+ * links. Runs until one read shows all of them (each link at its configured
+ * URL) or one write sets them, then never again in this process; a restart
+ * checks once more, so a link whose URL changed in the environment is
+ * rewritten on the next boot. A failure retries on a doubling interval
+ * capped at an hour and raises `metadata` after STAMP_ALERT_AFTER failures
+ * in a row; a document with no room for the tags or links
+ * (METADATA_TAGS_FULL, METADATA_LINKS_FULL) stops retrying and stays
+ * alerted.
  *
- * Why a pause does not hold it: the tags are the deployment's statement of
- * what runs the book, not an agent action, and a paused book is still run
- * by this signer. A self-lock does hold it: the chain no longer matches
- * what this process believes, and the curator may already be someone else.
+ * Why a pause does not hold it: the tags and links are the deployment's
+ * statement of what runs the book and under which policy, not an agent
+ * action, and a paused book is still run by this signer. A self-lock does
+ * hold it: the chain no longer matches what this process believes, and the
+ * curator may already be someone else. So does a tick whose invariants
+ * could not be read (`ctx.state.invariantsUnverified`): a policy link says
+ * the book's fee recipient, curator and notice are the ones the policy
+ * names, and an unread accountant is not proof of that.
  * @param {object} ctx
  * @param {object} snapshot this tick's
  * @param {{ raiseAlert: Function, clearAlert: Function, journal: Function }} hooks
  * @returns {Promise<{ state: string, attempts: number, error: object | null, alert: object | null } | null>} the outcome when an attempt ran
  *   (`alert` set when this attempt raised one the next GET /alerts delivers), null when none was due
  */
-export async function stampTags(ctx, snapshot, hooks) {
+export async function stampMetadata(ctx, snapshot, hooks) {
   const tags = ctx.config.metadata?.tags ?? [];
-  if (!tags.length || !ctx.metadata) return null;
+  const links = ctx.config.metadata?.links ?? {};
+  if ((!tags.length && !Object.keys(links).length) || !ctx.metadata) return null;
   const st = stampStateOf(ctx);
   const nowSecs = Math.floor(ctx.now() / 1000);
   if (st.state === 'ok' || st.state === 'full') return null;
   if (ctx.state.selfLocked) return null;
+  if (Array.isArray(ctx.state.invariantsUnverified) && ctx.state.invariantsUnverified.length > 0) return null;
   if (st.nextAt != null && nowSecs < st.nextAt) return null;
 
   const portfolio = String(snapshot?.portfolioRow?.portfolio ?? ctx.state.snapshotKeys?.portfolio ?? '');
@@ -291,8 +371,8 @@ export async function stampTags(ctx, snapshot, hooks) {
     Object.assign(st, { state: 'ok', at: nowSecs, attempts: 0, nextAt: null, error: null, updatedAt: out.document?.updatedAt ?? null });
     hooks.clearAlert(ctx, 'metadata');
     if (out.changed) {
-      hooks.journal({ kind: 'metadata', action: 'tags', ok: true, portfolio, added: out.added, tags: tagsOf(out.document), contentHash: out.contentHash, updatedAt: out.document?.updatedAt ?? null });
-      ctx.log?.('info', 'metadata-tags-stamped', { added: out.added });
+      hooks.journal({ kind: 'metadata', action: 'stamp', ok: true, portfolio, added: out.added, linked: out.linked, tags: tagsOf(out.document), links: linksOf(out.document), contentHash: out.contentHash, updatedAt: out.document?.updatedAt ?? null });
+      ctx.log?.('info', 'metadata-stamped', { added: out.added, linked: out.linked });
     }
   } catch (error) {
     const code = error instanceof Refusal ? error.code : 'ERROR';
@@ -300,7 +380,7 @@ export async function stampTags(ctx, snapshot, hooks) {
     st.attempts += 1;
     st.error = { code, message };
     st.at = nowSecs;
-    if (code === 'METADATA_TAGS_FULL') {
+    if (code === 'METADATA_TAGS_FULL' || code === 'METADATA_LINKS_FULL') {
       st.state = 'full';
       st.nextAt = null;
     } else {
@@ -309,13 +389,13 @@ export async function stampTags(ctx, snapshot, hooks) {
       st.nextAt = nowSecs + Math.min(STAMP_RETRY_MAX_SECS, tickSecs * 2 ** Math.min(st.attempts, 16));
     }
     if (st.attempts === 1 || st.state === 'full') {
-      hooks.journal({ kind: 'metadata', action: 'tags', ok: false, portfolio: portfolio || null, code, message });
+      hooks.journal({ kind: 'metadata', action: 'stamp', ok: false, portfolio: portfolio || null, code, message });
     }
     if (st.state === 'full' || st.attempts >= STAMP_ALERT_AFTER) {
-      const text = `the metadata document's tags could not be written (${code}): ${message}`;
+      const text = `the metadata document's tags and links could not be written (${code}): ${message}`;
       if (hooks.raiseAlert(ctx, 'metadata', code, text)) alert = { key: 'metadata', code, message: text };
     }
-    ctx.log?.('warn', 'metadata-tags-failed', { code, error: message, attempts: st.attempts });
+    ctx.log?.('warn', 'metadata-stamp-failed', { code, error: message, attempts: st.attempts });
   }
   return { state: st.state, attempts: st.attempts, error: st.error, alert };
 }

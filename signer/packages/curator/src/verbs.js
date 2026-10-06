@@ -55,7 +55,7 @@ import * as decodeMod from './decode.js';
 import * as preflightMod from './preflight.js';
 import * as metricsMod from './metrics.js';
 import { canonicalSha256 } from './journal.js';
-import { writeDocument, tagsOf, stampStateOf, DESCRIPTION_MAX_CHARS } from './metadata.js';
+import { writeDocument, tagsOf, linksOf, carriesConfigured, stampStateOf, DESCRIPTION_MAX_CHARS } from './metadata.js';
 
 /** An alert key that stays raised is delivered again after this long. */
 export const REALERT_SECS = 6 * 3600;
@@ -162,6 +162,7 @@ export function initialState({ paused = false, selfLocked = null, operatorReques
     operatorRequest: operatorRequest ?? null,
     reviewState: reviewState ?? null,
     invariantsUnverified: null,
+    invariantsVerifiedAt: null,
     apply: initialApplyState(),
     ledger,
     alerts: new Map(),
@@ -805,16 +806,19 @@ export function statusBody(ctx, snapshot, error = null) {
 }
 
 /**
- * The tags this signer stamps on the metadata document and where the stamp
- * stands: `off` (no CURATOR_METADATA_TAGS), `pending` (not tried yet),
- * `ok` (the document carries them), `failed` (retrying; `error` says why),
- * `full` (no room for them; an operator has to clear a tag).
+ * The tags and links this signer stamps on the metadata document and where
+ * the stamp stands: `off` (neither CURATOR_METADATA_TAGS nor
+ * CURATOR_METADATA_LINKS), `pending` (not tried yet, or held by a self-lock
+ * or an unverified invariant), `ok` (the document carries every tag and every
+ * link at its configured URL), `failed` (retrying; `error` says why), `full`
+ * (no room for them; an operator has to clear a tag or a link).
  */
 function metadataStatusOf(ctx) {
   const tags = ctx.config?.metadata?.tags ?? [];
-  if (!tags.length) return { tags: [], state: 'off' };
+  const links = ctx.config?.metadata?.links ?? {};
+  if (!tags.length && !Object.keys(links).length) return { tags: [], links: {}, state: 'off' };
   const st = ctx.state.metadata ?? { state: 'pending', at: null, error: null, updatedAt: null };
-  return { tags, state: st.state, at: st.at ?? null, updatedAt: st.updatedAt ?? null, error: st.error ?? null };
+  return { tags, links, state: st.state, at: st.at ?? null, updatedAt: st.updatedAt ?? null, error: st.error ?? null };
 }
 
 /**
@@ -1420,12 +1424,17 @@ export function strategyTextOf(raw) {
  * POST /strategy { text, why? } — publish the strategy as the description of
  * the portfolio's metadata document (what wallets show, and what weavr's site
  * shows under "Agent strategy"). No transaction: the curator key signs the
- * metadata service's message instead (metadata.js). The configured tags ride
- * along on every write. The hard rules of an agent write hold —
+ * metadata service's message instead (metadata.js). The configured tags and
+ * links ride along on every write. The hard rules of an agent write hold —
  * PORTFOLIO_NOT_ALLOWED, SELF_LOCKED, PAUSED and the hourly write budget —
- * but not LOW_SOL or INVARIANTS_UNVERIFIED: the write costs no lamports and
- * touches no account those reads guard. The same text twice writes once
- * (`changed: false`).
+ * but not LOW_SOL or INVARIANTS_UNVERIFIED: the write costs no lamports, and
+ * the description touches no account those reads guard. The configured links
+ * are different: a link such as the portfolio's policy states what the
+ * accountant and the curator are, so this write adds them only when the last
+ * tick verified the invariants. Otherwise it leaves them out of the merge
+ * (links already stored are kept) and the loop's stamp, held the same way,
+ * adds them on the next verified tick. The description is never refused for
+ * it. The same text twice writes once (`changed: false`).
  */
 export async function strategy(ctx, args, meta) {
   meta = normMeta(meta);
@@ -1484,14 +1493,17 @@ export async function strategy(ctx, args, meta) {
   const curator = base58Of(snapshot?.portfolioAccount?.curator);
   if (curator && curator !== ctx.signer.wallet) refuse('NOT_CURATOR', `the chain names ${curator} as curator, not this signer`, { curator });
 
+  // Verified: some tick read the invariants, and the last one read all of them.
+  const verified = ctx.state.invariantsVerifiedAt != null && !(Array.isArray(ctx.state.invariantsUnverified) && ctx.state.invariantsUnverified.length);
   let out;
   try {
-    out = await writeDocument(ctx, { portfolio, description: text });
+    out = await writeDocument(ctx, { portfolio, description: text, withLinks: verified });
   } catch (error) {
     if (error instanceof Refusal) refuse(error.code, error.message, error.detail);
     refuse('UPSTREAM', `metadata write failed: ${error?.message ?? String(error)}`);
   }
   const tags = tagsOf(out.document);
+  const links = linksOf(out.document);
   const record = journalAppend(ctx, {
     kind: 'verb',
     ...base,
@@ -1500,11 +1512,12 @@ export async function strategy(ctx, args, meta) {
     changed: out.changed,
     contentHash: out.contentHash,
     tags,
+    links,
     updatedAt: out.document?.updatedAt ?? null,
   });
-  const configured = ctx.config.metadata?.tags ?? [];
-  if (configured.length && configured.every((tag) => tags.includes(tag))) {
-    // The document carries the configured tags now, so the loop's stamp is done too.
+  const configured = { tags: ctx.config.metadata?.tags ?? [], links: ctx.config.metadata?.links ?? {} };
+  if ((configured.tags.length || Object.keys(configured.links).length) && carriesConfigured(out.document, configured)) {
+    // The document carries the configured tags and links now, so the loop's stamp is done too.
     Object.assign(stampStateOf(ctx), { state: 'ok', at: nowSecs, attempts: 0, nextAt: null, error: null, updatedAt: out.document?.updatedAt ?? null });
   }
   return {
@@ -1513,6 +1526,7 @@ export async function strategy(ctx, args, meta) {
     changed: out.changed,
     description: out.document?.description ?? text,
     tags,
+    links,
     updatedAt: out.document?.updatedAt ?? null,
     updatedBy: out.document?.updatedBy ?? null,
     journalId: record?.id ?? null,

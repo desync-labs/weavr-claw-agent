@@ -37,7 +37,7 @@
  * stale; one account read per tick keeps it current.
  */
 import { Refusal } from './errors.js';
-import { stampTags } from './metadata.js';
+import { stampMetadata } from './metadata.js';
 import {
   applySend, refreshNav, raiseAlert, clearAlert, clearApplyAlerts, depsOf, scrubText,
   pendingOf, currentTargetsOf, targetsEqual, keeperOkOf, initialApplyState, writeAttemptsLastHour, num,
@@ -370,6 +370,7 @@ export function createLoop(opts) {
       ? (Array.isArray(invariants.unverified) ? invariants.unverified.map(String) : [])
       : ['invariants (check failed)'];
     ctx.state.invariantsUnverified = unverified.length ? unverified : null;
+    if (invariants && invariants.ok !== false && !unverified.length) ctx.state.invariantsVerifiedAt = nowSecs;
     if (unverified.length) {
       const message = `${unverified.join(', ')} could not be verified this tick; writes are held until the accountant and FactoryConfig reads succeed`;
       if (raiseAlert(ctx, 'invariants_unverified', 'INVARIANTS_UNVERIFIED', message)) {
@@ -452,9 +453,10 @@ export function createLoop(opts) {
       if (ctx.state.apply.state === 'IDLE' || ctx.state.apply.state === 'DONE') clearApplyAlerts(ctx);
     }
 
-    // The metadata document's tags, last so a slow metadata service never
-    // delays an apply. A pause does not hold it (metadata.js stampTags says why).
-    const stamped = await stampTags(ctx, snapshot, { raiseAlert, clearAlert, journal });
+    // The metadata document's tags and links, last so a slow metadata service
+    // never delays an apply. A pause does not hold it; a self-lock or an
+    // unverified invariant does (metadata.js stampMetadata says why).
+    const stamped = await stampMetadata(ctx, snapshot, { raiseAlert, clearAlert, journal });
     if (stamped?.alert) result.alerts.push(stamped.alert);
 
     ctx.state.lastTick = { at: nowSecs, ok: true, error: null };
