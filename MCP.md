@@ -141,9 +141,11 @@ In the chat, in your words:
 > My thesis: Bitcoin and Solana. Which assets does weavr offer? Tickers only.
 
 Then a mix, a name, a ticker, a simulation, "create it". On a host with no
-wallet tool the agent must call `create_portfolio` with `wallet: "link"` and
-no creator, send you the `signUrl` **once in a private chat**, and call
-`await_portfolio` with only that deployment id.
+wallet tool the agent must pass `wallet: "link"` to `suggest_mix` and
+`simulate_portfolio` too (so the mix is not held to the wallet tool's four
+assets), call `create_portfolio` with `wallet: "link"` and no creator, send
+you the `signUrl` **once in a private chat**, and call `await_portfolio` with
+only that deployment id.
 
 The page shows the name, mix, fees and network cost before any wallet prompt.
 Whoever connects and signs pays the network cost and is the creator. One

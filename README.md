@@ -11,7 +11,7 @@ weavr itself is an MCP server at `https://mcp.weavr.sh` (same server: `https://a
 | `tools/sign-local.mjs` | an alias of `sign.mjs` that forces `--wallet local` (small amounts only: the key is a plain file on this machine) |
 | `tools/sign-check.mjs` | a zero-cost check that the wallet can sign, `--wallet` as above; with PayBox it also proves the key, the grant and the client agree and prints the PayBox client id |
 | `tools/lib/` | the checks (fee payer must be your wallet, every instruction inside weavr's programs), the weavr flows, the signers, the local wallet's lifecycle, balances |
-| `skills/weavr/SKILL.md` | the skill for this host: wallet first (choose or create), balance and funding rules before every money step, then the flows; a superset of `https://api.weavr.sh/hosts/hermes/SKILL.md` |
+| `skills/weavr/SKILL.md` | the skill for this host: wallet first (choose or create), balance and funding rules before every money step, then the flows; a superset of `https://api.weavr.sh/hosts/hermes/SKILL.md`, kept by hand: when weavr's MCP tools change, update both |
 | `plugins/weavr-wallet-gate/` | a Hermes plugin: every signing run becomes an approval you answer, with a message naming the action and the amount |
 | `plugins/weavr-curator/` | a Hermes plugin for the curator: the `weavr_curator` tool, its approval gate and the `/weavr-curator` command; an HTTP client of the signer that never sees a key |
 | `curator/` | the autonomous curator: the Hermes profile, the policy presets and the compose stack; `curator/README.md` is its page |
