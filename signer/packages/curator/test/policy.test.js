@@ -769,6 +769,16 @@ describe('evaluateInvariants', () => {
     assert.deepEqual(check({ curator: CURATOR, rebalanceDelaySecs: 21_600 }), { ok: true, drift: [] });
   });
 
+  it('accepts accountant.royaltyRecipient when recipient1 is gone', () => {
+    const { recipient1: _dropped, ...rest } = chain();
+    const result = evaluateInvariants({
+      policy,
+      config,
+      chain: { ...rest, royaltyRecipient: new PublicKey(TREASURY) },
+    });
+    assert.deepEqual(result, { ok: true, drift: [] });
+  });
+
   it('INVARIANT_DRIFT: each invariant planted', () => {
     const other = PublicKey.unique();
     const curator = check({ curator: other });
@@ -776,7 +786,7 @@ describe('evaluateInvariants', () => {
     assert.deepEqual(curator.drift, [{ invariant: 'portfolio.curator', expected: CURATOR, actual: other.toBase58() }]);
     assert.deepEqual(driftOf(check({ pendingCurator: other })), ['portfolio.pending_curator']);
     assert.deepEqual(driftOf(check({ rebalanceDelaySecs: bn(3600) })), ['portfolio.rebalance_delay_secs']);
-    assert.deepEqual(driftOf(check({ recipient1: other })), ['accountant.recipient1']);
+    assert.deepEqual(driftOf(check({ recipient1: other })), ['accountant.royaltyRecipient']);
     assert.deepEqual(driftOf(check({ guardian: other.toBase58() })), ['factory.guardian']);
     assert.deepEqual(driftOf(check({ compositionLocked: true })), ['portfolio.composition_locked']);
   });

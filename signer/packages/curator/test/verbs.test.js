@@ -1264,9 +1264,54 @@ test('strategy passes the service\'s refusal through by code and is not held by 
 });
 
 test('status reports the metadata stamp: off without tags, pending before the first try, the error while failing', async () => {
-  assert.deepEqual(verbs.statusBody(mk(), fakeSnapshot()).metadata, { tags: [], state: 'off' });
+  assert.deepEqual(verbs.statusBody(mk(), fakeSnapshot()).metadata, { tags: [], links: {}, state: 'off' });
   const ctx = mk({ metadataTags: ['agent-managed'] });
   assert.equal(verbs.statusBody(ctx, fakeSnapshot()).metadata.state, 'pending');
   ctx.state.metadata = { state: 'failed', at: T0, attempts: 1, nextAt: T0 + 60, error: { code: 'UPSTREAM', message: 'down' }, updatedAt: null };
-  assert.deepEqual(verbs.statusBody(ctx, fakeSnapshot()).metadata, { tags: ['agent-managed'], state: 'failed', at: T0, updatedAt: null, error: { code: 'UPSTREAM', message: 'down' } });
+  assert.deepEqual(verbs.statusBody(ctx, fakeSnapshot()).metadata, { tags: ['agent-managed'], links: {}, state: 'failed', at: T0, updatedAt: null, error: { code: 'UPSTREAM', message: 'down' } });
+});
+
+const POLICY_LINK = 'https://www.weavr.sh/policies/thesis/v1.json';
+
+test('strategy keeps the configured policy link, adds it when the document lost it, and reports the links', async () => {
+  const ctx = mk({ metadataTags: ['agent-managed'], metadataLinks: { policy: POLICY_LINK } });
+  ctx.state.invariantsVerifiedAt = T0;
+  ctx.metadata.doc.editable = { tags: ['agent-managed'], links: { policy: POLICY_LINK, twitter: 'https://x.com/a' } };
+  const out = await verbs.strategy(ctx, { text: STRATEGY }, meta());
+  assert.deepEqual(ctx.metadata.calls.find((c) => c.name === 'put').body.metadata, { tags: ['agent-managed'], links: { policy: POLICY_LINK, twitter: 'https://x.com/a' }, description: STRATEGY });
+  assert.deepEqual(out.links, { policy: POLICY_LINK, twitter: 'https://x.com/a' });
+  assert.deepEqual(records(ctx).find((r) => r.kind === 'verb' && r.verb === 'strategy').links, { policy: POLICY_LINK, twitter: 'https://x.com/a' });
+
+  const lost = mk({ metadataTags: ['agent-managed'], metadataLinks: { policy: POLICY_LINK } });
+  lost.state.invariantsVerifiedAt = T0;
+  lost.metadata.doc.editable = { tags: ['agent-managed'] };
+  const added = await verbs.strategy(lost, { text: STRATEGY }, meta());
+  assert.deepEqual(added.links, { policy: POLICY_LINK });
+  assert.equal(lost.state.metadata.state, 'ok', 'the write carried the tags and the link, so the loop\'s stamp is done');
+  assert.deepEqual(verbs.statusBody(lost, fakeSnapshot()).metadata.links, { policy: POLICY_LINK });
+});
+
+test('strategy is never refused for unverified invariants: it leaves the configured links out until a tick has verified them', async () => {
+  const fresh = mk({ metadataTags: ['agent-managed'], metadataLinks: { policy: POLICY_LINK } });
+  fresh.metadata.doc.editable = { tags: ['agent-managed'], links: { twitter: 'https://x.com/a' } };
+  const out = await verbs.strategy(fresh, { text: STRATEGY }, meta());
+  assert.equal(out.ok, true);
+  assert.deepEqual(fresh.metadata.calls.find((c) => c.name === 'put').body.metadata, { tags: ['agent-managed'], links: { twitter: 'https://x.com/a' }, description: STRATEGY }, 'no tick has verified the invariants yet: the policy link waits, stored links stay');
+  assert.notEqual(fresh.state.metadata?.state, 'ok', 'the loop\'s stamp still owes the link');
+
+  const unread = mk({ metadataLinks: { policy: POLICY_LINK } });
+  unread.state.invariantsVerifiedAt = T0;
+  unread.state.invariantsUnverified = ['accountant.recipient1'];
+  await verbs.strategy(unread, { text: STRATEGY }, meta());
+  assert.equal(unread.metadata.calls.find((c) => c.name === 'put').body.metadata.links, undefined, 'the last tick could not read the accountant: no link');
+
+  unread.state.invariantsUnverified = null;
+  await verbs.strategy(unread, { text: `${STRATEGY} Again.` }, meta());
+  assert.deepEqual(unread.metadata.calls.filter((c) => c.name === 'put').at(-1).body.metadata.links, { policy: POLICY_LINK }, 'verified: the link rides along');
+  assert.equal(unread.state.metadata.state, 'ok');
+});
+
+test('status shows the configured links beside the tags', async () => {
+  const ctx = mk({ metadataLinks: { policy: POLICY_LINK } });
+  assert.deepEqual(verbs.statusBody(ctx, fakeSnapshot()).metadata, { tags: [], links: { policy: POLICY_LINK }, state: 'pending', at: null, updatedAt: null, error: null });
 });

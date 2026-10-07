@@ -853,7 +853,11 @@ export function evaluateInvariants({ policy, chain, config }) {
   if (delay !== policy.invariants.rebalanceDelaySecs) {
     drift.push({ invariant: 'portfolio.rebalance_delay_secs', expected: String(policy.invariants.rebalanceDelaySecs), actual: delay == null ? 'unknown' : String(delay) });
   }
-  expectPubkey('accountant.recipient1', facts.recipient1, config?.treasury);
+  expectPubkey(
+    'accountant.royaltyRecipient',
+    facts.royaltyRecipient ?? facts.recipient1,
+    config?.treasury,
+  );
   expectPubkey('factory.guardian', facts.guardian, config?.guardian);
   const locked = typeof facts.compositionLocked === 'boolean' ? facts.compositionLocked : null;
   if (locked !== policy.invariants.compositionLocked) {

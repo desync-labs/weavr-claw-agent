@@ -446,7 +446,7 @@ describe('checkInvariants', () => {
   });
 
   it('INVARIANT_DRIFT: fee recipient is not the treasury', () => {
-    drifted(fixture({ accountantAccount: { recipient1: key() } }), 'accountant.recipient1');
+    drifted(fixture({ accountantAccount: { recipient1: key() } }), 'accountant.royaltyRecipient');
   });
 
   it('INVARIANT_DRIFT: guardian changed', () => {
@@ -455,7 +455,7 @@ describe('checkInvariants', () => {
 
   it('an unreadable optional account is unverified, not drift', () => {
     const result = checkInvariants(fixture({ accountantAccount: null, factoryConfig: null }), CONFIG, POLICY);
-    assert.deepEqual(result, { ok: true, unverified: ['accountant.recipient1', 'factory.guardian'] });
+    assert.deepEqual(result, { ok: true, unverified: ['accountant.royaltyRecipient', 'factory.guardian'] });
   });
 });
 
@@ -555,7 +555,7 @@ describe('readSnapshot', () => {
     const snapshot = await readSnapshot(soft.ctx);
     assert.equal(snapshot.accountantAccount, null);
     assert.ok(soft.logs.some((entry) => entry.fields.read === 'accountant'));
-    assert.deepEqual(checkInvariants(snapshot, CONFIG, POLICY), { ok: true, unverified: ['accountant.recipient1'] });
+    assert.deepEqual(checkInvariants(snapshot, CONFIG, POLICY), { ok: true, unverified: ['accountant.royaltyRecipient'] });
     const hard = fakeCtx(fixture(), { failing: new Set(['stoken.VaultConfig']) });
     await assert.rejects(readSnapshot(hard.ctx), /rpc: VaultConfig/);
     const missing = fakeCtx({ ...fixture(), portfolioAccount: null });

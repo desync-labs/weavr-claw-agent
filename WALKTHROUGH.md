@@ -128,7 +128,7 @@ Two images and the CLI. The signer image is public and compose pulls it
 on `up`; the agent image is the one you built or pulled for the chat agent:
 
 ```bash
-docker pull --platform linux/amd64 intothefathom/curator-public:0.3.0   # no linux/arm64 manifest; compose pins this platform
+docker pull --platform linux/amd64 intothefathom/curator-public:0.4.0   # no linux/arm64 manifest; compose pins this platform
 docker pull nousresearch/hermes-agent:v2026.8.27
 cd ~/weavr-wallet/tools/claw-agent && npm link          # `weavr-curator`; or node bin/weavr-curator.mjs
 docker image ls intothefathom/curator-public nousresearch/hermes-agent  # both tags listed

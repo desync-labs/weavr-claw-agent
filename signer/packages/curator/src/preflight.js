@@ -398,9 +398,13 @@ export function checkInvariants(snapshot, config, policy) {
   check('portfolio.compositionLocked', expectations.compositionLocked ?? false, Boolean(account.compositionLocked));
 
   if (snapshot.accountantAccount) {
-    check('accountant.recipient1', config.treasury, b58(snapshot.accountantAccount.recipient1));
+    check(
+      'accountant.royaltyRecipient',
+      config.treasury,
+      b58(snapshot.accountantAccount.royaltyRecipient ?? snapshot.accountantAccount.recipient1),
+    );
   } else {
-    unverified.push('accountant.recipient1');
+    unverified.push('accountant.royaltyRecipient');
   }
   if (snapshot.factoryConfig) {
     check('factory.guardian', config.guardian, b58(snapshot.factoryConfig.guardian));
