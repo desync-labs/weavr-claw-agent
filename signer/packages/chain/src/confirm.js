@@ -60,16 +60,20 @@ export async function sendRawUntilConfirmed(
     sig = await withRpcRetry(() => connection.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }));
   }
   for (;;) {
-    const height = await withRpcRetry(() => connection.getBlockHeight(commitment));
-    if (Number(height) > Number(lastValidBlockHeight)) {
-      throw new Error(`Signature ${sig} has expired: block height exceeded.`);
-    }
+    // The status before the height: a transaction that landed is confirmed
+    // whatever the height says. The other way round, one that landed as its
+    // window closed, or was watched against a window not its own, came back
+    // expired and its signature was lost.
     const statuses = await withRpcRetry(() => connection.getSignatureStatuses([sig]));
     const status = statuses?.value?.[0];
     if (status?.err) {
       throw new Error(`transaction failed: ${JSON.stringify(status.err)}`);
     }
     if (confirmed(status, commitment)) return sig;
+    const height = await withRpcRetry(() => connection.getBlockHeight(commitment));
+    if (Number(height) > Number(lastValidBlockHeight)) {
+      throw new Error(`Signature ${sig} has expired: block height exceeded.`);
+    }
     await send();
     await new Promise((resolve) => setTimeout(resolve, pollMs));
   }

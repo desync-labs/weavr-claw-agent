@@ -1,0 +1,1011 @@
+{
+  "address": "C34PzDzoMHYjPUUfgk5A7BAcuKPBtV81mX1CDcoqKQ4N",
+  "metadata": {
+    "name": "pyth_price_adapter",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Internal Pyth-interface adapter: receiver-shaped PriceUpdateV2 accounts fed by our own oracle"
+  },
+  "instructions": [
+    {
+      "name": "accept_governance",
+      "discriminator": [
+        248,
+        124,
+        36,
+        211,
+        224,
+        191,
+        79,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_feed_guard",
+      "docs": [
+        "Two-step feed-guard retirement: pause, wait `FEED_GUARD_CLOSE_DELAY_SECS`,",
+        "then close. Governance only."
+      ],
+      "discriminator": [
+        75,
+        42,
+        48,
+        15,
+        30,
+        202,
+        126,
+        115
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "feed_guard",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_price_feed",
+      "docs": [
+        "Close a price PDA and return rent to governance."
+      ],
+      "discriminator": [
+        4,
+        91,
+        255,
+        154,
+        47,
+        74,
+        139,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "price_update",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "shard",
+          "type": "u16"
+        },
+        {
+          "name": "feed_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "init_feed_guard",
+      "discriminator": [
+        120,
+        32,
+        198,
+        202,
+        3,
+        124,
+        218,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "feed_guard",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "feed_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "authorities",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "max_step_bps",
+          "type": "u16"
+        },
+        {
+          "name": "step_window_secs",
+          "type": "u64"
+        },
+        {
+          "name": "max_catchup_bps",
+          "type": "u16"
+        },
+        {
+          "name": "min_interval_secs",
+          "type": "u64"
+        },
+        {
+          "name": "min_price",
+          "type": "i64"
+        },
+        {
+          "name": "max_price",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Creates `AdapterConfig`, once (plain init). Only nav's on-chain",
+        "governance may sign — the same identity that later runs",
+        "`set_price_source` — so a front-runner at the pinned program id gains",
+        "nothing. Governance is read from nav's `NavConfig` at a fixed offset",
+        "(layout documented at `NAV_CONFIG_GOVERNANCE_OFFSET`) rather than",
+        "through the nav crate, which would be a dependency cycle."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "docs": [
+            "Must be nav's on-chain governance; becomes `config.governance`."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "nav_config",
+          "docs": [
+            "`NAV_CONFIG_GOVERNANCE_OFFSET` are all checked in the handler."
+          ]
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "override_price",
+      "discriminator": [
+        162,
+        255,
+        27,
+        91,
+        148,
+        156,
+        127,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "feed_guard",
+          "writable": true
+        },
+        {
+          "name": "price_update",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "shard",
+          "type": "u16"
+        },
+        {
+          "name": "feed_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "price",
+          "type": "i64"
+        },
+        {
+          "name": "conf",
+          "type": "u64"
+        },
+        {
+          "name": "exponent",
+          "type": "i32"
+        },
+        {
+          "name": "publish_time",
+          "type": "i64"
+        },
+        {
+          "name": "ema_price",
+          "type": "i64"
+        },
+        {
+          "name": "ema_conf",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_governance",
+      "discriminator": [
+        129,
+        138,
+        213,
+        117,
+        56,
+        242,
+        208,
+        54
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_governance",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "put_price_guarded",
+      "discriminator": [
+        79,
+        239,
+        79,
+        216,
+        245,
+        61,
+        19,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "feed_guard",
+          "writable": true
+        },
+        {
+          "name": "price_update",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "shard",
+          "type": "u16"
+        },
+        {
+          "name": "feed_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "price",
+          "type": "i64"
+        },
+        {
+          "name": "conf",
+          "type": "u64"
+        },
+        {
+          "name": "exponent",
+          "type": "i32"
+        },
+        {
+          "name": "publish_time",
+          "type": "i64"
+        },
+        {
+          "name": "ema_price",
+          "type": "i64"
+        },
+        {
+          "name": "ema_conf",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "raise_governance_rotation_delay",
+      "discriminator": [
+        131,
+        0,
+        142,
+        206,
+        209,
+        212,
+        64,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_delay_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_authority",
+      "docs": [
+        "Rotate the posting hot key. Signer must be `config.governance`."
+      ],
+      "discriminator": [
+        133,
+        250,
+        37,
+        21,
+        110,
+        163,
+        26,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_feed_guard",
+      "discriminator": [
+        83,
+        49,
+        182,
+        226,
+        126,
+        216,
+        137,
+        172
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "governance",
+          "signer": true
+        },
+        {
+          "name": "feed_guard",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "authorities",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "max_step_bps",
+          "type": "u16"
+        },
+        {
+          "name": "step_window_secs",
+          "type": "u64"
+        },
+        {
+          "name": "max_catchup_bps",
+          "type": "u16"
+        },
+        {
+          "name": "min_interval_secs",
+          "type": "u64"
+        },
+        {
+          "name": "min_price",
+          "type": "i64"
+        },
+        {
+          "name": "max_price",
+          "type": "i64"
+        },
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AdapterConfig",
+      "discriminator": [
+        232,
+        238,
+        221,
+        123,
+        55,
+        57,
+        27,
+        14
+      ]
+    },
+    {
+      "name": "FeedGuard",
+      "discriminator": [
+        26,
+        137,
+        198,
+        128,
+        80,
+        126,
+        103,
+        181
+      ]
+    },
+    {
+      "name": "PriceUpdateV2",
+      "discriminator": [
+        34,
+        241,
+        35,
+        99,
+        157,
+        126,
+        244,
+        205
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "AdapterConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "governance",
+            "docs": [
+              "Signs `set_authority` / `close_price_feed`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "docs": [
+              "Hot key that signs `put_price`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_governance",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_governance_at",
+            "type": "i64"
+          },
+          {
+            "name": "governance_rotation_delay_secs",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeedGuard",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authorities",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "max_step_bps",
+            "type": "u16"
+          },
+          {
+            "name": "step_window_secs",
+            "type": "u64"
+          },
+          {
+            "name": "max_catchup_bps",
+            "type": "u16"
+          },
+          {
+            "name": "min_interval_secs",
+            "type": "u64"
+          },
+          {
+            "name": "min_price",
+            "type": "i64"
+          },
+          {
+            "name": "max_price",
+            "type": "i64"
+          },
+          {
+            "name": "budget_bps",
+            "type": "u64"
+          },
+          {
+            "name": "last_price",
+            "type": "i64"
+          },
+          {
+            "name": "last_expo",
+            "type": "i32"
+          },
+          {
+            "name": "last_publish_time",
+            "type": "i64"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "paused_at",
+            "docs": [
+              "Unix time `paused` last flipped to true. 0 when unpaused."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "quorum_n",
+            "docs": [
+              "0 = quorum off."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": "u8"
+          },
+          {
+            "name": "twap_max_dev_bps",
+            "docs": [
+              "0 = [`crate::posted_twap::DEFAULT_TWAP_MAX_DEV_BPS`]."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "twap_next",
+            "type": "u8"
+          },
+          {
+            "name": "twap_slots",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "TwapSlot"
+                  }
+                },
+                6
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeedGuardClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeedGuardInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_step_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeedGuardUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeedPriceOverridden",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price",
+            "type": "i64"
+          },
+          {
+            "name": "publish_time",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeedStepClamped",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "posted",
+            "type": "i64"
+          },
+          {
+            "name": "written",
+            "type": "i64"
+          },
+          {
+            "name": "allowed_bps",
+            "type": "u64"
+          },
+          {
+            "name": "publish_time",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GovernanceAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old",
+            "type": "pubkey"
+          },
+          {
+            "name": "new",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GovernanceProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pending",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_at",
+            "type": "i64"
+          },
+          {
+            "name": "delay_secs",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GovernanceRotationDelayRaised",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old",
+            "type": "u64"
+          },
+          {
+            "name": "new",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PriceFeedMessage",
+      "docs": [
+        "Same field order as `pythnet_sdk::messages::PriceFeedMessage`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price",
+            "type": "i64"
+          },
+          {
+            "name": "conf",
+            "type": "u64"
+          },
+          {
+            "name": "exponent",
+            "type": "i32"
+          },
+          {
+            "name": "publish_time",
+            "type": "i64"
+          },
+          {
+            "name": "prev_publish_time",
+            "type": "i64"
+          },
+          {
+            "name": "ema_price",
+            "type": "i64"
+          },
+          {
+            "name": "ema_conf",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PriceUpdateV2",
+      "docs": [
+        "Exactly the SDK account layout (SDK `VerificationLevel` + `PriceFeedMessage`",
+        "embedded). Anchor derives the discriminator from the struct name, not the",
+        "program id, so nav's `try_deserialize` accepts these bytes."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "write_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "verification_level",
+            "type": {
+              "defined": {
+                "name": "VerificationLevel"
+              }
+            }
+          },
+          {
+            "name": "price_message",
+            "type": {
+              "defined": {
+                "name": "PriceFeedMessage"
+              }
+            }
+          },
+          {
+            "name": "posted_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TwapSlot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ts",
+            "type": "i64"
+          },
+          {
+            "name": "price",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerificationLevel",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Partial",
+            "fields": [
+              {
+                "name": "num_signatures",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "Full"
+          }
+        ]
+      }
+    }
+  ]
+}

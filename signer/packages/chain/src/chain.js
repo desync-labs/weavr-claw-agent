@@ -22,7 +22,6 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { withRpcRetry } from './confirm.js';
 import { observeRpc } from './metrics.js';
 import { configuredMaxRps, rateLimitedFetch, rateLimiter } from './rateLimit.js';
-import { assertProductionManifest, refuseForeignProgramId } from './programIds.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const UMBRELLA =
@@ -32,9 +31,11 @@ const DEPLOY = join(HERE, '..', '..', '..', 'deploy');
 const IDL_PATHS = {
   portfolio_factory: 'composable-portfolios-programs/target/idl/portfolio_factory.json',
   portfolio_allocator: 'composable-portfolios-programs/target/idl/portfolio_allocator.json',
-  stoken: 'splyce-composable-core/target/idl/stoken.json',
-  accountant: 'splyce-composable-core/target/idl/accountant.json',
-  asset_manager_escrow: 'splyce-composable-core/target/idl/asset_manager_escrow.json',
+  portfolio_nav: 'composable-portfolios-programs/target/idl/portfolio_nav.json',
+  pyth_price_adapter: 'composable-portfolios-programs/target/idl/pyth_price_adapter.json',
+  stoken: 'splyce-solana-s-token-core/target/idl/stoken.json',
+  accountant: 'splyce-solana-s-token-core/target/idl/accountant.json',
+  asset_manager_escrow: 'splyce-solana-s-token-core/target/idl/asset_manager_escrow.json',
 };
 
 function resolveTree() {
@@ -54,7 +55,6 @@ function resolveTree() {
 }
 
 const { manifest, idlPath } = resolveTree();
-assertProductionManifest(manifest);
 const idls = new Map();
 const coders = new Map();
 
@@ -74,6 +74,10 @@ const FACTORY_EVENT_NAMES = Object.freeze([
   'PositionRetired', 'CoreAdminProposed', 'PoolVaultCreated',
   'PoolEscrowPauseToggled', 'PoolEscrowTokenAccountInitialized',
   'PoolCctpDestinationAdded', 'FeeRecipientProposed', 'FeeRecipientAccepted',
+  'RoyaltyBoundsSet', 'PortfolioTreasuryProposed', 'PortfolioTreasuryAccepted',
+  'PoolAdapterRegistryInitialized', 'PoolAdapterProposed', 'PoolAdapterAccepted',
+  'PoolAdapterDisabled', 'PoolAdapterEnabled', 'PoolAdapterClosed', 'PoolAdapterCancelled',
+  'PoolAdapterCooldownProposed', 'PoolAdapterCooldownAccepted', 'PoolInflightCleared',
 ]);
 
 function synthesiseEvents(idl) {
@@ -107,20 +111,41 @@ function coderFor(program) {
 }
 
 /**
- * Program IDs come from `manifest.json`, which is where identity is decided.
- * `ci/check_program_id_pins` already proves it agrees with `declare_id!`, the
- * keypair and the compiled object, so reading it here means the keeper and that
- * check cannot disagree about what it is talking to.
+ * Program IDs come from the umbrella `manifest.json` when this tree sits under
+ * weavr. Default is the production compile identity (`production.programs`,
+ * ADR-0290 / U11). Retired alpha: `WEAVR_PROGRAM_IDS=alpha`. Live demo:
+ * `WEAVR_PROGRAM_IDS=demo`.
+ *
+ * The vendored `deploy/manifest.json` is a demo snapshot used only when the
+ * umbrella file is absent (standalone backend clone). Localnet recipes load
+ * `--bpf-program` via ops `pinnedProgramId`; those txs must hit the same IDs.
  */
-export function programId(program) {
-  for (const entry of Object.values(manifest.repos)) {
-    const pinned = entry.deployed_programs?.[program];
-    if (pinned) {
-      refuseForeignProgramId(pinned);
-      return new PublicKey(pinned);
-    }
+function programPinsManifest() {
+  const umbrellaManifest = join(UMBRELLA, 'manifest.json');
+  if (existsSync(umbrellaManifest)) {
+    return JSON.parse(readFileSync(umbrellaManifest, 'utf8'));
   }
-  throw new Error(`manifest.json pins no program ID for ${program}`);
+  return manifest;
+}
+
+export function programId(program) {
+  const pins = programPinsManifest();
+  const mode = process.env.WEAVR_PROGRAM_IDS;
+  if (mode === 'demo') {
+    for (const entry of Object.values(pins.repos ?? {})) {
+      const pinned = entry.deployed_programs?.[program];
+      if (pinned) return new PublicKey(pinned);
+    }
+    throw new Error(`manifest.json pins no live demo program ID for ${program}`);
+  }
+  if (mode === 'alpha') {
+    const alpha = pins.alpha?.localnet_programs?.[program];
+    if (alpha) return new PublicKey(alpha);
+    throw new Error(`manifest.alpha.localnet_programs has no ${program}`);
+  }
+  const production = pins.production?.programs?.[program];
+  if (production) return new PublicKey(production);
+  throw new Error(`manifest.production.programs has no ${program}`);
 }
 
 export const BPF_LOADER_UPGRADEABLE_PROGRAM_ID = new PublicKey(
@@ -203,7 +228,7 @@ export function decode(program, account, data) {
   } catch (error) {
     if (
       !APPEND_ONLY_ACCOUNTS.has(name) ||
-      !/Reached the end of buffer when accessing index|offset .+ out of range/.test(String(error))
+      !/Reached the end of buffer when accessing index|out of range/i.test(String(error))
     ) {
       throw error;
     }

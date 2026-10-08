@@ -130,16 +130,16 @@
       ]
     },
     {
-      "name": "accept_recipients",
+      "name": "accept_royalty_recipient",
       "discriminator": [
+        151,
+        201,
         115,
-        209,
-        182,
-        215,
         221,
-        95,
-        164,
-        213
+        166,
+        130,
+        16,
+        248
       ],
       "accounts": [
         {
@@ -154,16 +154,46 @@
       "args": []
     },
     {
-      "name": "accept_split_ratio",
+      "name": "accept_recover_admin",
+      "docs": [
+        "Upgrade-authority escape hatch (accept after delay)."
+      ],
       "discriminator": [
-        109,
-        42,
-        183,
-        183,
-        230,
-        72,
-        205,
-        215
+        232,
+        56,
+        120,
+        195,
+        67,
+        193,
+        207,
+        10
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "upgrade_authority",
+          "signer": true
+        },
+        {
+          "name": "program_data"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_treasury",
+      "discriminator": [
+        196,
+        145,
+        81,
+        139,
+        177,
+        13,
+        197,
+        43
       ],
       "accounts": [
         {
@@ -345,16 +375,16 @@
       ]
     },
     {
-      "name": "cancel_recipients",
+      "name": "cancel_royalty_recipient",
       "discriminator": [
-        46,
-        192,
-        140,
-        140,
-        11,
-        113,
-        243,
-        98
+        65,
+        197,
+        216,
+        121,
+        122,
+        226,
+        14,
+        68
       ],
       "accounts": [
         {
@@ -369,16 +399,16 @@
       "args": []
     },
     {
-      "name": "cancel_split_ratio",
+      "name": "cancel_treasury",
       "discriminator": [
-        124,
-        13,
-        175,
-        82,
-        181,
-        215,
-        168,
-        243
+        234,
+        202,
+        206,
+        126,
+        159,
+        136,
+        169,
+        58
       ],
       "accounts": [
         {
@@ -388,6 +418,77 @@
         {
           "name": "manager",
           "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_accountant",
+      "docs": [
+        "Close an accountant instance with no pending changes."
+      ],
+      "discriminator": [
+        93,
+        242,
+        88,
+        180,
+        128,
+        199,
+        135,
+        152
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_accountant_token_account",
+      "docs": [
+        "Close an empty accountant-owned token account. Admin, manager or processor."
+      ],
+      "discriminator": [
+        40,
+        29,
+        210,
+        32,
+        184,
+        61,
+        178,
+        16
+      ],
+      "accounts": [
+        {
+          "name": "accountant"
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "accountant_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
         }
       ],
       "args": []
@@ -413,16 +514,18 @@
           "writable": true
         },
         {
-          "name": "recipient1",
+          "name": "config"
+        },
+        {
+          "name": "royalty_recipient",
           "writable": true
         },
         {
-          "name": "recipient2",
+          "name": "treasury",
           "writable": true
         },
         {
           "name": "processor",
-          "writable": true,
           "signer": true
         },
         {
@@ -433,6 +536,10 @@
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "royalty_bps",
+          "type": "u16"
         }
       ]
     },
@@ -457,6 +564,9 @@
           "writable": true
         },
         {
+          "name": "config"
+        },
+        {
           "name": "processor",
           "docs": [
             "The processor - authorized to trigger distributions"
@@ -471,24 +581,18 @@
           "writable": true
         },
         {
-          "name": "recipient1_token_account",
-          "docs": [
-            "Recipient 1 token account"
-          ],
+          "name": "royalty_recipient_token_account",
           "writable": true
         },
         {
-          "name": "recipient2_token_account",
-          "docs": [
-            "Recipient 2 token account"
-          ],
+          "name": "treasury_token_account",
           "writable": true
         },
         {
-          "name": "recipient1"
+          "name": "royalty_recipient"
         },
         {
-          "name": "recipient2"
+          "name": "treasury"
         },
         {
           "name": "mint",
@@ -504,6 +608,10 @@
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "royalty_bps",
+          "type": "u16"
         }
       ]
     },
@@ -549,6 +657,14 @@
           "type": {
             "option": "u64"
           }
+        },
+        {
+          "name": "min_royalty_bps",
+          "type": "u16"
+        },
+        {
+          "name": "max_royalty_bps",
+          "type": "u16"
         }
       ]
     },
@@ -588,20 +704,12 @@
       ],
       "args": [
         {
-          "name": "recipient1",
+          "name": "royalty_recipient",
           "type": "pubkey"
         },
         {
-          "name": "recipient2",
+          "name": "treasury",
           "type": "pubkey"
-        },
-        {
-          "name": "weight1",
-          "type": "u64"
-        },
-        {
-          "name": "weight2",
-          "type": "u64"
         },
         {
           "name": "manager",
@@ -873,6 +981,110 @@
       ]
     },
     {
+      "name": "propose_recover_admin",
+      "docs": [
+        "Upgrade-authority escape hatch (propose). Delay is",
+        "`Config.admin_change_cooldown_secs` (demo may set 1s)."
+      ],
+      "discriminator": [
+        103,
+        199,
+        237,
+        254,
+        47,
+        208,
+        104,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "upgrade_authority",
+          "signer": true
+        },
+        {
+          "name": "program_data"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "raise_admin_cooldown",
+      "docs": [
+        "Immediate raise of the global admin-change cooldown. Refuses equal or lower."
+      ],
+      "discriminator": [
+        68,
+        122,
+        248,
+        13,
+        141,
+        69,
+        94,
+        54
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_cooldown_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "raise_manager_cooldown",
+      "docs": [
+        "Immediate raise of a per-accountant manager-change cooldown."
+      ],
+      "discriminator": [
+        179,
+        111,
+        101,
+        167,
+        104,
+        202,
+        76,
+        56
+      ],
+      "accounts": [
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "accountant_index",
+          "type": "u64"
+        },
+        {
+          "name": "new_cooldown_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "update_processor",
       "docs": [
         "Update processor - MANAGER GATED"
@@ -908,19 +1120,19 @@
       ]
     },
     {
-      "name": "update_recipients",
+      "name": "propose_royalty_recipient",
       "docs": [
         "Update recipients - MANAGER GATED"
       ],
       "discriminator": [
-        92,
-        134,
-        20,
-        47,
-        48,
-        34,
-        175,
-        112
+        120,
+        100,
+        59,
+        53,
+        17,
+        3,
+        185,
+        61
       ],
       "accounts": [
         {
@@ -937,29 +1149,25 @@
       ],
       "args": [
         {
-          "name": "new_recipient1",
-          "type": "pubkey"
-        },
-        {
-          "name": "new_recipient2",
+          "name": "new_royalty_recipient",
           "type": "pubkey"
         }
       ]
     },
     {
-      "name": "update_split_ratio",
+      "name": "propose_treasury",
       "docs": [
         "Update split ratio (weights)"
       ],
       "discriminator": [
-        126,
-        72,
-        186,
-        123,
-        71,
         235,
-        51,
-        12
+        240,
+        222,
+        34,
+        106,
+        66,
+        137,
+        236
       ],
       "accounts": [
         {
@@ -973,12 +1181,41 @@
       ],
       "args": [
         {
-          "name": "new_weight1",
-          "type": "u64"
+          "name": "new_treasury",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_royalty_bounds",
+      "discriminator": [
+        2,
+        204,
+        196,
+        145,
+        13,
+        77,
+        47,
+        246
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
         },
         {
-          "name": "new_weight2",
-          "type": "u64"
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "min_royalty_bps",
+          "type": "u16"
+        },
+        {
+          "name": "max_royalty_bps",
+          "type": "u16"
         }
       ]
     }
@@ -1078,6 +1315,32 @@
       ]
     },
     {
+      "name": "AccountantAdminRecoverAccepted",
+      "discriminator": [
+        220,
+        29,
+        118,
+        105,
+        33,
+        4,
+        51,
+        49
+      ]
+    },
+    {
+      "name": "AccountantAdminRecoverProposed",
+      "discriminator": [
+        39,
+        109,
+        100,
+        90,
+        105,
+        155,
+        47,
+        48
+      ]
+    },
+    {
       "name": "AccountantAdminUpdated",
       "discriminator": [
         206,
@@ -1101,6 +1364,19 @@
         211,
         133,
         131
+      ]
+    },
+    {
+      "name": "AccountantClosed",
+      "discriminator": [
+        237,
+        136,
+        208,
+        222,
+        83,
+        112,
+        86,
+        103
       ]
     },
     {
@@ -1299,6 +1575,19 @@
       ]
     },
     {
+      "name": "AccountantTokenAccountClosed",
+      "discriminator": [
+        216,
+        227,
+        69,
+        162,
+        178,
+        5,
+        64,
+        103
+      ]
+    },
+    {
       "name": "AccountantTokenDistributed",
       "discriminator": [
         47,
@@ -1480,6 +1769,21 @@
       "code": 6030,
       "name": "InvalidProgramData",
       "msg": "Invalid program data: Program data account does not match expected address"
+    },
+    {
+      "code": 6031,
+      "name": "TokenAccountNotEmpty",
+      "msg": "Token account is not empty"
+    },
+    {
+      "code": 6032,
+      "name": "AccountantPendingChange",
+      "msg": "Accountant has a pending change"
+    },
+    {
+      "code": 6033,
+      "name": "CooldownNotRaised",
+      "msg": "New cooldown must be strictly greater than the current value"
     }
   ],
   "types": [
@@ -1496,20 +1800,12 @@
             "type": "u64"
           },
           {
-            "name": "recipient1",
+            "name": "royalty_recipient",
             "type": "pubkey"
           },
           {
-            "name": "recipient2",
+            "name": "treasury",
             "type": "pubkey"
-          },
-          {
-            "name": "weight1",
-            "type": "u64"
-          },
-          {
-            "name": "weight2",
-            "type": "u64"
           },
           {
             "name": "manager",
@@ -1525,9 +1821,6 @@
           },
           {
             "name": "pending_manager",
-            "docs": [
-              "Pending manager change awaiting approval"
-            ],
             "type": {
               "option": {
                 "defined": {
@@ -1538,16 +1831,10 @@
           },
           {
             "name": "manager_change_cooldown_secs",
-            "docs": [
-              "Manager change cooldown period in seconds (default 48 hours)"
-            ],
             "type": "u64"
           },
           {
             "name": "pending_manager_change_cooldown",
-            "docs": [
-              "Pending manager change cooldown awaiting approval"
-            ],
             "type": {
               "option": {
                 "defined": {
@@ -1557,21 +1844,21 @@
             }
           },
           {
-            "name": "pending_recipients",
+            "name": "pending_royalty_recipient",
             "type": {
               "option": {
                 "defined": {
-                  "name": "PendingRecipients"
+                  "name": "PendingRecipient"
                 }
               }
             }
           },
           {
-            "name": "pending_split_ratio",
+            "name": "pending_treasury",
             "type": {
               "option": {
                 "defined": {
-                  "name": "PendingSplitRatio"
+                  "name": "PendingRecipient"
                 }
               }
             }
@@ -1731,6 +2018,62 @@
       }
     },
     {
+      "name": "AccountantAdminRecoverAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantAdminRecoverProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "AccountantAdminUpdated",
       "type": {
         "kind": "struct",
@@ -1769,6 +2112,26 @@
           },
           {
             "name": "token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccountantClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
             "type": "pubkey"
           },
           {
@@ -2226,6 +2589,30 @@
       }
     },
     {
+      "name": "AccountantTokenAccountClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "AccountantTokenDistributed",
       "docs": [
         "Unified event for token distribution (replaces StokenDistributed and UnderlyingDistributed)"
@@ -2326,6 +2713,14 @@
                 }
               }
             }
+          },
+          {
+            "name": "min_royalty_bps",
+            "type": "u16"
+          },
+          {
+            "name": "max_royalty_bps",
+            "type": "u16"
           }
         ]
       }
@@ -2495,6 +2890,22 @@
           },
           {
             "name": "Guardian"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingRecipient",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "eligible_at",
+            "type": "i64"
           }
         ]
       }

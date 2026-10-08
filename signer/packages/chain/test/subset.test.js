@@ -27,7 +27,7 @@ describe('the chain subset', () => {
     for (const name of SIGNER_NAMES) assert.ok(name in chain, `${name} is not exported`);
   });
 
-  it('reads the manifest and the five IDLs from signer/deploy', () => {
+  it('reads the manifest and the seven IDLs from signer/deploy', () => {
     for (const program of PROGRAMS) {
       const idl = chain.idlFor(program);
       assert.ok(Array.isArray(idl.instructions) && idl.instructions.length > 0, `${program}: no instructions`);
@@ -36,8 +36,8 @@ describe('the chain subset', () => {
       if (idl.address) assert.equal(idl.address, id, `${program}: the IDL names a different program than the manifest`);
     }
     assert.equal(chain.programId('portfolio_factory').toBase58(), 'BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts');
-    assert.throws(() => chain.idlFor('portfolio_nav'), /no IDL registered/);
-    assert.throws(() => chain.programId('not_a_program'), /pins no program ID/);
+    assert.throws(() => chain.idlFor('not_a_program'), /no IDL registered/);
+    assert.throws(() => chain.programId('not_a_program'), /has no not_a_program/);
   });
 
   it('synthesises the factory event table the IDL omits', () => {

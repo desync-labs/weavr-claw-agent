@@ -1,16 +1,74 @@
 {
-  "address": "Az9Mg3XFPPBimxHEYSSuEKpGXmohKEtcPnK6pkzCdh4D",
+  "address": "GduZJt22NSJmdJ4yZdJjLb4QQXCVtzW86zALcGSddyXf",
   "metadata": {
-    "name": "portfolio_allocator",
+    "name": "portfolio_nav",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "Custodian-signed allocation and unwind mediator for composable portfolios"
+    "description": "Permissionless on-chain portfolio NAV crank (M6 / ADR-0008)"
   },
   "instructions": [
     {
+      "name": "accept_adapter_feed_max_age",
+      "discriminator": [
+        146,
+        114,
+        225,
+        220,
+        120,
+        119,
+        209,
+        247
+      ],
+      "accounts": [
+        {
+          "name": "nav_config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "accept_governance",
+      "discriminator": [
+        248,
+        124,
+        36,
+        211,
+        224,
+        191,
+        79,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "nav_config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "accept_vault_role",
       "docs": [
-        "Claims the vault's AssetManager role for the portfolio's custodian."
+        "Incoming-program consent for vault oracle role (B.7 step 4).",
+        "Ops: `stoken::propose_roles(oracle → nav_authority)` is a human",
+        "governance batch; this ix only claims. Do not run live rotations here."
       ],
       "discriminator": [
         47,
@@ -24,21 +82,14 @@
       ],
       "accounts": [
         {
-          "name": "governance",
-          "docs": [
-            "Governance authorises the claim; the custodian PDA performs it."
-          ],
-          "signer": true
+          "name": "nav_config"
         },
         {
-          "name": "factory_config"
+          "name": "nav_authority"
         },
         {
           "name": "vault_config",
           "writable": true
-        },
-        {
-          "name": "custodian"
         },
         {
           "name": "stoken_program"
@@ -56,314 +107,89 @@
       ]
     },
     {
-      "name": "allocate",
+      "name": "close_nav_scratch",
       "docs": [
-        "Deposits custody USDC into a pool vault, then enforces the weight band."
+        "Governance or the crank payer closes a leftover `nav_scratch` PDA."
       ],
       "discriminator": [
-        64,
-        38,
-        189,
-        129,
-        24,
-        157,
-        82,
-        136
+        201,
+        107,
+        211,
+        78,
+        247,
+        31,
+        75,
+        182
       ],
       "accounts": [
         {
-          "name": "keeper",
+          "name": "signer",
+          "writable": true,
           "signer": true
         },
         {
-          "name": "factory_config",
-          "docs": [
-            "Factory-owned; `Account` checks the owner against the factory's ID,",
-            "which the shared state crate declares."
-          ]
+          "name": "nav_config"
         },
         {
           "name": "portfolio"
         },
         {
-          "name": "position_page"
+          "name": "nav_scratch",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_pool_feed",
+      "docs": [
+        "Close a pool feed PDA and return rent to governance. The factory `Pool`",
+        "must already be Halted — closing a live feed would un-mark a still-traded",
+        "pool."
+      ],
+      "discriminator": [
+        225,
+        26,
+        18,
+        148,
+        199,
+        125,
+        128,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "nav_config"
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
         },
         {
           "name": "pool"
         },
         {
-          "name": "portfolio_vault",
+          "name": "pool_feed",
           "writable": true
-        },
-        {
-          "name": "pool_vault",
-          "writable": true
-        },
-        {
-          "name": "custodian"
-        },
-        {
-          "name": "custody_underlying_account",
-          "writable": true
-        },
-        {
-          "name": "custody_shares_account",
-          "writable": true
-        },
-        {
-          "name": "pool_shares_mint",
-          "writable": true
-        },
-        {
-          "name": "underlying_mint",
-          "writable": true
-        },
-        {
-          "name": "pool_vault_underlying_account",
-          "writable": true
-        },
-        {
-          "name": "pool_deposit_whitelist",
-          "docs": [
-            "The custodian's entry on this pool's deposit whitelist.",
-            "",
-            "The core reads it from `remaining_accounts` and refuses the deposit if",
-            "it is absent, so the allocator has to forward it. Passing it explicitly",
-            "rather than relaying whatever the caller appended means the derivation",
-            "is checked here, by the program that knows which custodian and which",
-            "pool this is (F13).",
-            ""
-          ]
-        },
-        {
-          "name": "pool_accountant_shares_account",
-          "writable": true
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "stoken_program"
-        },
-        {
-          "name": "nav_scratch",
-          "docs": [
-            "`portfolio_nav` scratch PDA. Empty / uncreated = no crank in flight."
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        },
-        {
-          "name": "min_shares",
-          "type": {
-            "option": "u64"
-          }
-        }
-      ]
-    },
-    {
-      "name": "cancel_unwind",
-      "docs": [
-        "Cancels a tracked pool unwind (stoken `cancel_withdrawal` as custodian).",
-        "Guardian or governance any time; permissionless after `UNWIND_CANCEL_GRACE_SECS`."
-      ],
-      "discriminator": [
-        192,
-        14,
-        51,
-        134,
-        243,
-        95,
-        214,
-        162
-      ],
-      "accounts": [
-        {
-          "name": "actor",
-          "signer": true
-        },
-        {
-          "name": "factory_config"
-        },
-        {
-          "name": "portfolio"
-        },
-        {
-          "name": "allocator_portfolio",
-          "writable": true
-        },
-        {
-          "name": "pool_account"
-        },
-        {
-          "name": "pool_vault",
-          "writable": true
-        },
-        {
-          "name": "withdrawal_request",
-          "writable": true
-        },
-        {
-          "name": "custodian",
-          "writable": true
-        },
-        {
-          "name": "shares_mint",
-          "writable": true
-        },
-        {
-          "name": "user_shares_account",
-          "writable": true
-        },
-        {
-          "name": "accountant_shares_account",
-          "writable": true
-        },
-        {
-          "name": "vault_shares_account",
-          "writable": true
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "stoken_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "pool",
-          "type": "pubkey"
-        },
-        {
-          "name": "request_id",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "close_custodian_accounts",
-      "docs": [
-        "After the vault is sunset and no unwind is tracked: close empty",
-        "custodian ATAs, drain the custodian PDA, close the tracker."
-      ],
-      "discriminator": [
-        235,
-        59,
-        165,
-        203,
-        244,
-        48,
-        80,
-        29
-      ],
-      "accounts": [
-        {
-          "name": "recipient",
-          "docs": [
-            "Receives ATA rent and the drained custodian lamports."
-          ],
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "vault"
-        },
-        {
-          "name": "allocator_portfolio",
-          "writable": true
-        },
-        {
-          "name": "custodian",
-          "writable": true
-        },
-        {
-          "name": "shares_ata",
-          "writable": true
-        },
-        {
-          "name": "underlying_ata",
-          "writable": true
-        },
-        {
-          "name": "token_program"
         }
       ],
       "args": []
     },
     {
-      "name": "create_custodian",
+      "name": "crank_nav_page",
       "docs": [
-        "Creates the system-owned custodian PDA and the portfolio's tracker.",
-        "Callable only through an authenticated factory CPI."
+        "Permissionless paged NAV crank. Page 0 inits scratch; last page writes."
       ],
       "discriminator": [
-        148,
-        51,
-        83,
-        175,
-        91,
-        107,
-        142,
-        18
-      ],
-      "accounts": [
-        {
-          "name": "factory_authority",
-          "docs": [
-            "The factory's authority PDA. Being a signer is what proves this is a",
-            "factory CPI, and it pays for both accounts created here."
-          ],
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "vault"
-        },
-        {
-          "name": "portfolio"
-        },
-        {
-          "name": "custodian",
-          "docs": [
-            "The custodian is created by hand rather than with `#[account(init)]`.",
-            "",
-            "Anchor's `init` would assign program ownership, and the System Program",
-            "refuses to move lamports out of a program-owned account. The custodian",
-            "has to pay rent for `WithdrawalRequest` accounts, so it must stay",
-            "system-owned with zero data.",
-            ""
-          ],
-          "writable": true
-        },
-        {
-          "name": "allocator_portfolio",
-          "writable": true
-        },
-        {
-          "name": "system_program"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "init_custody",
-      "docs": [
-        "Creates a canonical custody ATA for the underlying or a pool's shares."
-      ],
-      "discriminator": [
-        122,
-        177,
-        151,
-        164,
-        169,
-        97,
-        160,
-        22
+        76,
+        219,
+        212,
+        227,
+        218,
+        147,
+        6,
+        74
       ],
       "accounts": [
         {
@@ -372,283 +198,531 @@
           "signer": true
         },
         {
-          "name": "portfolio_vault",
-          "docs": [
-            "The portfolio's vault, which names both the custodian and the",
-            "underlying mint this custody set is allowed to hold."
-          ]
+          "name": "nav_config"
         },
         {
-          "name": "custodian"
-        },
-        {
-          "name": "mint"
-        },
-        {
-          "name": "custody_account",
-          "writable": true
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "associated_token_program"
-        },
-        {
-          "name": "system_program"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "reconcile_unwind",
-      "docs": [
-        "Drops a tracked unwind whose core request has closed."
-      ],
-      "discriminator": [
-        209,
-        51,
-        219,
-        116,
-        158,
-        159,
-        251,
-        19
-      ],
-      "accounts": [
-        {
-          "name": "portfolio"
-        },
-        {
-          "name": "allocator_portfolio",
-          "writable": true
-        },
-        {
-          "name": "withdrawal_request",
-          "docs": [
-            "The core `WithdrawalRequest` this tracker entry refers to.",
-            "",
-            "Passed unchecked because the point of the instruction is to observe",
-            "whether it still exists: once the core closes it after fulfilment or",
-            "cancellation, the account is system-owned with no data. The address is",
-            "compared against the tracked one, so a substituted account cannot be",
-            "used to retire a live request.",
-            ""
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "pool",
-          "type": "pubkey"
-        }
-      ]
-    },
-    {
-      "name": "request_unwind",
-      "docs": [
-        "Asks a pool vault to redeem shares, recording why the unwind is allowed."
-      ],
-      "discriminator": [
-        40,
-        75,
-        64,
-        142,
-        85,
-        92,
-        122,
-        52
-      ],
-      "accounts": [
-        {
-          "name": "keeper",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "factory_config"
+          "name": "nav_authority"
         },
         {
           "name": "portfolio"
         },
         {
-          "name": "position_page"
+          "name": "allocator_portfolio"
         },
-        {
-          "name": "pool"
-        },
-        {
-          "name": "portfolio_vault"
-        },
-        {
-          "name": "pool_vault",
-          "writable": true
-        },
-        {
-          "name": "custodian",
-          "docs": [
-            "core request, which is the reason it must stay system-owned."
-          ],
-          "writable": true
-        },
-        {
-          "name": "allocator_portfolio",
-          "writable": true
-        },
-        {
-          "name": "custody_shares_account",
-          "writable": true
-        },
-        {
-          "name": "pool_shares_mint",
-          "writable": true
-        },
-        {
-          "name": "withdrawal_request",
-          "writable": true
-        },
-        {
-          "name": "underlying_mint"
-        },
-        {
-          "name": "pool_vault_shares_account",
-          "writable": true
-        },
-        {
-          "name": "token_program"
-        },
-        {
-          "name": "system_program"
-        },
-        {
-          "name": "stoken_program"
-        },
-        {
-          "name": "nav_scratch",
-          "docs": [
-            "`portfolio_nav` scratch PDA. Empty / uncreated = no crank in flight."
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "shares",
-          "type": "u64"
-        },
-        {
-          "name": "min_amount_out",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "return_to_vault",
-      "docs": [
-        "Moves custody USDC back to the vault. Permissionless by design."
-      ],
-      "discriminator": [
-        250,
-        201,
-        58,
-        239,
-        58,
-        7,
-        80,
-        115
-      ],
-      "accounts": [
         {
           "name": "vault_config",
           "writable": true
         },
         {
-          "name": "custodian"
-        },
-        {
-          "name": "vault_underlying_account",
-          "writable": true
-        },
-        {
-          "name": "custodian_underlying_account",
+          "name": "custodian",
           "docs": [
-            "The custodian's USDC ATA. The core checks the mint; the ownership check",
-            "here is what stops a caller draining custody to an account they control."
-          ],
+            "The portfolio vault's custodian — the allocator PDA recorded as",
+            "`vault_config.asset_manager`. Bound here so a permissionless caller",
+            "cannot pass a custodian they control and have the crank value",
+            "attacker-owned zero-balance accounts as portfolio custody. The per-leg",
+            "and USDC custody accounts are additionally pinned to this custodian's",
+            "canonical ATAs in `nav_scratch::handler`.",
+            ""
+          ]
+        },
+        {
+          "name": "usdc_custody"
+        },
+        {
+          "name": "nav_scratch",
           "writable": true
+        },
+        {
+          "name": "position_page",
+          "docs": [
+            "Factory-owned page. PDA is checked against `nav_config.factory_program`."
+          ]
+        },
+        {
+          "name": "stoken_program"
         },
         {
           "name": "token_program"
         },
         {
-          "name": "stoken_program"
+          "name": "system_program"
+        },
+        {
+          "name": "clock"
         }
       ],
       "args": [
         {
-          "name": "amount",
-          "type": "u64"
+          "name": "page_index",
+          "type": "u16"
         }
       ]
     },
     {
-      "name": "settle_turnover_fee",
+      "name": "crank_pool",
+      "docs": [
+        "Permissionless pool crank: Pyth × escrow balances, then `stoken::update_price`",
+        "as `nav_authority`. Inside cooldown: no CPI (`CrankPoolNoop` / `CrankPoolHeldCooldown`)."
+      ],
       "discriminator": [
-        115,
-        167,
-        111,
-        194,
-        39,
-        128,
-        206,
-        138
+        102,
+        96,
+        84,
+        85,
+        164,
+        83,
+        89,
+        162
       ],
       "accounts": [
         {
-          "name": "caller",
+          "name": "nav_config"
+        },
+        {
+          "name": "nav_authority"
+        },
+        {
+          "name": "pool",
+          "docs": [
+            "Factory `Pool` (owner = the pinned factory, `composable_portfolios_state::ID`).",
+            "Binds this crank to the vault/mint the feed-map seed actually belongs to",
+            "— not an unbound pubkey."
+          ]
+        },
+        {
+          "name": "pool_feed",
+          "writable": true
+        },
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "price_update",
+          "docs": [
+            "— rec2 by default (SDK Owner is rec5), or the governance-set adapter."
+          ]
+        },
+        {
+          "name": "escrow_usdc"
+        },
+        {
+          "name": "custody"
+        },
+        {
+          "name": "custody_mint"
+        },
+        {
+          "name": "stoken_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "crank_pool_external",
+      "docs": [
+        "H-5 Layer C. Reads `external_assets_usd` from the adapter feed derived",
+        "from `pool` (posted through `put_price_guarded`), adds escrow USDC,",
+        "applies Layer B / A′, CPIs `update_price` as `nav_authority`.",
+        "",
+        "Ops: `propose_roles(oracle → nav_authority)` on ETH vaults is a human",
+        "governance batch. Do not run live rotations from this program."
+      ],
+      "discriminator": [
+        5,
+        57,
+        14,
+        139,
+        82,
+        203,
+        188,
+        52
+      ],
+      "accounts": [
+        {
+          "name": "nav_config"
+        },
+        {
+          "name": "nav_authority"
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "pool_feed",
+          "writable": true
+        },
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "price_update",
+          "docs": [
+            "Owner must be `nav_config.expected_price_owner()` (the adapter after",
+            "`set_price_source`). Posted through `put_price_guarded` so Layer A applies."
+          ]
+        },
+        {
+          "name": "escrow_usdc"
+        },
+        {
+          "name": "stoken_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "clock"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Creates `NavConfig` and the system-owned `nav_authority` PDA."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
           "signer": true
         },
         {
-          "name": "factory_config"
-        },
-        {
-          "name": "portfolio"
-        },
-        {
-          "name": "allocator_portfolio",
+          "name": "nav_config",
           "writable": true
         },
         {
-          "name": "portfolio_vault",
-          "writable": true
-        },
-        {
-          "name": "custodian"
-        },
-        {
-          "name": "shares_mint",
-          "writable": true
-        },
-        {
-          "name": "accountant"
-        },
-        {
-          "name": "accountant_shares_account",
-          "writable": true
+          "name": "nav_authority"
         },
         {
           "name": "underlying_mint"
         },
         {
-          "name": "token_program"
+          "name": "program_data"
         },
         {
-          "name": "stoken_program"
-        },
-        {
-          "name": "nav_scratch"
+          "name": "system_program"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "factory_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "allocator_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "governance",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_adapter_feed_max_age",
+      "docs": [
+        "Propose a new adapter-feed max age. Accept after `ADAPTER_FEED_POLICY_DELAY_SECS`."
+      ],
+      "discriminator": [
+        233,
+        46,
+        60,
+        247,
+        46,
+        20,
+        159,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "nav_config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_governance",
+      "discriminator": [
+        129,
+        138,
+        213,
+        117,
+        56,
+        242,
+        208,
+        54
+      ],
+      "accounts": [
+        {
+          "name": "nav_config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_governance",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "raise_governance_rotation_delay",
+      "discriminator": [
+        131,
+        0,
+        142,
+        206,
+        209,
+        212,
+        64,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "nav_config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_delay_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_pool_feed",
+      "docs": [
+        "Create or replace the Pyth feed ids for `pool`. Signer must be `NavConfig.governance`.",
+        "`kamino_vault` default (zero) is Jupiter. A catalogue vault pubkey marks",
+        "Kamino so `crank_pool` fail-closes without that remaining account."
+      ],
+      "discriminator": [
+        108,
+        50,
+        143,
+        86,
+        145,
+        29,
+        4,
+        153
+      ],
+      "accounts": [
+        {
+          "name": "nav_config"
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "pool_feed",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "pyth_feed_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "rr_feed_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "kamino_vault",
+          "type": "pubkey"
+        },
+        {
+          "name": "kamino_underlying_decimals",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "set_pool_feed_guards",
+      "discriminator": [
+        156,
+        177,
+        59,
+        246,
+        1,
+        12,
+        58,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "nav_config"
+        },
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool"
+        },
+        {
+          "name": "pool_feed",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "ratio_source",
+          "type": {
+            "option": {
+              "defined": {
+                "name": "RatioSource"
+              }
+            }
+          }
+        },
+        {
+          "name": "ratio_agree_bps",
+          "type": "u16"
+        },
+        {
+          "name": "max_mark_step_bps",
+          "type": "u16"
+        },
+        {
+          "name": "step_window_secs",
+          "type": "u64"
+        },
+        {
+          "name": "max_catchup_bps",
+          "type": "u16"
+        },
+        {
+          "name": "hold_above_bps",
+          "type": "u16"
+        },
+        {
+          "name": "allow_jump_until",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "set_price_source",
+      "docs": [
+        "Point every PriceUpdate owner check at `new_source`. Passing rec2",
+        "explicitly goes back to the real receiver; the default pubkey is",
+        "refused (default-in-state already means rec2). `price_source_program`",
+        "must be the named program and executable — a typo'd or non-program",
+        "source would brick every crank. Reallocs a pre-upgrade config to the",
+        "current length, rent topped up by governance."
+      ],
+      "discriminator": [
+        57,
+        150,
+        166,
+        254,
+        90,
+        79,
+        215,
+        64
+      ],
+      "accounts": [
+        {
+          "name": "nav_config",
+          "writable": true
+        },
+        {
+          "name": "governance",
+          "docs": [
+            "Pays the realloc rent top-up when the live account is short."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "price_source_program",
+          "docs": [
+            "or non-program source would brick every crank."
+          ]
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_source",
+          "type": "pubkey"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -666,16 +740,29 @@
       ]
     },
     {
-      "name": "FactoryConfig",
+      "name": "NavConfig",
       "discriminator": [
-        29,
-        197,
-        255,
-        232,
-        22,
-        128,
-        67,
-        26
+        41,
+        162,
+        116,
+        82,
+        164,
+        60,
+        207,
+        158
+      ]
+    },
+    {
+      "name": "NavScratch",
+      "discriminator": [
+        13,
+        88,
+        68,
+        200,
+        25,
+        76,
+        227,
+        167
       ]
     },
     {
@@ -689,6 +776,19 @@
         177,
         109,
         188
+      ]
+    },
+    {
+      "name": "PoolFeedConfig",
+      "discriminator": [
+        61,
+        158,
+        247,
+        116,
+        6,
+        171,
+        207,
+        90
       ]
     },
     {
@@ -729,330 +829,33 @@
         119,
         77
       ]
-    },
-    {
-      "name": "WithdrawalRequest",
-      "discriminator": [
-        242,
-        88,
-        147,
-        173,
-        182,
-        62,
-        229,
-        193
-      ]
-    }
-  ],
-  "events": [
-    {
-      "name": "Allocated",
-      "discriminator": [
-        146,
-        11,
-        194,
-        76,
-        4,
-        220,
-        226,
-        43
-      ]
-    },
-    {
-      "name": "CustodianAccountsClosed",
-      "discriminator": [
-        143,
-        200,
-        173,
-        35,
-        68,
-        224,
-        255,
-        235
-      ]
-    },
-    {
-      "name": "CustodianCreated",
-      "discriminator": [
-        159,
-        7,
-        51,
-        160,
-        8,
-        10,
-        220,
-        92
-      ]
-    },
-    {
-      "name": "CustodyInitialized",
-      "discriminator": [
-        3,
-        14,
-        210,
-        151,
-        24,
-        131,
-        120,
-        20
-      ]
-    },
-    {
-      "name": "ReturnedToVault",
-      "discriminator": [
-        3,
-        187,
-        26,
-        175,
-        159,
-        55,
-        19,
-        188
-      ]
-    },
-    {
-      "name": "UnwindCancelled",
-      "discriminator": [
-        148,
-        40,
-        203,
-        234,
-        59,
-        9,
-        254,
-        99
-      ]
-    },
-    {
-      "name": "UnwindFloorClamped",
-      "discriminator": [
-        206,
-        189,
-        12,
-        44,
-        122,
-        145,
-        16,
-        199
-      ]
-    },
-    {
-      "name": "UnwindReconciled",
-      "discriminator": [
-        219,
-        110,
-        128,
-        180,
-        61,
-        143,
-        245,
-        214
-      ]
-    },
-    {
-      "name": "UnwindRequested",
-      "discriminator": [
-        25,
-        205,
-        160,
-        181,
-        17,
-        2,
-        178,
-        77
-      ]
-    },
-    {
-      "name": "VaultRoleAccepted",
-      "discriminator": [
-        36,
-        37,
-        123,
-        162,
-        181,
-        20,
-        129,
-        34
-      ]
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "Unauthorized",
-      "msg": "Unauthorized"
-    },
-    {
-      "code": 6001,
-      "name": "KeeperRiskPaused",
-      "msg": "Keeper risk paths are paused"
-    },
-    {
-      "code": 6002,
-      "name": "WrongPortfolioState",
-      "msg": "Portfolio is not in the required state"
-    },
-    {
-      "code": 6003,
-      "name": "InvalidVaultBranch",
-      "msg": "Vault branch does not match the supplied accounts"
-    },
-    {
-      "code": 6004,
-      "name": "PoolNotInTargets",
-      "msg": "Pool is not among the portfolio's targets"
-    },
-    {
-      "code": 6005,
-      "name": "PoolNotActive",
-      "msg": "Pool is not active"
-    },
-    {
-      "code": 6006,
-      "name": "VaultPaused",
-      "msg": "Vault is paused"
-    },
-    {
-      "code": 6007,
-      "name": "PortfolioPriceStale",
-      "msg": "Portfolio price is stale"
-    },
-    {
-      "code": 6008,
-      "name": "PortfolioPricePending",
-      "msg": "Portfolio has an unaccepted pending price"
-    },
-    {
-      "code": 6009,
-      "name": "PoolPriceStale",
-      "msg": "A required pool price is stale"
-    },
-    {
-      "code": 6010,
-      "name": "PoolPricePending",
-      "msg": "A required pool has an unaccepted pending price"
-    },
-    {
-      "code": 6011,
-      "name": "WeightBandExceeded",
-      "msg": "Allocation would push the leg outside its weight band"
-    },
-    {
-      "code": 6012,
-      "name": "InsufficientCustodyBalance",
-      "msg": "Custody balance is insufficient"
-    },
-    {
-      "code": 6013,
-      "name": "InvalidCustodyAccount",
-      "msg": "Custody account is not the canonical one"
-    },
-    {
-      "code": 6014,
-      "name": "InvalidRecipientAccount",
-      "msg": "Recipient account is not the canonical one"
-    },
-    {
-      "code": 6015,
-      "name": "InvalidWithdrawalRequest",
-      "msg": "Withdrawal request account is invalid"
-    },
-    {
-      "code": 6016,
-      "name": "InvalidMint",
-      "msg": "Mint is neither the underlying nor a registered pool's shares mint"
-    },
-    {
-      "code": 6017,
-      "name": "InvalidAllocatorRoleClaim",
-      "msg": "Allocator may only claim the AssetManager role"
-    },
-    {
-      "code": 6018,
-      "name": "UnwindNotJustified",
-      "msg": "Unwind is not justified by targets or pending withdrawals"
-    },
-    {
-      "code": 6019,
-      "name": "UnwindExceedsTickCap",
-      "msg": "Unwind exceeds the per-tick share cap"
-    },
-    {
-      "code": 6020,
-      "name": "PoolWithdrawalAlreadyPending",
-      "msg": "A withdrawal is already pending for this pool"
-    },
-    {
-      "code": 6021,
-      "name": "WithdrawalStillPending",
-      "msg": "Tracked withdrawal is still pending"
-    },
-    {
-      "code": 6022,
-      "name": "CustodianNotWhitelisted",
-      "msg": "Custodian is not on the pool's deposit whitelist"
-    },
-    {
-      "code": 6023,
-      "name": "MathOverflow",
-      "msg": "Arithmetic overflow"
-    },
-    {
-      "code": 6024,
-      "name": "PendingTargetsRequired",
-      "msg": "Effective pending targets account is required"
-    },
-    {
-      "code": 6025,
-      "name": "ApplyInFlight",
-      "msg": "A paged apply is in flight; wait for it to complete"
-    },
-    {
-      "code": 6026,
-      "name": "UnwindBelowMinimum",
-      "msg": "Unwind is below the dust floor and is not the full remainder"
-    },
-    {
-      "code": 6027,
-      "name": "NavInFlight",
-      "msg": "A paged NAV crank is in flight; wait for it to complete or restart"
-    },
-    {
-      "code": 6028,
-      "name": "LedgerRequired",
-      "msg": "Unwind ledger is required for pending-redemption unwinds"
-    },
-    {
-      "code": 6029,
-      "name": "UnwindExceedsShortfall",
-      "msg": "Unwind value exceeds the remaining redemption shortfall"
     }
   ],
   "types": [
     {
-      "name": "Allocated",
+      "name": "AdapterFeedMaxAgeAccepted",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "portfolio",
-            "type": "pubkey"
-          },
+            "name": "secs",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AdapterFeedMaxAgeProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
-            "name": "pool",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount_in",
+            "name": "secs",
             "type": "u64"
           },
           {
-            "name": "shares_out",
-            "type": "u64"
-          },
-          {
-            "name": "pool_price",
-            "type": "u64"
+            "name": "proposed_at",
+            "type": "i64"
           }
         ]
       }
@@ -1079,209 +882,189 @@
                 }
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CrankHeldDeviation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
           },
           {
-            "name": "turnover_pending_underlying",
+            "name": "last_price",
             "type": "u64"
           },
           {
-            "name": "turnover_fee_period_start",
+            "name": "target",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CrankHeldRatio",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "last_price",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CrankHeldTwap",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "last_price",
+            "type": "u64"
+          },
+          {
+            "name": "target",
+            "type": "u64"
+          },
+          {
+            "name": "twap",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CrankPoolHeldCooldown",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "live_price",
+            "type": "u64"
+          },
+          {
+            "name": "computed_price",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CrankPoolNoop",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CrankStepClamped",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "last_price",
+            "type": "u64"
+          },
+          {
+            "name": "published",
+            "type": "u64"
+          },
+          {
+            "name": "target",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GovernanceAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old",
+            "type": "pubkey"
+          },
+          {
+            "name": "new",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GovernanceProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pending",
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_at",
             "type": "i64"
           },
           {
-            "name": "turnover_fee_charged_in_period",
+            "name": "delay_secs",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "CreationPolicy",
+      "name": "GovernanceRotationDelayRaised",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "max_deposit_fee_bps",
-            "type": "u16"
-          },
-          {
-            "name": "max_withdraw_fee_bps",
-            "type": "u16"
-          },
-          {
-            "name": "max_mgmt_fee_bps",
-            "type": "u16"
-          },
-          {
-            "name": "min_spread_bps",
-            "type": "u16"
-          },
-          {
-            "name": "min_idle_target_bps",
-            "type": "u16"
-          },
-          {
-            "name": "max_legs",
-            "docs": [
-              "Stored as `u16` so v1 can raise to 32 without a type change.",
-              "Legs live on `PositionPage` PDAs, not on this header."
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "min_drift_band_bps",
-            "type": "u16"
-          },
-          {
-            "name": "max_drift_band_bps",
-            "type": "u16"
-          },
-          {
-            "name": "per_portfolio_max_total_shares",
+            "name": "old",
             "type": "u64"
           },
           {
-            "name": "max_idle_buffer",
-            "docs": [
-              "Becomes `max_total_idle` \u2014 undeployed cash only, not a TVL cap."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "min_rebalance_delay_secs",
-            "type": "u64"
-          },
-          {
-            "name": "max_unwind_shares_per_tick",
+            "name": "new",
             "type": "u64"
           }
         ]
       }
     },
     {
-      "name": "CreationPolicyProfile",
+      "name": "NavConfig",
       "docs": [
-        "Append-only creation-policy tail on `FactoryConfig`.",
-        "",
-        "Lives here \u2014 not inside `CreationPolicy` \u2014 because `policy` sits in the",
-        "middle of the account. New fields must append so a NOW-era config still",
-        "deserializes (zeros \u2192 demo inherit)."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "price_update_cooldown_secs",
-            "type": "u64"
-          },
-          {
-            "name": "price_acceptance_cooldown_secs",
-            "type": "u64"
-          },
-          {
-            "name": "config_cooldown_secs",
-            "type": "u64"
-          },
-          {
-            "name": "emergency_withdrawal_cooldown_secs",
-            "type": "u64"
-          },
-          {
-            "name": "role_change_cooldown_secs",
-            "type": "u64"
-          },
-          {
-            "name": "fee_change_cooldown_secs",
-            "type": "u64"
-          },
-          {
-            "name": "downside_cap_bps_by_class",
-            "type": {
-              "array": [
-                "u16",
-                3
-              ]
-            }
-          },
-          {
-            "name": "max_price_staleness_secs",
-            "docs": [
-              "Vault fuse. 0 inherits `DEMO_MAX_PRICE_STALENESS_SECS` (300)."
-            ],
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "CustodianAccountsClosed",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "custodian",
-            "type": "pubkey"
-          },
-          {
-            "name": "recipient",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "CustodianCreated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "portfolio",
-            "type": "pubkey"
-          },
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "custodian",
-            "type": "pubkey"
-          },
-          {
-            "name": "allocator_portfolio",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "CustodyInitialized",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "custodian",
-            "type": "pubkey"
-          },
-          {
-            "name": "mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "ata",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "FactoryConfig",
-      "docs": [
-        "Account traits are hand-implemented so a shorter NOW-era body (no",
-        "`profile` tail) still deserializes. Fresh accounts are `8 + INIT_SPACE`."
+        "Account traits are hand-implemented instead of `#[account]` so a shorter",
+        "append-only body (no trailing `price_source`) still deserializes. Fresh",
+        "accounts are `8 + INIT_SPACE`. Discriminator, owner, and serialize match",
+        "the macro."
       ],
       "type": {
         "kind": "struct",
@@ -1295,31 +1078,7 @@
             "type": "u8"
           },
           {
-            "name": "governance",
-            "type": "pubkey"
-          },
-          {
-            "name": "guardian",
-            "type": "pubkey"
-          },
-          {
-            "name": "treasury",
-            "type": "pubkey"
-          },
-          {
-            "name": "keeper_processor",
-            "type": "pubkey"
-          },
-          {
-            "name": "oracle_authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "stoken_program",
-            "type": "pubkey"
-          },
-          {
-            "name": "accountant_program",
+            "name": "factory_program",
             "type": "pubkey"
           },
           {
@@ -1327,104 +1086,41 @@
             "type": "pubkey"
           },
           {
-            "name": "asset_manager_escrow_program",
-            "type": "pubkey"
-          },
-          {
             "name": "underlying_mint",
             "type": "pubkey"
           },
           {
-            "name": "policy",
-            "type": {
-              "defined": {
-                "name": "CreationPolicy"
-              }
-            }
-          },
-          {
-            "name": "factory_tx_margin_lamports",
+            "name": "governance",
             "docs": [
-              "Read by `required_factory_rent()`; never sourced off-chain."
+              "Copied at `initialize`; `set_pool_feed` / `close_pool_feed` require this signer."
             ],
-            "type": "u64"
-          },
-          {
-            "name": "custodian_tx_margin_lamports",
-            "docs": [
-              "Read by `required_custodian_reserve()`."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "portfolios_created",
-            "type": "u64"
-          },
-          {
-            "name": "pools_registered",
-            "type": "u32"
-          },
-          {
-            "name": "creation_paused",
-            "type": "bool"
-          },
-          {
-            "name": "keeper_risk_paused",
-            "docs": [
-              "Blocks deposits/allocate/unwind/fees; never fulfilment or return."
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "deployed_risk_budget",
-            "docs": [
-              "Monitoring target; hard exposure bounds are per-pool caps."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "profile",
-            "docs": [
-              "I-1 / M-5. Absent on NOW-era accounts (read as zero \u2192 demo inherit)."
-            ],
-            "type": {
-              "defined": {
-                "name": "CreationPolicyProfile"
-              }
-            }
-          },
-          {
-            "name": "policy_delay_secs",
-            "docs": [
-              "ADR-0222. 0 = accept is immediate. Absent on pre-0222 accounts."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "pending_policy",
-            "type": {
-              "defined": {
-                "name": "CreationPolicy"
-              }
-            }
-          },
-          {
-            "name": "pending_policy_at",
-            "type": "i64"
-          },
-          {
-            "name": "pending_oracle",
             "type": "pubkey"
           },
           {
-            "name": "pending_oracle_at",
+            "name": "price_source",
+            "docs": [
+              "Program expected to own every PriceUpdate account. Default = rec2",
+              "(`PYTH_RECEIVER_PROGRAM_ID`); `set_price_source` writes an explicit one."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "adapter_feed_max_age_secs",
+            "docs": [
+              "0 = `DEFAULT_ADAPTER_FEED_MAX_AGE_SECS` (300). Official Pyth pull stays 60."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_adapter_feed_max_age_secs",
+            "type": "u64"
+          },
+          {
+            "name": "pending_adapter_feed_max_age_at",
             "type": "i64"
           },
           {
             "name": "pending_governance",
-            "docs": [
-              "ADR-0291 / U10. Default pubkey = none pending."
-            ],
             "type": "pubkey"
           },
           {
@@ -1433,10 +1129,123 @@
           },
           {
             "name": "governance_rotation_delay_secs",
-            "docs": [
-              "0 = accept is immediate (same as `policy_delay_secs`)."
-            ],
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NavCranked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "portfolio",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "legs",
+            "type": "u16"
+          },
+          {
+            "name": "pending_unwinds",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NavInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nav_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "underlying_mint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NavScratch",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "portfolio",
+            "type": "pubkey"
+          },
+          {
+            "name": "next_page",
+            "type": "u16"
+          },
+          {
+            "name": "acc_assets",
+            "type": "u128"
+          },
+          {
+            "name": "started_slot",
+            "type": "u64"
+          },
+          {
+            "name": "payer",
+            "docs": [
+              "Crank payer; `close_nav_scratch` may refund here."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "snap_total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "snap_total_idle",
+            "type": "u64"
+          },
+          {
+            "name": "snap_usdc_custody",
+            "type": "u64"
+          },
+          {
+            "name": "snap_book_seq",
+            "type": "u64"
+          },
+          {
+            "name": "snap_unwind_fp",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "NavScratchClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "portfolio",
+            "type": "pubkey"
+          },
+          {
+            "name": "closed_by",
+            "type": "pubkey"
           }
         ]
       }
@@ -1719,10 +1528,6 @@
           {
             "name": "shares_requested",
             "type": "u64"
-          },
-          {
-            "name": "turnover_underlying",
-            "type": "u64"
           }
         ]
       }
@@ -1920,6 +1725,184 @@
           {
             "name": "registered_at",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolFeedClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolFeedConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "pyth_feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "rr_feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "kamino_vault",
+            "docs": [
+              "Catalogue Kamino vault. Default = not Kamino (Jupiter 1.0-share path)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "kamino_underlying_decimals",
+            "docs": [
+              "Underlying mint decimals for the converted Kamino amount. 0 = unused",
+              "(Jupiter path uses the custody mint's decimals)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "ratio_source",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "RatioSource"
+                }
+              }
+            }
+          },
+          {
+            "name": "ratio_agree_bps",
+            "type": "u16"
+          },
+          {
+            "name": "max_mark_step_bps",
+            "type": "u16"
+          },
+          {
+            "name": "step_window_secs",
+            "type": "u64"
+          },
+          {
+            "name": "max_catchup_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hold_above_bps",
+            "type": "u16"
+          },
+          {
+            "name": "allow_jump_until",
+            "type": "i64"
+          },
+          {
+            "name": "budget_bps",
+            "type": "u64"
+          },
+          {
+            "name": "last_accrual_ts",
+            "type": "i64"
+          },
+          {
+            "name": "twap_max_dev_bps",
+            "type": "u16"
+          },
+          {
+            "name": "twap_next",
+            "type": "u8"
+          },
+          {
+            "name": "twap_slots",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "TwapCheckpoint"
+                  }
+                },
+                6
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolFeedGuardsSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_mark_step_bps",
+            "type": "u16"
+          },
+          {
+            "name": "hold_above_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolFeedSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "pyth_feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "rr_feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "kamino_vault",
+            "type": "pubkey"
           }
         ]
       }
@@ -2126,17 +2109,29 @@
       }
     },
     {
-      "name": "ReturnedToVault",
+      "name": "PriceSourceSet",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "vault",
+            "name": "price_source",
             "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RatioSource",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "kind",
+            "type": "u8"
           },
           {
-            "name": "amount",
-            "type": "u64"
+            "name": "account",
+            "type": "pubkey"
           }
         ]
       }
@@ -2171,115 +2166,16 @@
       }
     },
     {
-      "name": "UnwindCancelled",
+      "name": "TwapCheckpoint",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "portfolio",
-            "type": "pubkey"
+            "name": "ts",
+            "type": "i64"
           },
           {
-            "name": "pool",
-            "type": "pubkey"
-          },
-          {
-            "name": "request",
-            "type": "pubkey"
-          },
-          {
-            "name": "request_id",
-            "type": "u64"
-          },
-          {
-            "name": "cancelled_by",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "UnwindFloorClamped",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "pool",
-            "type": "pubkey"
-          },
-          {
-            "name": "policy_floor",
-            "type": "u64"
-          },
-          {
-            "name": "vault_cap",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "UnwindReconciled",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "portfolio",
-            "type": "pubkey"
-          },
-          {
-            "name": "pool",
-            "type": "pubkey"
-          },
-          {
-            "name": "request",
-            "type": "pubkey"
-          },
-          {
-            "name": "request_id",
-            "type": "u64"
-          },
-          {
-            "name": "turnover_underlying",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "UnwindRequested",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "portfolio",
-            "type": "pubkey"
-          },
-          {
-            "name": "pool",
-            "type": "pubkey"
-          },
-          {
-            "name": "shares",
-            "type": "u64"
-          },
-          {
-            "name": "min_amount_out",
-            "type": "u64"
-          },
-          {
-            "name": "justification",
-            "docs": [
-              "Exactly one reason, per spec 5.3."
-            ],
-            "type": "u8"
-          },
-          {
-            "name": "request_id",
-            "type": "u64"
-          },
-          {
-            "name": "turnover_underlying",
+            "name": "price",
             "type": "u64"
           }
         ]
@@ -2683,139 +2579,6 @@
                 }
               }
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "VaultRoleAccepted",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "custodian",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
-      "name": "WithdrawalRequest",
-      "docs": [
-        "Withdrawal request state - stored as individual accounts"
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "user",
-            "type": "pubkey"
-          },
-          {
-            "name": "request_id",
-            "type": "u64"
-          },
-          {
-            "name": "shares",
-            "type": "u64"
-          },
-          {
-            "name": "amount_due",
-            "type": "u64"
-          },
-          {
-            "name": "min_amount_out",
-            "type": "u64"
-          },
-          {
-            "name": "fee_shares",
-            "type": "u64"
-          },
-          {
-            "name": "price_at_request",
-            "type": "u64"
-          },
-          {
-            "name": "created_at",
-            "type": "i64"
-          },
-          {
-            "name": "status",
-            "type": {
-              "defined": {
-                "name": "WithdrawalRequestStatus"
-              }
-            }
-          },
-          {
-            "name": "processed_at",
-            "type": {
-              "option": "i64"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "WithdrawalRequestStatus",
-      "docs": [
-        "Withdrawal request status"
-      ],
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Pending"
-          },
-          {
-            "name": "Fulfilled"
-          },
-          {
-            "name": "Cancelled"
-          }
-        ]
-      }
-    },
-    {
-      "name": "TurnoverFeeSettled",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "portfolio",
-            "type": "pubkey"
-          },
-          {
-            "name": "turnover_underlying",
-            "type": "u64"
-          },
-          {
-            "name": "charged_underlying",
-            "type": "u64"
-          },
-          {
-            "name": "clipped_underlying",
-            "type": "u64"
-          },
-          {
-            "name": "turnover_fee_bps",
-            "type": "u16"
-          },
-          {
-            "name": "period_start",
-            "type": "i64"
-          },
-          {
-            "name": "rolled",
-            "type": "bool"
           }
         ]
       }

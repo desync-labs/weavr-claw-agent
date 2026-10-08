@@ -226,6 +226,36 @@
       "args": []
     },
     {
+      "name": "accept_recover_admin",
+      "docs": [
+        "Upgrade-authority escape hatch (accept after delay)."
+      ],
+      "discriminator": [
+        232,
+        56,
+        120,
+        195,
+        67,
+        193,
+        207,
+        10
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "upgrade_authority",
+          "signer": true
+        },
+        {
+          "name": "program_data"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "accept_role_assignment",
       "docs": [
         "Claim a single pending role after cooldown (incoming holder must sign /",
@@ -390,7 +420,7 @@
     {
       "name": "add_user_to_deposit_whitelist",
       "docs": [
-        "Add a user to the vault deposit whitelist"
+        "Add a user to the vault deposit whitelist (manager or processor)"
       ],
       "discriminator": [
         60,
@@ -413,6 +443,10 @@
         },
         {
           "name": "manager",
+          "docs": [
+            "Manager or processor. Account name stays `manager` so the IDL slot",
+            "does not move; the processor is the keeper on factory vaults."
+          ],
           "writable": true,
           "signer": true
         },
@@ -701,6 +735,72 @@
         {
           "name": "manager",
           "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_vault",
+      "docs": [
+        "Close a sunset vault with zero supply, idle, pending withdrawals and custody."
+      ],
+      "discriminator": [
+        141,
+        103,
+        17,
+        126,
+        72,
+        75,
+        29,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_vault_token_account",
+      "docs": [
+        "Close an empty vault-owned token account. Manager. Vault paused or sunset."
+      ],
+      "discriminator": [
+        124,
+        142,
+        69,
+        139,
+        94,
+        176,
+        190,
+        56
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "manager",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
         }
       ],
       "args": []
@@ -1533,6 +1633,42 @@
       ]
     },
     {
+      "name": "propose_recover_admin",
+      "docs": [
+        "Upgrade-authority escape hatch (propose). Delay is",
+        "`Config.admin_change_cooldown_secs` (demo may set 1s)."
+      ],
+      "discriminator": [
+        103,
+        199,
+        237,
+        254,
+        47,
+        208,
+        104,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "upgrade_authority",
+          "signer": true
+        },
+        {
+          "name": "program_data"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "propose_roles",
       "docs": [
         "Propose vault role changes"
@@ -1703,6 +1839,38 @@
           "type": {
             "option": "u16"
           }
+        }
+      ]
+    },
+    {
+      "name": "raise_admin_cooldown",
+      "docs": [
+        "Immediate raise of the global admin-change cooldown. Refuses equal or lower."
+      ],
+      "discriminator": [
+        68,
+        122,
+        248,
+        13,
+        141,
+        69,
+        94,
+        54
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_cooldown_secs",
+          "type": "u64"
         }
       ]
     },
@@ -2193,6 +2361,55 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "accrue_turnover_fee",
+      "docs": [
+        "Mint a turnover fee, in vault shares, to the accountant. Asset manager only."
+      ],
+      "discriminator": [
+        225,
+        128,
+        45,
+        30,
+        179,
+        86,
+        53,
+        71
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "asset_manager",
+          "signer": true
+        },
+        {
+          "name": "accountant"
+        },
+        {
+          "name": "accountant_s_token_account",
+          "writable": true
+        },
+        {
+          "name": "shares_mint",
+          "writable": true
+        },
+        {
+          "name": "underlying_mint"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_underlying",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -2391,6 +2608,32 @@
         152,
         30,
         67
+      ]
+    },
+    {
+      "name": "STokenAdminRecoverAccepted",
+      "discriminator": [
+        119,
+        140,
+        252,
+        244,
+        166,
+        232,
+        97,
+        107
+      ]
+    },
+    {
+      "name": "STokenAdminRecoverProposed",
+      "discriminator": [
+        113,
+        241,
+        145,
+        165,
+        149,
+        207,
+        172,
+        134
       ]
     },
     {
@@ -2810,6 +3053,19 @@
       ]
     },
     {
+      "name": "STokenVaultClosed",
+      "discriminator": [
+        49,
+        61,
+        103,
+        60,
+        102,
+        78,
+        233,
+        186
+      ]
+    },
+    {
       "name": "STokenVaultInitialized",
       "discriminator": [
         239,
@@ -2833,6 +3089,19 @@
         73,
         228,
         92
+      ]
+    },
+    {
+      "name": "STokenVaultTokenAccountClosed",
+      "discriminator": [
+        155,
+        74,
+        126,
+        113,
+        81,
+        161,
+        126,
+        173
       ]
     },
     {
@@ -3589,6 +3858,41 @@
       "code": 6121,
       "name": "InvalidProgramData",
       "msg": "Invalid program data: Program data account does not match expected address"
+    },
+    {
+      "code": 6122,
+      "name": "TokenAccountNotEmpty",
+      "msg": "Token account is not empty"
+    },
+    {
+      "code": 6123,
+      "name": "VaultNotPausedOrSunset",
+      "msg": "Vault is not paused or sunset"
+    },
+    {
+      "code": 6124,
+      "name": "VaultNotSunset",
+      "msg": "Vault is not sunset"
+    },
+    {
+      "code": 6125,
+      "name": "PendingWithdrawalsRemain",
+      "msg": "Pending withdrawals remain"
+    },
+    {
+      "code": 6126,
+      "name": "SharesInCustodyRemain",
+      "msg": "Shares remain in custody"
+    },
+    {
+      "code": 6127,
+      "name": "VaultSupplyNotZero",
+      "msg": "Vault still has share supply"
+    },
+    {
+      "code": 6128,
+      "name": "CooldownNotRaised",
+      "msg": "New cooldown must be strictly greater than the current value"
     }
   ],
   "types": [
@@ -4248,6 +4552,62 @@
           },
           {
             "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminRecoverAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenAdminRecoverProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "effective_time",
+            "type": "i64"
+          },
+          {
+            "name": "cooldown_secs",
             "type": "u64"
           },
           {
@@ -5468,6 +5828,26 @@
       }
     },
     {
+      "name": "STokenVaultClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "STokenVaultInitialized",
       "type": {
         "kind": "struct",
@@ -5525,6 +5905,30 @@
             "docs": [
               "The authority who paused the vault (manager or guardian)"
             ],
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenVaultTokenAccountClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "manager",
             "type": "pubkey"
           },
           {
@@ -6650,6 +7054,15 @@
             "type": {
               "option": "u16"
             }
+          },
+          {
+            "name": "max_price_staleness_secs",
+            "docs": [
+              "Vault fuse. `None` keeps the 300 s production default."
+            ],
+            "type": {
+              "option": "u64"
+            }
           }
         ]
       }
@@ -6731,6 +7144,42 @@
           },
           {
             "name": "Cancelled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "STokenTurnoverFeeAccrued",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_underlying",
+            "type": "u64"
+          },
+          {
+            "name": "shares_minted",
+            "type": "u64"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
           }
         ]
       }

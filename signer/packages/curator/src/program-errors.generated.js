@@ -6,7 +6,7 @@
  * test/errors.test.js prove the embedded copy matches the checkout.
  */
 
-/** FactoryError (composable-portfolios-programs/programs/portfolio_factory/src/errors.rs): 65 variants. */
+/** FactoryError (composable-portfolios-programs/programs/portfolio_factory/src/errors.rs): 66 variants. */
 export const FACTORY_ERRORS = Object.freeze([
   'CreationPaused',
   'TooManyLegs',
@@ -59,6 +59,7 @@ export const FACTORY_ERRORS = Object.freeze([
   'RiskTierOutOfRange',
   'RiskDisclosureHashMissing',
   'ExecutionLossPolicyExceeded',
+  'DownsideCapExceedsExecutionLoss',
   'InvalidSymbol',
   'EscrowMismatch',
   'TokenExtensionMismatch',
@@ -75,7 +76,7 @@ export const FACTORY_ERRORS = Object.freeze([
   'Unauthorized',
 ]);
 
-/** STokenError (splyce-composable-core/programs/stoken/src/errors.rs): 122 variants. */
+/** STokenError (splyce-composable-core/programs/stoken/src/errors.rs): 129 variants. */
 export const STOKEN_ERRORS = Object.freeze([
   'Unauthorized',
   'InvalidFee',
@@ -199,4 +200,11 @@ export const STOKEN_ERRORS = Object.freeze([
   'NoPendingAdminCooldownChange',
   'AdminCooldownChangeTimelockActive',
   'InvalidProgramData',
+  'TokenAccountNotEmpty',
+  'VaultNotPausedOrSunset',
+  'VaultNotSunset',
+  'PendingWithdrawalsRemain',
+  'SharesInCustodyRemain',
+  'VaultSupplyNotZero',
+  'CooldownNotRaised',
 ]);

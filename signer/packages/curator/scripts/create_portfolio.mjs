@@ -519,10 +519,6 @@ export async function runCreate(opts) {
       name: args.name,
       symbol: args.symbol,
       ...(args.metadataUri != null ? { metadataUri: args.metadataUri } : {}),
-      depositFeeBps: args.depositFeeBps,
-      withdrawFeeBps: args.withdrawFeeBps,
-      managementFeeBpsPerYear: args.managementFeeBpsPerYear,
-      creatorFeeBps: args.creatorFeeBps,
       driftBandBps: args.driftBandBps,
       idleTargetBps: args.idleTargetBps,
       compositionLocked: args.compositionLocked,
@@ -556,10 +552,6 @@ export async function runCreate(opts) {
       name: args.name,
       symbol: args.symbol,
       ...(args.metadataUri != null ? { metadataUri: args.metadataUri } : {}),
-      depositFeeBps: args.depositFeeBps,
-      withdrawFeeBps: args.withdrawFeeBps,
-      managementFeeBpsPerYear: args.managementFeeBpsPerYear,
-      creatorFeeBps: args.creatorFeeBps,
       driftBandBps: args.driftBandBps,
       idleTargetBps: args.idleTargetBps,
       compositionLocked: args.compositionLocked,
@@ -592,7 +584,7 @@ export async function runCreate(opts) {
     const summary = verify(built.transactions);
     const c = summary.create;
     log(`verified ${summary.mine.length} treasury step(s) (${summary.mine.map((i) => built.transactions[i].step).join(', ')}) and ${summary.theirs.length} keeper step(s) (${summary.theirs.map((t) => t.step).join(', ')})`);
-    log(`create_portfolio: name "${c.name}" symbol "${c.symbol}" metadata ${c.metadataUri} curator ${c.curator} rebalance_delay_secs ${c.rebalanceDelaySecs} fees deposit ${c.depositFeeBps} / withdraw ${c.withdrawFeeBps} / creator ${c.creatorFeeBps} / mgmt ${c.managementFeeBpsPerYear} drift ${c.driftBandBps} idle ${c.idleTargetBps} locked ${c.compositionLocked}`);
+    log(`create_portfolio: name "${c.name}" symbol "${c.symbol}" metadata ${c.metadataUri} curator ${c.curator} rebalance_delay_secs ${c.rebalanceDelaySecs} drift ${c.driftBandBps} idle ${c.idleTargetBps} locked ${c.compositionLocked}`);
     log(`targets: ${c.targets.map((t) => `${Object.entries(poolKeys).find(([, k]) => k === t.pool)?.[0] ?? t.pool} ${t.weightBps}`).join(', ')}`);
     log(`rent: factory ${c.factoryRentLamports} lamports, custodian reserve ${c.custodianReserveLamports}, keeper reimbursement ${c.keeperLamports ?? 'none'} lamports to ${keeperProcessor}`);
     log(`outlay: ${c.outlayLamports} lamports of api-set amounts (reimbursement + factory rent + custodian reserve), within --max-lamports ${args.maxLamports}; program-fixed account rent and the base fee are on top and cannot be set by the api; priority fees ${c.priorityLamports} lamports, each transaction within --max-priority-lamports ${args.maxPriorityLamports}`);

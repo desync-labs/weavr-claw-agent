@@ -85,6 +85,7 @@ export const CREATE_STEPS = Object.freeze({
   init_custody: 'keeper_processor',
   init_vault_atas: 'keeper_processor',
   whitelist_custodian: 'keeper_processor',
+  crank_nav_page: 'keeper_processor',
   activate_portfolio: 'keeper_processor',
 });
 
@@ -703,10 +704,6 @@ function checkCreateInstruction(ix, tx, ctx, state) {
       assertField(ix, args, 'name', expect.name);
       assertField(ix, args, 'symbol', expect.symbol);
       assertField(ix, args, 'metadata_uri', expect.metadataUri);
-      assertField(ix, args, 'deposit_fee_bps', expect.depositFeeBps);
-      assertField(ix, args, 'withdraw_fee_bps', expect.withdrawFeeBps);
-      assertField(ix, args, 'management_fee_bps_per_year', expect.managementFeeBpsPerYear);
-      assertField(ix, args, 'creator_fee_bps', expect.creatorFeeBps);
       assertField(ix, args, 'drift_band_bps', expect.driftBandBps);
       assertField(ix, args, 'idle_target_bps', expect.idleTargetBps);
       assertField(ix, args, 'composition_locked', expect.compositionLocked);
@@ -726,10 +723,6 @@ function checkCreateInstruction(ix, tx, ctx, state) {
         metadataUri: args.metadata_uri ?? null,
         curator: args.curator ?? null,
         rebalanceDelaySecs: args.rebalance_delay_secs ?? null,
-        depositFeeBps: args.deposit_fee_bps ?? null,
-        withdrawFeeBps: args.withdraw_fee_bps ?? null,
-        managementFeeBpsPerYear: args.management_fee_bps_per_year ?? null,
-        creatorFeeBps: args.creator_fee_bps ?? null,
         driftBandBps: args.drift_band_bps ?? null,
         idleTargetBps: args.idle_target_bps ?? null,
         compositionLocked: args.composition_locked ?? null,
