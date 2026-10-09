@@ -3801,6 +3801,53 @@
       ]
     },
     {
+      "name": "set_trusted_creators",
+      "docs": [
+        "Governance: creators allowed to set a book's notice down to",
+        "trusted_min_rebalance_delay_secs. 0 disables it. ADR-0367.",
+        "The privilege follows the creator, not the curator."
+      ],
+      "discriminator": [
+        116,
+        1,
+        101,
+        165,
+        6,
+        220,
+        255,
+        215
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "factory_config",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "trusted_min_rebalance_delay_secs",
+          "type": "u64"
+        },
+        {
+          "name": "creators",
+          "type": {
+            "array": [
+              "pubkey",
+              4
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "withdraw_factory_rent",
       "docs": [
         "Governance: return surplus `factory_authority` lamports to treasury,",
@@ -5497,6 +5544,25 @@
               "0 = accept is immediate (same as `policy_delay_secs`)."
             ],
             "type": "u64"
+          },
+          {
+            "name": "trusted_min_rebalance_delay_secs",
+            "docs": [
+              "ADR-0367. 0 = unused. Else the notice floor for trusted_creators."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "trusted_creators",
+            "docs": [
+              "Creators who may use the shorter notice. Empty slots are the default pubkey and trail."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                4
+              ]
+            }
           }
         ]
       }
