@@ -6,7 +6,7 @@
       "deployed_programs": {
         "stoken": "DU83bnLZvD1GrRwXXYr5cGJ17RnZ1c7WJeNzxt3hh33r",
         "accountant": "AzVpJT7fWpnuFCTjkbtBi8P46zniPuAdMPtPL8g69wUn",
-        "asset_manager_escrow": "Cay4w3Z3umsG7qUgTB55PT5N4tRsUvBY7LFseqErz6K"
+        "asset_manager_escrow": "Cay4w3Z3iumsG7qUgTB55PT5N4tRsUvBY7LFseqErz6K"
       }
     },
     "composable-portfolios-programs": {
@@ -20,6 +20,22 @@
         "kamino_adapter": "B7DFnGQUDM1zTVmGjuDkqDQHSjRYBNd26wAx7mwBy3CS",
         "cctp_adapter": "AtjgCQuvtCpzsGbN4uNyMieYkjsNy2ky5QVvyDcqnGJg"
       }
+    }
+  },
+  "production": {
+    "$comment": "The production compile identity in the backend umbrella layout (production.programs): signer/packages/chain reads it from here when this repo stands in for the umbrella.",
+    "programs": {
+      "stoken": "DU83bnLZvD1GrRwXXYr5cGJ17RnZ1c7WJeNzxt3hh33r",
+      "accountant": "AzVpJT7fWpnuFCTjkbtBi8P46zniPuAdMPtPL8g69wUn",
+      "asset_manager_escrow": "Cay4w3Z3iumsG7qUgTB55PT5N4tRsUvBY7LFseqErz6K",
+      "portfolio_factory": "BJmFhsrASmQwSVMfBcPAPqEo9uSsW3EsTXjq2ALi4Zts",
+      "portfolio_allocator": "Az9Mg3XFPPBimxHEYSSuEKpGXmohKEtcPnK6pkzCdh4D",
+      "portfolio_nav": "GduZJt22NSJmdJ4yZdJjLb4QQXCVtzW86zALcGSddyXf",
+      "pyth_price_adapter": "C34PzDzoMHYjPUUfgk5A7BAcuKPBtV81mX1CDcoqKQ4N",
+      "titan_adapter": "7PW4FpqwGa5T3tgUUGNzZLBKHBGP34GB6hrcBNj1aT78",
+      "jupiter_adapter": "G7sny8vHv4YwWaMBYYg6oyHckwCBaTxsuftR1sDNNyZW",
+      "kamino_adapter": "B7DFnGQUDM1zTVmGjuDkqDQHSjRYBNd26wAx7mwBy3CS",
+      "cctp_adapter": "AtjgCQuvtCpzsGbN4uNyMieYkjsNy2ky5QVvyDcqnGJg"
     }
   }
 }
