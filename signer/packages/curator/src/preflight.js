@@ -367,9 +367,10 @@ export function proposeGates(snapshot, policy, now) {
 
 /**
  * The every-tick invariants: curator == expected, pending_curator == None,
- * rebalance_delay_secs == expected, accountant.recipient1 == treasury,
- * factory.guardian == expected, composition_locked == false. Any drift makes
- * the loop self-lock every write until an operator unlocks.
+ * accountant.recipient1 == treasury, factory.guardian == expected,
+ * composition_locked == false. The notice is a governance floor, not a field
+ * on the portfolio, so a stored delay is not drift. Any drift makes the loop
+ * self-lock every write until an operator unlocks.
  *
  * An optional account that could not be read (`accountantAccount`,
  * `factoryConfig` at `null`) is not drift — a transient RPC failure must not
@@ -394,7 +395,6 @@ export function checkInvariants(snapshot, config, policy) {
   if (expectations.pendingCuratorMustBeNone !== false) {
     check('portfolio.pendingCurator', 'null', b58(account.pendingCurator) ?? 'null');
   }
-  check('portfolio.rebalanceDelaySecs', expectations.rebalanceDelaySecs ?? config.rebalanceDelaySecs, num(account.rebalanceDelaySecs));
   check('portfolio.compositionLocked', expectations.compositionLocked ?? false, Boolean(account.compositionLocked));
 
   if (snapshot.accountantAccount) {

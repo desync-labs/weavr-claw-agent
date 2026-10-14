@@ -117,7 +117,6 @@ test('the decoder is told every fixed argument: deposit amount/minShares, withdr
   await verbs.deposit(ctx, { amountUsd: 250 }, meta());
   await verbs.withdraw(ctx, { amountUsd: 10 }, meta({ session: 'chat' }));
   await verbs.rotateCurator(ctx, { newCurator: KEYS.governance.toBase58(), why: 'x' }, meta({ tokenKind: 'ops' }));
-  await verbs.setDelay(ctx, { rebalanceDelaySecs: 3600, why: 'x' }, meta({ tokenKind: 'ops' }));
   await verbs.setMetadata(ctx, { uri: 'https://www.weavr.sh/metadata/WEAVR', why: 'x' }, meta({ tokenKind: 'ops' }));
   const byVerb = Object.fromEntries(seen);
   assert.equal(byVerb.deposit.amount, '250000000');
@@ -125,7 +124,6 @@ test('the decoder is told every fixed argument: deposit amount/minShares, withdr
   assert.equal(byVerb.withdraw.shares, '1000000');
   assert.equal(byVerb.withdraw.minAmountOut, '0');
   assert.equal(byVerb['rotate-curator'].newCurator, KEYS.governance.toBase58());
-  assert.equal(byVerb['set-delay'].rebalanceDelaySecs, 3600);
   assert.equal(byVerb['set-metadata'].uri, 'https://www.weavr.sh/metadata/WEAVR');
   for (const [verb, expect] of seen) {
     assert.equal(expect.vault, KEYS.vault.toBase58(), verb);
@@ -346,7 +344,7 @@ test('paused: the agent write verbs are refused PAUSED; cancel and the ops-token
   await rejectsWith(verbs.rotateCurator(ctx, WRITE_ARGS['rotate-curator'], meta({ tokenKind: 'agent' })), 'PAUSED');
   assert.equal(ctx.signer.calls.length, 0);
   assert.equal((await verbs.cancel(ctx, { why: 'stop' }, meta())).ok, true);
-  for (const verb of ['rotate-curator', 'set-delay', 'set-metadata']) {
+  for (const verb of ['rotate-curator', 'set-metadata']) {
     const out = await verbs.VERBS[verb](ctx, WRITE_ARGS[verb], meta({ tokenKind: 'ops' }));
     assert.equal(out.ok, true, verb);
   }
@@ -530,15 +528,10 @@ test('rotate-curator signs propose_curator and answers the accept steps for the 
   assert.equal(records(ctx).find((r) => r.kind === 'verb').verb, 'rotateCurator');
 });
 
-test('set-delay validates, builds with the curator and warns when the delay leaves the invariant', async () => {
+test('set-delay is refused: the notice is not a per-book setting', async () => {
   const ctx = mk();
-  await rejectsWith(verbs.setDelay(ctx, { rebalanceDelaySecs: -1, why: 'x' }, meta({ tokenKind: 'ops' })), 'BAD_REQUEST');
-  await rejectsWith(verbs.setDelay(ctx, { rebalanceDelaySecs: 3600 }, meta({ tokenKind: 'ops' })), 'WHY_REQUIRED');
-  const out = await verbs.setDelay(ctx, { rebalanceDelaySecs: 3600, why: 'dust rehearsal' }, meta({ tokenKind: 'ops' }));
-  assert.deepEqual(ctx.client.calls.at(-2).body, { curator: WALLET, rebalanceDelaySecs: 3600 });
-  assert.ok(out.warning.includes('86400'));
-  const back = await verbs.setDelay(ctx, { rebalanceDelaySecs: 86400, why: 'back' }, meta({ tokenKind: 'ops' }));
-  assert.equal(back.warning, undefined);
+  await rejectsWith(verbs.setDelay(ctx, { rebalanceDelaySecs: 3600, why: 'dust rehearsal' }, meta({ tokenKind: 'ops' })), 'BAD_REQUEST');
+  assert.equal(ctx.client.calls.length, 0);
 });
 
 test('set-metadata validates the uri and builds with the signer', async () => {
@@ -633,7 +626,7 @@ test('writes are held INVARIANTS_UNVERIFIED while the loop could not verify an i
   assert.equal(ctx.client.calls.length, 0);
   assert.equal(ctx.signer.calls.length, 0);
   assert.equal((await verbs.cancel(ctx, { why: 'stop' }, meta())).ok, true);
-  assert.equal((await verbs.setDelay(ctx, { rebalanceDelaySecs: 86400, why: 'x' }, meta({ tokenKind: 'ops' }))).ok, true);
+  await rejectsWith(verbs.setDelay(ctx, { rebalanceDelaySecs: 86400, why: 'x' }, meta({ tokenKind: 'ops' })), 'BAD_REQUEST');
   assert.deepEqual((await verbs.status(ctx, {}, meta())).invariantsUnverified, ['accountant.recipient1']);
   ctx.state.invariantsUnverified = null;
   assert.equal((await verbs.deposit(ctx, { amountUsd: 10 }, meta())).ok, true);
