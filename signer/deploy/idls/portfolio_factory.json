@@ -2599,6 +2599,14 @@
         },
         {
           "name": "system_program"
+        },
+        {
+          "name": "creator_access_record",
+          "optional": true
+        },
+        {
+          "name": "curator_access_record",
+          "optional": true
         }
       ],
       "args": [
@@ -2650,6 +2658,14 @@
         },
         {
           "name": "system_program"
+        },
+        {
+          "name": "creator_access_record",
+          "optional": true
+        },
+        {
+          "name": "curator_access_record",
+          "optional": true
         }
       ],
       "args": [
@@ -3689,41 +3705,6 @@
       ]
     },
     {
-      "name": "update_portfolio_rebalance_delay",
-      "docs": [
-        "Curator: update portfolio rebalance-delay floor (demo / ops)."
-      ],
-      "discriminator": [
-        159,
-        218,
-        179,
-        120,
-        207,
-        137,
-        244,
-        181
-      ],
-      "accounts": [
-        {
-          "name": "curator",
-          "signer": true
-        },
-        {
-          "name": "factory_config"
-        },
-        {
-          "name": "portfolio",
-          "writable": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_secs",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "update_rent_margins",
       "docs": [
         "Updates the rent margins read by the on-chain rent formulas."
@@ -3796,53 +3777,6 @@
             "defined": {
               "name": "CreationPolicyProfile"
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "set_trusted_creators",
-      "docs": [
-        "Governance: creators allowed to set a book's notice down to",
-        "trusted_min_rebalance_delay_secs. 0 disables it. ADR-0367.",
-        "The privilege follows the creator, not the curator."
-      ],
-      "discriminator": [
-        116,
-        1,
-        101,
-        165,
-        6,
-        220,
-        255,
-        215
-      ],
-      "accounts": [
-        {
-          "name": "governance",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "factory_config",
-          "writable": true
-        },
-        {
-          "name": "system_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "trusted_min_rebalance_delay_secs",
-          "type": "u64"
-        },
-        {
-          "name": "creators",
-          "type": {
-            "array": [
-              "pubkey",
-              4
-            ]
           }
         }
       ]
@@ -4006,6 +3940,94 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "set_rebalance_whitelist_config",
+      "docs": [
+        "Governance: turn the rebalance whitelist on or off, and set the short notice floor.",
+        "0 disables the short floor."
+      ],
+      "discriminator": [
+        202,
+        53,
+        247,
+        165,
+        48,
+        118,
+        234,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "factory_config",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "enabled",
+          "type": "bool"
+        },
+        {
+          "name": "trusted_min_rebalance_delay_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_access_record",
+      "docs": [
+        "Governance: grant or revoke propose rights and the short notice for one key."
+      ],
+      "discriminator": [
+        143,
+        61,
+        21,
+        155,
+        165,
+        1,
+        177,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "factory_config"
+        },
+        {
+          "name": "access_record",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "can_rebalance",
+          "type": "bool"
+        },
+        {
+          "name": "trusted_delay",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -4176,6 +4198,19 @@
         102,
         119,
         77
+      ]
+    },
+    {
+      "name": "AccessRecord",
+      "discriminator": [
+        224,
+        96,
+        239,
+        97,
+        225,
+        133,
+        153,
+        188
       ]
     }
   ],
@@ -5548,14 +5583,14 @@
           {
             "name": "trusted_min_rebalance_delay_secs",
             "docs": [
-              "ADR-0367. 0 = unused. Else the notice floor for trusted_creators."
+              "Short notice floor. 0 disables it."
             ],
             "type": "u64"
           },
           {
-            "name": "trusted_creators",
+            "name": "deprecated_trusted_creators",
             "docs": [
-              "Creators who may use the shorter notice. Empty slots are the default pubkey and trail."
+              "Unused. Bytes stay so existing configs still decode."
             ],
             "type": {
               "array": [
@@ -5563,6 +5598,13 @@
                 4
               ]
             }
+          },
+          {
+            "name": "rebalance_whitelist_enabled",
+            "docs": [
+              "When set, propose requires an AccessRecord with can_rebalance for the creator or curator."
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -7467,8 +7509,11 @@
             "type": "bool"
           },
           {
-            "name": "rebalance_delay_secs",
-            "type": "u64"
+            "name": "deprecated_rebalance_delay_secs",
+            "type": "u64",
+            "docs": [
+              "Unused. Notice is resolved from FactoryConfig and AccessRecord at propose."
+            ]
           },
           {
             "name": "last_rebalance_at",
@@ -8675,6 +8720,66 @@
           {
             "name": "timestamp",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "can_rebalance",
+            "type": "bool"
+          },
+          {
+            "name": "trusted_delay",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessRecordUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "can_rebalance",
+            "type": "bool"
+          },
+          {
+            "name": "trusted_delay",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RebalanceWhitelistConfigSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "trusted_min_rebalance_delay_secs",
+            "type": "u64"
           }
         ]
       }

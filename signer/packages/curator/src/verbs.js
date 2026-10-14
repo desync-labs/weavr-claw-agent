@@ -773,7 +773,7 @@ export function statusBody(ctx, snapshot, error = null) {
       withdrawalsPending: row?.withdrawalsPending ?? plain(snapshot.vaultAccount?.totalWithdrawalsPending) ?? null,
       curator: plain(acct?.curator) ?? row?.curator ?? null,
       pendingCurator: plain(acct?.pendingCurator),
-      rebalanceDelaySecs: num(acct?.rebalanceDelaySecs) ?? row?.rebalanceDelaySecs ?? null,
+      rebalanceDelaySecs: num(row?.rebalanceDelaySecs) ?? num(acct?.rebalanceDelaySecs) ?? null,
       lastRebalanceAt: num(acct?.lastRebalanceAt),
       applyNextPage: num(acct?.applyNextPage),
       compositionLocked: acct?.compositionLocked ?? row?.compositionLocked ?? null,
@@ -1017,7 +1017,7 @@ export async function propose(ctx, args, meta) {
         const first = gates.blockers?.[0] ?? { code: 'TARGETS_PENDING', message: 'chain state blocks a proposal' };
         refuse(first.code, first.message, { blockers: gates.blockers ?? [] });
       }
-      const delay = num(snapshot?.portfolioAccount?.rebalanceDelaySecs) ?? snapshot?.portfolioRow?.rebalanceDelaySecs ?? ctx.config.rebalanceDelaySecs;
+      const delay = num(snapshot?.portfolioRow?.rebalanceDelaySecs) ?? num(snapshot?.portfolioAccount?.rebalanceDelaySecs) ?? ctx.config.rebalanceDelaySecs;
       return { targets, summary: evaluated.summary ?? null, effectiveAt: nowSecs + Number(delay ?? 0) };
     },
     intent: () => ({ targets }),

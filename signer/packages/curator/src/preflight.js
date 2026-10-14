@@ -349,9 +349,9 @@ export function proposeGates(snapshot, policy, now) {
     blocked('TARGETS_PENDING', `a targets change is already pending (TargetsChangePending), effective at ${effectiveAt ?? '?'}; cancel it first`, { effectiveAt });
   }
   const last = num(account.lastRebalanceAt);
-  const delay = num(account.rebalanceDelaySecs);
+  const delay = num(snapshot?.portfolioRow?.rebalanceDelaySecs) ?? num(account.rebalanceDelaySecs);
   if (last == null || delay == null) {
-    blocked('REBALANCE_TOO_SOON', 'last_rebalance_at or rebalance_delay_secs unreadable');
+    blocked('REBALANCE_TOO_SOON', 'last_rebalance_at or the notice floor is unreadable');
   } else if (now - last < delay) {
     blocked('REBALANCE_TOO_SOON', `last rebalance ${now - last} s ago, delay ${delay} s (RebalanceTooSoon); ready at ${last + delay}`, { readyAt: last + delay });
   }

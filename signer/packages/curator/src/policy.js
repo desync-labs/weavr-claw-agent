@@ -154,7 +154,7 @@ const SCHEMA = Object.freeze({
   withdraw: { chatOnly: 'bool', dailyCapUsd: 'number', toSignerAtaOnly: 'bool' },
   verbs: { agent: 'strings', ops: 'strings', denied: 'strings', cronDenied: 'strings' },
   rate: UINTS('maxWriteAttemptsPerHour', 'minSignerLamports'),
-  invariants: { rebalanceDelaySecs: 'uint', compositionLocked: 'bool', pendingCuratorMustBeNone: 'bool' },
+  invariants: { compositionLocked: 'bool', pendingCuratorMustBeNone: 'bool' },
   apply: {
     ...UINTS(
       'tickSecs', 'armBeforeEffectiveSecs', 'windowAfterEffectiveSecs', 'maxSendsPerTick',
@@ -252,6 +252,8 @@ export function loadPolicy(jsonOrObject) {
   }
   if (!isPlainObject(raw)) fail('document must be a JSON object');
   const doc = stripComments(raw);
+  // Notice is global. Older policy files still name a per-book delay; ignore it.
+  if (isPlainObject(doc.invariants)) delete doc.invariants.rebalanceDelaySecs;
   if (doc.version !== 1) fail(`version must be 1 (got ${JSON.stringify(doc.version)})`);
 
   const policy = { version: 1 };
@@ -848,10 +850,6 @@ export function evaluateInvariants({ policy, chain, config }) {
   expectPubkey('portfolio.curator', facts.curator, config?.expectedCurator);
   if (policy.invariants.pendingCuratorMustBeNone && facts.pendingCurator != null) {
     drift.push({ invariant: 'portfolio.pending_curator', expected: 'none', actual: toBase58(facts.pendingCurator) ?? 'set' });
-  }
-  const delay = toNumber(facts.rebalanceDelaySecs);
-  if (delay !== policy.invariants.rebalanceDelaySecs) {
-    drift.push({ invariant: 'portfolio.rebalance_delay_secs', expected: String(policy.invariants.rebalanceDelaySecs), actual: delay == null ? 'unknown' : String(delay) });
   }
   expectPubkey(
     'accountant.royaltyRecipient',
