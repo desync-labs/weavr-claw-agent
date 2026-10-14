@@ -435,10 +435,9 @@ describe('checkInvariants', () => {
     drifted(fixture({ portfolioAccount: { pendingCurator: key() } }), 'portfolio.pendingCurator');
   });
 
-  it('INVARIANT_DRIFT: rebalance delay shortened', () => {
-    const entry = drifted(fixture({ portfolioAccount: { rebalanceDelaySecs: bn(3600) } }), 'portfolio.rebalanceDelaySecs');
-    assert.equal(entry.expected, '86400');
-    assert.equal(entry.actual, '3600');
+  it('a stored rebalance delay is not drift', () => {
+    const result = checkInvariants(fixture({ portfolioAccount: { rebalanceDelaySecs: bn(3600) } }), CONFIG, POLICY);
+    assert.equal(result.ok, true);
   });
 
   it('INVARIANT_DRIFT: composition locked', () => {

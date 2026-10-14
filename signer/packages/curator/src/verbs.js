@@ -1355,30 +1355,9 @@ export async function rotateCurator(ctx, args, meta) {
   });
 }
 
-/** POST /set-delay { rebalanceDelaySecs, why } (ops) — REST /v1/portfolios/:mint/rebalance-delay. */
-export async function setDelay(ctx, args, meta) {
-  meta = normMeta(meta);
-  const secs = typeof args?.rebalanceDelaySecs === 'string' ? Number(args.rebalanceDelaySecs) : args?.rebalanceDelaySecs;
-  if (!Number.isInteger(secs) || secs < 0) throw bad('rebalanceDelaySecs must be a non-negative integer');
-  const why = whyOf(args);
-  return runWrite(ctx, meta, 'set-delay', {
-    args: { rebalanceDelaySecs: secs, why },
-    precheck: ({ refuse }) => {
-      requireWhy(ctx, why, refuse);
-      return {};
-    },
-    intent: () => ({ rebalanceDelaySecs: secs }),
-    build: () => ctx.client.buildRebalanceDelay(ctx.config.mint, { curator: ctx.signer.wallet, rebalanceDelaySecs: secs }),
-    result: ({ sent }) => ({
-      ok: true,
-      verb: 'set-delay',
-      rebalanceDelaySecs: secs,
-      signatures: sent.signatures,
-      ...(secs !== ctx.config.rebalanceDelaySecs ? {
-        warning: `the invariant expects rebalanceDelaySecs == ${ctx.config.rebalanceDelaySecs}; this signer self-locks on its next tick until the policy/env is updated or the delay is set back`,
-      } : {}),
-    }),
-  });
+/** POST /set-delay is gone. The notice is a governance floor, not a per-book setting. */
+export async function setDelay(_ctx, _args, _meta) {
+  throw bad('the rebalance notice is set by governance and cannot be changed on a portfolio');
 }
 
 /** POST /set-metadata { uri, why } (ops) — REST /v1/portfolios/:mint/metadata. */
@@ -1564,5 +1543,5 @@ export const OPS_VERBS = Object.freeze(new Set(['resume', 'unlock', 'rotate-cura
 
 /** Verbs that sign and send (counted against RATE_LIMITED, refused when paused or self-locked); `strategy` signs a message, not a transaction. */
 export const WRITE_VERBS = Object.freeze(new Set([
-  'propose', 'apply', 'cancel', 'deposit', 'withdraw', 'refresh-nav', 'rotate-curator', 'set-delay', 'set-metadata', 'strategy',
+  'propose', 'apply', 'cancel', 'deposit', 'withdraw', 'refresh-nav', 'rotate-curator', 'set-metadata', 'strategy',
 ]));
