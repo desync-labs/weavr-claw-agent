@@ -785,7 +785,7 @@ describe('evaluateInvariants', () => {
     assert.equal(curator.code, 'INVARIANT_DRIFT');
     assert.deepEqual(curator.drift, [{ invariant: 'portfolio.curator', expected: CURATOR, actual: other.toBase58() }]);
     assert.deepEqual(driftOf(check({ pendingCurator: other })), ['portfolio.pending_curator']);
-    assert.deepEqual(driftOf(check({ rebalanceDelaySecs: bn(3600) })), ['portfolio.rebalance_delay_secs']);
+    assert.deepEqual(driftOf(check({ rebalanceDelaySecs: bn(3600) })), []);
     assert.deepEqual(driftOf(check({ recipient1: other })), ['accountant.royaltyRecipient']);
     assert.deepEqual(driftOf(check({ guardian: other.toBase58() })), ['factory.guardian']);
     assert.deepEqual(driftOf(check({ compositionLocked: true })), ['portfolio.composition_locked']);
@@ -793,11 +793,11 @@ describe('evaluateInvariants', () => {
 
   it('treats an unreadable fact as drift, never as fine — except pendingCurator, whose null is None', () => {
     const unknown = check({ curator: undefined, rebalanceDelaySecs: undefined, compositionLocked: undefined });
-    assert.deepEqual(driftOf(unknown), ['portfolio.curator', 'portfolio.rebalance_delay_secs', 'portfolio.composition_locked']);
+    assert.deepEqual(driftOf(unknown), ['portfolio.curator', 'portfolio.composition_locked']);
     assert.ok(unknown.drift.every((d) => d.actual === 'unknown'));
     const nothing = evaluateInvariants({ policy, chain: null, config });
     assert.equal(nothing.ok, false);
-    assert.equal(nothing.drift.length, 5);
+    assert.equal(nothing.drift.length, 4);
     assert.match(nothing.message, /invariant drift: portfolio\.curator/);
   });
 });

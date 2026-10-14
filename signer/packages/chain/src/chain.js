@@ -78,6 +78,7 @@ const FACTORY_EVENT_NAMES = Object.freeze([
   'PoolAdapterRegistryInitialized', 'PoolAdapterProposed', 'PoolAdapterAccepted',
   'PoolAdapterDisabled', 'PoolAdapterEnabled', 'PoolAdapterClosed', 'PoolAdapterCancelled',
   'PoolAdapterCooldownProposed', 'PoolAdapterCooldownAccepted', 'PoolInflightCleared',
+  'AccessRecordUpdated', 'RebalanceWhitelistConfigSet',
 ]);
 
 function synthesiseEvents(idl) {
@@ -295,7 +296,8 @@ export function accountMetas(program, instruction, addresses, { remaining = [] }
   const supplied = new Map(Object.entries(addresses).map(([key, value]) => [flatten(key), value]));
 
   const metas = spec.accounts.map((account) => {
-    const pubkey = supplied.get(flatten(account.name)) ?? account.address;
+    let pubkey = supplied.get(flatten(account.name)) ?? account.address;
+    if (pubkey == null && account.optional) pubkey = programId(program);
     if (!pubkey) {
       throw new Error(`${program}.${match} needs an address for ${account.name}`);
     }
@@ -349,6 +351,12 @@ export const pda = (seeds, program) =>
   PublicKey.findProgramAddressSync(seeds, programId(program))[0];
 
 export const factoryConfigKey = () => pda([Buffer.from('factory_config')], 'portfolio_factory');
+/** Governance grant for one authority. Absent means no grant. */
+export const accessRecordPda = (authority) =>
+  pda(
+    [Buffer.from('access_record'), (authority instanceof PublicKey ? authority : new PublicKey(authority)).toBuffer()],
+    'portfolio_factory',
+  );
 export const factoryAuthorityKey = () =>
   pda([Buffer.from('factory_authority')], 'portfolio_factory');
 /** Core `Config` singletons: `create_portfolio` bumps both counters through CPI. */
@@ -392,11 +400,56 @@ export function connect(rpcUrl, { maxRps = configuredMaxRps() } = {}) {
   return connection;
 }
 
+/**
+ * Paginated getProgramAccountsV2. Returns null when the node does not offer
+ * it, so the caller falls back to the single-shot method. Helius rejects the
+ * unpaged call once the stoken set is large ("use getProgramAccountsV2").
+ */
+export async function programAccountsV2(connection, owner, filters) {
+  if (typeof connection._rpcRequest !== 'function') return null;
+  const rows = [];
+  let paginationKey = null;
+  for (let page = 0; page < 50; page += 1) {
+    const config = {
+      encoding: 'base64',
+      filters,
+      limit: 1000,
+      ...(paginationKey ? { paginationKey } : {}),
+    };
+    const response = await connection._rpcRequest('getProgramAccountsV2', [owner.toBase58(), config]);
+    if (response?.error) {
+      const message = response.error.message ?? JSON.stringify(response.error);
+      if (/method|not found|unsupported/i.test(message)) return null;
+      throw new Error(message);
+    }
+    const body = response?.result ?? {};
+    for (const row of body.accounts ?? []) {
+      const encoded = row.account?.data?.[0] ?? row.account?.data;
+      rows.push({
+        pubkey: new PublicKey(row.pubkey),
+        account: { data: Buffer.from(encoded, 'base64') },
+      });
+    }
+    paginationKey = body.paginationKey ?? null;
+    if (!paginationKey) return rows;
+  }
+  return rows;
+}
+
 /** Every account of one type owned by a program, already decoded. */
 export async function programAccounts(connection, program, account) {
-  const raw = await connection.getProgramAccounts(programId(program), {
-    filters: [{ memcmp: { offset: 0, bytes: discriminator(program, account) } }],
-  });
+  const filters = [{ memcmp: { offset: 0, bytes: discriminator(program, account) } }];
+  const owner = programId(program);
+  let raw = null;
+  try {
+    raw = await programAccountsV2(connection, owner, filters);
+  } catch (error) {
+    console.log(`getProgramAccountsV2 failed, falling back: ${error.message}`);
+    raw = null;
+  }
+  if (!raw) {
+    raw = await connection.getProgramAccounts(owner, { filters });
+  }
   return raw.map(({ pubkey, account: info }) => ({
     pubkey,
     data: decode(program, account, info.data),
