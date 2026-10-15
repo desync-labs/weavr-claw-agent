@@ -67,7 +67,7 @@
       "name": "accept_vault_role",
       "docs": [
         "Incoming-program consent for vault oracle role (B.7 step 4).",
-        "Ops: `stoken::propose_roles(oracle → nav_authority)` is a human",
+        "Ops: `stoken::propose_roles(oracle \u2192 nav_authority)` is a human",
         "governance batch; this ix only claims. Do not run live rotations here."
       ],
       "discriminator": [
@@ -144,7 +144,7 @@
       "name": "close_pool_feed",
       "docs": [
         "Close a pool feed PDA and return rent to governance. The factory `Pool`",
-        "must already be Halted — closing a live feed would un-mark a still-traded",
+        "must already be Halted \u2014 closing a live feed would un-mark a still-traded",
         "pool."
       ],
       "discriminator": [
@@ -216,7 +216,7 @@
         {
           "name": "custodian",
           "docs": [
-            "The portfolio vault's custodian — the allocator PDA recorded as",
+            "The portfolio vault's custodian \u2014 the allocator PDA recorded as",
             "`vault_config.asset_manager`. Bound here so a permissionless caller",
             "cannot pass a custodian they control and have the crank value",
             "attacker-owned zero-balance accounts as portfolio custody. The per-leg",
@@ -261,7 +261,7 @@
     {
       "name": "crank_pool",
       "docs": [
-        "Permissionless pool crank: Pyth × escrow balances, then `stoken::update_price`",
+        "Permissionless pool crank: Pyth \u00d7 escrow balances, then `stoken::update_price`",
         "as `nav_authority`. Inside cooldown: no CPI (`CrankPoolNoop` / `CrankPoolHeldCooldown`)."
       ],
       "discriminator": [
@@ -286,7 +286,7 @@
           "docs": [
             "Factory `Pool` (owner = the pinned factory, `composable_portfolios_state::ID`).",
             "Binds this crank to the vault/mint the feed-map seed actually belongs to",
-            "— not an unbound pubkey."
+            "\u2014 not an unbound pubkey."
           ]
         },
         {
@@ -295,12 +295,17 @@
         },
         {
           "name": "vault_config",
+          "docs": [
+            "Heap-allocated. `VaultConfig` is about 1KB; on the stack it pushes",
+            "`CrankPool::try_accounts` past the 4KB sBPF frame, and the custody",
+            "constraints then compare spilled bytes."
+          ],
           "writable": true
         },
         {
           "name": "price_update",
           "docs": [
-            "— rec2 by default (SDK Owner is rec5), or the governance-set adapter."
+            "\u2014 rec2 by default (SDK Owner is rec5), or the governance-set adapter."
           ]
         },
         {
@@ -329,9 +334,9 @@
       "docs": [
         "H-5 Layer C. Reads `external_assets_usd` from the adapter feed derived",
         "from `pool` (posted through `put_price_guarded`), adds escrow USDC,",
-        "applies Layer B / A′, CPIs `update_price` as `nav_authority`.",
+        "applies Layer B / A\u2032, CPIs `update_price` as `nav_authority`.",
         "",
-        "Ops: `propose_roles(oracle → nav_authority)` on ETH vaults is a human",
+        "Ops: `propose_roles(oracle \u2192 nav_authority)` on ETH vaults is a human",
         "governance batch. Do not run live rotations from this program."
       ],
       "discriminator": [
@@ -360,6 +365,9 @@
         },
         {
           "name": "vault_config",
+          "docs": [
+            "Same heap move as `CrankPool`: this accounts struct also holds `VaultConfig`."
+          ],
           "writable": true
         },
         {
@@ -680,7 +688,7 @@
         "Point every PriceUpdate owner check at `new_source`. Passing rec2",
         "explicitly goes back to the real receiver; the default pubkey is",
         "refused (default-in-state already means rec2). `price_source_program`",
-        "must be the named program and executable — a typo'd or non-program",
+        "must be the named program and executable \u2014 a typo'd or non-program",
         "source would brick every crank. Reallocs a pre-upgrade config to the",
         "current length, rent topped up by governance."
       ],
@@ -835,19 +843,18 @@
     {
       "name": "AdapterFeedMaxAgeAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "AdapterFeedMaxAgeProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "secs",
@@ -857,7 +864,8 @@
             "name": "proposed_at",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -882,6 +890,27 @@
                 }
               }
             }
+          },
+          {
+            "name": "turnover_pending_underlying",
+            "docs": [
+              "Completed rebalance sales not yet settled, in underlying units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "turnover_fee_period_start",
+            "docs": [
+              "Start of the current turnover-fee cap window."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "turnover_fee_charged_in_period",
+            "docs": [
+              "Turnover fee already charged in the current window, in underlying units."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -889,7 +918,6 @@
     {
       "name": "CrankHeldDeviation",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -903,13 +931,13 @@
             "name": "target",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CrankHeldRatio",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -919,13 +947,13 @@
             "name": "last_price",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CrankHeldTwap",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -943,13 +971,13 @@
             "name": "twap",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CrankPoolHeldCooldown",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -963,13 +991,13 @@
             "name": "computed_price",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CrankPoolNoop",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -979,13 +1007,13 @@
             "name": "price",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CrankStepClamped",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -1003,13 +1031,13 @@
             "name": "target",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "GovernanceAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old",
@@ -1019,13 +1047,13 @@
             "name": "new",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "GovernanceProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pending",
@@ -1039,13 +1067,13 @@
             "name": "delay_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "GovernanceRotationDelayRaised",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old",
@@ -1055,7 +1083,8 @@
             "name": "new",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -1137,7 +1166,6 @@
     {
       "name": "NavCranked",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -1159,13 +1187,13 @@
             "name": "pending_unwinds",
             "type": "u8"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "NavInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "nav_authority",
@@ -1175,7 +1203,8 @@
             "name": "underlying_mint",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -1237,7 +1266,6 @@
     {
       "name": "NavScratchClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -1247,7 +1275,8 @@
             "name": "closed_by",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -1528,6 +1557,14 @@
           {
             "name": "shares_requested",
             "type": "u64"
+          },
+          {
+            "name": "turnover_underlying",
+            "docs": [
+              "`expected_out` of a sale this book chose. Zero for redemption and halt exits.",
+              "Counted into `turnover_pending_underlying` only when the request closes."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -1672,7 +1709,7 @@
           {
             "name": "redemption_estimate_secs",
             "docs": [
-              "Conservative estimate; floors `Portfolio.rebalance_delay_secs`.",
+              "Conservative estimate. Propose notice is at least this long.",
               "Capped at 30 days at registration (`MAX_NOTICE_SECS`)."
             ],
             "type": "u64"
@@ -1732,13 +1769,13 @@
     {
       "name": "PoolFeedClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -1856,7 +1893,6 @@
     {
       "name": "PoolFeedGuardsSet",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -1870,13 +1906,13 @@
             "name": "hold_above_bps",
             "type": "u16"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolFeedSet",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -1904,7 +1940,8 @@
             "name": "kamino_vault",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -1974,10 +2011,6 @@
             "type": "string"
           },
           {
-            "name": "creator_fee_bps",
-            "type": "u16"
-          },
-          {
             "name": "pending_targets",
             "docs": [
               "Timestamps only. The proposed set is `PendingTargetsAccount`."
@@ -1995,7 +2028,11 @@
             "type": "bool"
           },
           {
-            "name": "rebalance_delay_secs",
+            "name": "deprecated_rebalance_delay_secs",
+            "docs": [
+              "Unused. Bytes stay so existing portfolio headers still decode.",
+              "Notice is resolved from `FactoryConfig` and `AccessRecord` at propose."
+            ],
             "type": "u64"
           },
           {
@@ -2111,13 +2148,13 @@
     {
       "name": "PriceSourceSet",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "price_source",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -2582,6 +2619,375 @@
           }
         ]
       }
+    }
+  ],
+  "constants": [],
+  "events": [
+    {
+      "discriminator": [
+        177,
+        47,
+        237,
+        66,
+        93,
+        68,
+        248,
+        249
+      ],
+      "name": "AdapterFeedMaxAgeAccepted"
+    },
+    {
+      "discriminator": [
+        56,
+        254,
+        36,
+        37,
+        255,
+        30,
+        184,
+        72
+      ],
+      "name": "AdapterFeedMaxAgeProposed"
+    },
+    {
+      "discriminator": [
+        9,
+        241,
+        2,
+        107,
+        171,
+        41,
+        80,
+        208
+      ],
+      "name": "CrankHeldDeviation"
+    },
+    {
+      "discriminator": [
+        238,
+        225,
+        125,
+        164,
+        226,
+        118,
+        177,
+        194
+      ],
+      "name": "CrankHeldRatio"
+    },
+    {
+      "discriminator": [
+        167,
+        111,
+        38,
+        41,
+        107,
+        4,
+        148,
+        181
+      ],
+      "name": "CrankHeldTwap"
+    },
+    {
+      "discriminator": [
+        170,
+        249,
+        51,
+        135,
+        107,
+        217,
+        174,
+        28
+      ],
+      "name": "CrankPoolHeldCooldown"
+    },
+    {
+      "discriminator": [
+        241,
+        38,
+        18,
+        30,
+        123,
+        208,
+        62,
+        116
+      ],
+      "name": "CrankPoolNoop"
+    },
+    {
+      "discriminator": [
+        120,
+        135,
+        120,
+        96,
+        130,
+        160,
+        16,
+        156
+      ],
+      "name": "CrankStepClamped"
+    },
+    {
+      "discriminator": [
+        58,
+        188,
+        56,
+        73,
+        240,
+        184,
+        32,
+        89
+      ],
+      "name": "GovernanceAccepted"
+    },
+    {
+      "discriminator": [
+        159,
+        228,
+        224,
+        214,
+        100,
+        69,
+        40,
+        198
+      ],
+      "name": "GovernanceProposed"
+    },
+    {
+      "discriminator": [
+        155,
+        8,
+        60,
+        11,
+        226,
+        91,
+        61,
+        207
+      ],
+      "name": "GovernanceRotationDelayRaised"
+    },
+    {
+      "discriminator": [
+        48,
+        41,
+        252,
+        192,
+        133,
+        46,
+        45,
+        134
+      ],
+      "name": "NavCranked"
+    },
+    {
+      "discriminator": [
+        14,
+        196,
+        163,
+        130,
+        163,
+        22,
+        181,
+        186
+      ],
+      "name": "NavInitialized"
+    },
+    {
+      "discriminator": [
+        246,
+        47,
+        51,
+        246,
+        160,
+        227,
+        182,
+        3
+      ],
+      "name": "NavScratchClosed"
+    },
+    {
+      "discriminator": [
+        175,
+        67,
+        34,
+        117,
+        74,
+        104,
+        76,
+        157
+      ],
+      "name": "PoolFeedClosed"
+    },
+    {
+      "discriminator": [
+        197,
+        73,
+        223,
+        157,
+        206,
+        86,
+        45,
+        37
+      ],
+      "name": "PoolFeedGuardsSet"
+    },
+    {
+      "discriminator": [
+        231,
+        21,
+        179,
+        148,
+        199,
+        171,
+        153,
+        88
+      ],
+      "name": "PoolFeedSet"
+    },
+    {
+      "discriminator": [
+        77,
+        39,
+        165,
+        4,
+        49,
+        231,
+        226,
+        2
+      ],
+      "name": "PriceSourceSet"
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "VaultMismatch",
+      "msg": "Portfolio vault does not match supplied vault"
+    },
+    {
+      "code": 6001,
+      "name": "AllocatorMismatch",
+      "msg": "Allocator portfolio does not reference this portfolio"
+    },
+    {
+      "code": 6002,
+      "name": "ExactSetMismatch",
+      "msg": "Exact-set validation failed (omission, substitution, reorder, or length)"
+    },
+    {
+      "code": 6003,
+      "name": "CustodyMismatch",
+      "msg": "Custody account mint or owner mismatch"
+    },
+    {
+      "code": 6004,
+      "name": "PoolPriceStale",
+      "msg": "A required pool price is stale"
+    },
+    {
+      "code": 6005,
+      "name": "PoolPricePending",
+      "msg": "A required pool has an unaccepted pending price"
+    },
+    {
+      "code": 6006,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow in NAV math"
+    },
+    {
+      "code": 6007,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6008,
+      "name": "NotImplemented",
+      "msg": "Not implemented"
+    },
+    {
+      "code": 6009,
+      "name": "PythNegativePrice",
+      "msg": "Pyth price is negative"
+    },
+    {
+      "code": 6010,
+      "name": "PythWideConfidence",
+      "msg": "Pyth confidence is wider than the allowed band"
+    },
+    {
+      "code": 6011,
+      "name": "PythWrongOwner",
+      "msg": "Price update account is not owned by the Pyth receiver"
+    },
+    {
+      "code": 6012,
+      "name": "PythPriceUnusable",
+      "msg": "Pyth price update is unusable (stale, unverified, or wrong feed)"
+    },
+    {
+      "code": 6013,
+      "name": "FeedUnset",
+      "msg": "Pool feed map account is missing or uninitialized"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidFeedIds",
+      "msg": "At least one of pyth_feed_id or rr_feed_id must be set"
+    },
+    {
+      "code": 6015,
+      "name": "KaminoVaultInvalid",
+      "msg": "Kamino vault remaining account is missing, wrong owner, or unreadable"
+    },
+    {
+      "code": 6016,
+      "name": "KaminoExchangeRateUnavailable",
+      "msg": "Kamino vault exchange rate is unavailable (zero shares issued)"
+    },
+    {
+      "code": 6017,
+      "name": "NavScratchStale",
+      "msg": "Nav scratch is stale or does not match this page"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidPriceSource",
+      "msg": "Price source must be an explicit program id"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidAdapterFeedMaxAge",
+      "msg": "adapter_feed_max_age_secs is outside [60, 7d]"
+    },
+    {
+      "code": 6020,
+      "name": "NoPendingAdapterFeedMaxAge",
+      "msg": "No pending adapter_feed_max_age_secs"
+    },
+    {
+      "code": 6021,
+      "name": "ScaledUiInvalid",
+      "msg": "Token-2022 ScaledUiAmountConfig is unreadable or out of bound"
+    },
+    {
+      "code": 6022,
+      "name": "NoPendingGovernance",
+      "msg": "No pending governance rotation"
+    },
+    {
+      "code": 6023,
+      "name": "GovernanceRotationDelay",
+      "msg": "Governance rotation delay has not elapsed"
+    },
+    {
+      "code": 6024,
+      "name": "InflightAccountInvalid",
+      "msg": "Inflight account is not the canonical InflightBridge PDA"
+    },
+    {
+      "code": 6025,
+      "name": "RatioSourceInvalid",
+      "msg": "ratio_source is set but the reference account is missing or unreadable"
     }
   ]
 }

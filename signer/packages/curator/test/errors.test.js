@@ -28,14 +28,16 @@ const code = (table, name) => ANCHOR_CUSTOM_ERROR_BASE + table.indexOf(name);
 
 describe('error tables', () => {
   it('embed every variant of both enums in order', () => {
-    assert.equal(FACTORY_ERRORS.length, 66);
-    assert.equal(STOKEN_ERRORS.length, 129);
+    assert.equal(FACTORY_ERRORS.length, 67);
+    assert.equal(STOKEN_ERRORS.length, 131);
     assert.equal(FACTORY_ERRORS[0], 'CreationPaused');
     assert.equal(FACTORY_ERRORS[20], 'RebalanceTooSoon');
     assert.equal(FACTORY_ERRORS[65], 'Unauthorized');
+    assert.equal(FACTORY_ERRORS[66], 'RebalanceNotAuthorized');
     assert.equal(STOKEN_ERRORS[0], 'Unauthorized');
     assert.equal(STOKEN_ERRORS[121], 'InvalidProgramData');
     assert.equal(STOKEN_ERRORS[128], 'CooldownNotRaised');
+    assert.equal(STOKEN_ERRORS[130], 'TurnoverFeeExceedsSupplyCap');
     assert.ok(Object.isFrozen(FACTORY_ERRORS));
     assert.ok(Object.isFrozen(STOKEN_ERRORS));
     assert.equal(new Set(FACTORY_ERRORS).size, FACTORY_ERRORS.length);

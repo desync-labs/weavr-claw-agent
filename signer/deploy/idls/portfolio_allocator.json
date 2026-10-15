@@ -271,6 +271,12 @@
           "signer": true
         },
         {
+          "name": "factory_config"
+        },
+        {
+          "name": "portfolio"
+        },
+        {
           "name": "vault"
         },
         {
@@ -592,6 +598,9 @@
     },
     {
       "name": "settle_turnover_fee",
+      "docs": [
+        "Charges the turnover fee on completed rebalance sales. Permissionless."
+      ],
       "discriminator": [
         115,
         167,
@@ -744,295 +753,10 @@
       ]
     }
   ],
-  "events": [
-    {
-      "name": "Allocated",
-      "discriminator": [
-        146,
-        11,
-        194,
-        76,
-        4,
-        220,
-        226,
-        43
-      ]
-    },
-    {
-      "name": "CustodianAccountsClosed",
-      "discriminator": [
-        143,
-        200,
-        173,
-        35,
-        68,
-        224,
-        255,
-        235
-      ]
-    },
-    {
-      "name": "CustodianCreated",
-      "discriminator": [
-        159,
-        7,
-        51,
-        160,
-        8,
-        10,
-        220,
-        92
-      ]
-    },
-    {
-      "name": "CustodyInitialized",
-      "discriminator": [
-        3,
-        14,
-        210,
-        151,
-        24,
-        131,
-        120,
-        20
-      ]
-    },
-    {
-      "name": "ReturnedToVault",
-      "discriminator": [
-        3,
-        187,
-        26,
-        175,
-        159,
-        55,
-        19,
-        188
-      ]
-    },
-    {
-      "name": "UnwindCancelled",
-      "discriminator": [
-        148,
-        40,
-        203,
-        234,
-        59,
-        9,
-        254,
-        99
-      ]
-    },
-    {
-      "name": "UnwindFloorClamped",
-      "discriminator": [
-        206,
-        189,
-        12,
-        44,
-        122,
-        145,
-        16,
-        199
-      ]
-    },
-    {
-      "name": "UnwindReconciled",
-      "discriminator": [
-        219,
-        110,
-        128,
-        180,
-        61,
-        143,
-        245,
-        214
-      ]
-    },
-    {
-      "name": "UnwindRequested",
-      "discriminator": [
-        25,
-        205,
-        160,
-        181,
-        17,
-        2,
-        178,
-        77
-      ]
-    },
-    {
-      "name": "VaultRoleAccepted",
-      "discriminator": [
-        36,
-        37,
-        123,
-        162,
-        181,
-        20,
-        129,
-        34
-      ]
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "Unauthorized",
-      "msg": "Unauthorized"
-    },
-    {
-      "code": 6001,
-      "name": "KeeperRiskPaused",
-      "msg": "Keeper risk paths are paused"
-    },
-    {
-      "code": 6002,
-      "name": "WrongPortfolioState",
-      "msg": "Portfolio is not in the required state"
-    },
-    {
-      "code": 6003,
-      "name": "InvalidVaultBranch",
-      "msg": "Vault branch does not match the supplied accounts"
-    },
-    {
-      "code": 6004,
-      "name": "PoolNotInTargets",
-      "msg": "Pool is not among the portfolio's targets"
-    },
-    {
-      "code": 6005,
-      "name": "PoolNotActive",
-      "msg": "Pool is not active"
-    },
-    {
-      "code": 6006,
-      "name": "VaultPaused",
-      "msg": "Vault is paused"
-    },
-    {
-      "code": 6007,
-      "name": "PortfolioPriceStale",
-      "msg": "Portfolio price is stale"
-    },
-    {
-      "code": 6008,
-      "name": "PortfolioPricePending",
-      "msg": "Portfolio has an unaccepted pending price"
-    },
-    {
-      "code": 6009,
-      "name": "PoolPriceStale",
-      "msg": "A required pool price is stale"
-    },
-    {
-      "code": 6010,
-      "name": "PoolPricePending",
-      "msg": "A required pool has an unaccepted pending price"
-    },
-    {
-      "code": 6011,
-      "name": "WeightBandExceeded",
-      "msg": "Allocation would push the leg outside its weight band"
-    },
-    {
-      "code": 6012,
-      "name": "InsufficientCustodyBalance",
-      "msg": "Custody balance is insufficient"
-    },
-    {
-      "code": 6013,
-      "name": "InvalidCustodyAccount",
-      "msg": "Custody account is not the canonical one"
-    },
-    {
-      "code": 6014,
-      "name": "InvalidRecipientAccount",
-      "msg": "Recipient account is not the canonical one"
-    },
-    {
-      "code": 6015,
-      "name": "InvalidWithdrawalRequest",
-      "msg": "Withdrawal request account is invalid"
-    },
-    {
-      "code": 6016,
-      "name": "InvalidMint",
-      "msg": "Mint is neither the underlying nor a registered pool's shares mint"
-    },
-    {
-      "code": 6017,
-      "name": "InvalidAllocatorRoleClaim",
-      "msg": "Allocator may only claim the AssetManager role"
-    },
-    {
-      "code": 6018,
-      "name": "UnwindNotJustified",
-      "msg": "Unwind is not justified by targets or pending withdrawals"
-    },
-    {
-      "code": 6019,
-      "name": "UnwindExceedsTickCap",
-      "msg": "Unwind exceeds the per-tick share cap"
-    },
-    {
-      "code": 6020,
-      "name": "PoolWithdrawalAlreadyPending",
-      "msg": "A withdrawal is already pending for this pool"
-    },
-    {
-      "code": 6021,
-      "name": "WithdrawalStillPending",
-      "msg": "Tracked withdrawal is still pending"
-    },
-    {
-      "code": 6022,
-      "name": "CustodianNotWhitelisted",
-      "msg": "Custodian is not on the pool's deposit whitelist"
-    },
-    {
-      "code": 6023,
-      "name": "MathOverflow",
-      "msg": "Arithmetic overflow"
-    },
-    {
-      "code": 6024,
-      "name": "PendingTargetsRequired",
-      "msg": "Effective pending targets account is required"
-    },
-    {
-      "code": 6025,
-      "name": "ApplyInFlight",
-      "msg": "A paged apply is in flight; wait for it to complete"
-    },
-    {
-      "code": 6026,
-      "name": "UnwindBelowMinimum",
-      "msg": "Unwind is below the dust floor and is not the full remainder"
-    },
-    {
-      "code": 6027,
-      "name": "NavInFlight",
-      "msg": "A paged NAV crank is in flight; wait for it to complete or restart"
-    },
-    {
-      "code": 6028,
-      "name": "LedgerRequired",
-      "msg": "Unwind ledger is required for pending-redemption unwinds"
-    },
-    {
-      "code": 6029,
-      "name": "UnwindExceedsShortfall",
-      "msg": "Unwind value exceeds the remaining redemption shortfall"
-    }
-  ],
   "types": [
     {
       "name": "Allocated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -1054,7 +778,8 @@
             "name": "pool_price",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -1082,14 +807,23 @@
           },
           {
             "name": "turnover_pending_underlying",
+            "docs": [
+              "Completed rebalance sales not yet settled, in underlying units."
+            ],
             "type": "u64"
           },
           {
             "name": "turnover_fee_period_start",
+            "docs": [
+              "Start of the current turnover-fee cap window."
+            ],
             "type": "i64"
           },
           {
             "name": "turnover_fee_charged_in_period",
+            "docs": [
+              "Turnover fee already charged in the current window, in underlying units."
+            ],
             "type": "u64"
           }
         ]
@@ -1101,20 +835,46 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "max_deposit_fee_bps",
+            "name": "deposit_fee_bps",
+            "docs": [
+              "Charged on every deposit into a book created under this policy."
+            ],
             "type": "u16"
           },
           {
-            "name": "max_withdraw_fee_bps",
+            "name": "withdraw_fee_bps",
+            "docs": [
+              "Charged on every withdrawal from a book created under this policy."
+            ],
             "type": "u16"
           },
           {
-            "name": "max_mgmt_fee_bps",
+            "name": "management_fee_bps_per_year",
+            "docs": [
+              "Annual management fee written onto new books. Launch value is 0."
+            ],
             "type": "u16"
           },
           {
-            "name": "min_spread_bps",
+            "name": "turnover_fee_bps",
+            "docs": [
+              "Charged on a completed rebalance sale, in bps of the sale."
+            ],
             "type": "u16"
+          },
+          {
+            "name": "turnover_fee_cap_bps_per_period",
+            "docs": [
+              "Most a book may be charged for turnover in one period, in bps of NAV."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "turnover_fee_period_secs",
+            "docs": [
+              "Length of the turnover cap window, in seconds."
+            ],
+            "type": "u64"
           },
           {
             "name": "min_idle_target_bps",
@@ -1216,7 +976,6 @@
     {
       "name": "CustodianAccountsClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -1230,13 +989,13 @@
             "name": "recipient",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CustodianCreated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -1254,13 +1013,13 @@
             "name": "allocator_portfolio",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CustodyInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "custodian",
@@ -1274,7 +1033,8 @@
             "name": "ata",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -1437,6 +1197,35 @@
               "0 = accept is immediate (same as `policy_delay_secs`)."
             ],
             "type": "u64"
+          },
+          {
+            "name": "trusted_min_rebalance_delay_secs",
+            "docs": [
+              "Short notice floor. 0 disables it. An `AccessRecord` with",
+              "`trusted_delay` may use this instead of `policy.min_rebalance_delay_secs`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "deprecated_trusted_creators",
+            "docs": [
+              "ADR-0367 fixed slots. Unused. Bytes stay so existing configs still decode."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                4
+              ]
+            }
+          },
+          {
+            "name": "rebalance_whitelist_enabled",
+            "docs": [
+              "When set, `propose_targets` requires an `AccessRecord` with",
+              "`can_rebalance` for the portfolio creator or curator.",
+              "Absent on pre-whitelist accounts (read as false)."
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -1722,6 +1511,10 @@
           },
           {
             "name": "turnover_underlying",
+            "docs": [
+              "`expected_out` of a sale this book chose. Zero for redemption and halt exits.",
+              "Counted into `turnover_pending_underlying` only when the request closes."
+            ],
             "type": "u64"
           }
         ]
@@ -1867,7 +1660,7 @@
           {
             "name": "redemption_estimate_secs",
             "docs": [
-              "Conservative estimate; floors `Portfolio.rebalance_delay_secs`.",
+              "Conservative estimate. Propose notice is at least this long.",
               "Capped at 30 days at registration (`MAX_NOTICE_SECS`)."
             ],
             "type": "u64"
@@ -1991,10 +1784,6 @@
             "type": "string"
           },
           {
-            "name": "creator_fee_bps",
-            "type": "u16"
-          },
-          {
             "name": "pending_targets",
             "docs": [
               "Timestamps only. The proposed set is `PendingTargetsAccount`."
@@ -2012,7 +1801,11 @@
             "type": "bool"
           },
           {
-            "name": "rebalance_delay_secs",
+            "name": "deprecated_rebalance_delay_secs",
+            "docs": [
+              "Unused. Bytes stay so existing portfolio headers still decode.",
+              "Notice is resolved from `FactoryConfig` and `AccessRecord` at propose."
+            ],
             "type": "u64"
           },
           {
@@ -2128,7 +1921,6 @@
     {
       "name": "ReturnedToVault",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -2138,7 +1930,8 @@
             "name": "amount",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -2171,9 +1964,44 @@
       }
     },
     {
+      "name": "TurnoverFeeSettled",
+      "type": {
+        "fields": [
+          {
+            "name": "portfolio",
+            "type": "pubkey"
+          },
+          {
+            "name": "turnover_underlying",
+            "type": "u64"
+          },
+          {
+            "name": "charged_underlying",
+            "type": "u64"
+          },
+          {
+            "name": "clipped_underlying",
+            "type": "u64"
+          },
+          {
+            "name": "turnover_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "period_start",
+            "type": "i64"
+          },
+          {
+            "name": "rolled",
+            "type": "bool"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
       "name": "UnwindCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -2195,13 +2023,13 @@
             "name": "cancelled_by",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "UnwindFloorClamped",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -2215,13 +2043,13 @@
             "name": "vault_cap",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "UnwindReconciled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -2243,13 +2071,13 @@
             "name": "turnover_underlying",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "UnwindRequested",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -2268,10 +2096,10 @@
             "type": "u64"
           },
           {
-            "name": "justification",
             "docs": [
               "Exactly one reason, per spec 5.3."
             ],
+            "name": "justification",
             "type": "u8"
           },
           {
@@ -2282,7 +2110,8 @@
             "name": "turnover_underlying",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -2690,7 +2519,6 @@
     {
       "name": "VaultRoleAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -2700,7 +2528,8 @@
             "name": "custodian",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -2783,42 +2612,309 @@
           }
         ]
       }
+    }
+  ],
+  "constants": [],
+  "events": [
+    {
+      "discriminator": [
+        146,
+        11,
+        194,
+        76,
+        4,
+        220,
+        226,
+        43
+      ],
+      "name": "Allocated"
     },
     {
-      "name": "TurnoverFeeSettled",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "portfolio",
-            "type": "pubkey"
-          },
-          {
-            "name": "turnover_underlying",
-            "type": "u64"
-          },
-          {
-            "name": "charged_underlying",
-            "type": "u64"
-          },
-          {
-            "name": "clipped_underlying",
-            "type": "u64"
-          },
-          {
-            "name": "turnover_fee_bps",
-            "type": "u16"
-          },
-          {
-            "name": "period_start",
-            "type": "i64"
-          },
-          {
-            "name": "rolled",
-            "type": "bool"
-          }
-        ]
-      }
+      "discriminator": [
+        143,
+        200,
+        173,
+        35,
+        68,
+        224,
+        255,
+        235
+      ],
+      "name": "CustodianAccountsClosed"
+    },
+    {
+      "discriminator": [
+        159,
+        7,
+        51,
+        160,
+        8,
+        10,
+        220,
+        92
+      ],
+      "name": "CustodianCreated"
+    },
+    {
+      "discriminator": [
+        3,
+        14,
+        210,
+        151,
+        24,
+        131,
+        120,
+        20
+      ],
+      "name": "CustodyInitialized"
+    },
+    {
+      "discriminator": [
+        3,
+        187,
+        26,
+        175,
+        159,
+        55,
+        19,
+        188
+      ],
+      "name": "ReturnedToVault"
+    },
+    {
+      "discriminator": [
+        81,
+        11,
+        163,
+        228,
+        236,
+        147,
+        161,
+        218
+      ],
+      "name": "TurnoverFeeSettled"
+    },
+    {
+      "discriminator": [
+        148,
+        40,
+        203,
+        234,
+        59,
+        9,
+        254,
+        99
+      ],
+      "name": "UnwindCancelled"
+    },
+    {
+      "discriminator": [
+        206,
+        189,
+        12,
+        44,
+        122,
+        145,
+        16,
+        199
+      ],
+      "name": "UnwindFloorClamped"
+    },
+    {
+      "discriminator": [
+        219,
+        110,
+        128,
+        180,
+        61,
+        143,
+        245,
+        214
+      ],
+      "name": "UnwindReconciled"
+    },
+    {
+      "discriminator": [
+        25,
+        205,
+        160,
+        181,
+        17,
+        2,
+        178,
+        77
+      ],
+      "name": "UnwindRequested"
+    },
+    {
+      "discriminator": [
+        36,
+        37,
+        123,
+        162,
+        181,
+        20,
+        129,
+        34
+      ],
+      "name": "VaultRoleAccepted"
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6001,
+      "name": "KeeperRiskPaused",
+      "msg": "Keeper risk paths are paused"
+    },
+    {
+      "code": 6002,
+      "name": "WrongPortfolioState",
+      "msg": "Portfolio is not in the required state"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidVaultBranch",
+      "msg": "Vault branch does not match the supplied accounts"
+    },
+    {
+      "code": 6004,
+      "name": "PoolNotInTargets",
+      "msg": "Pool is not among the portfolio's targets"
+    },
+    {
+      "code": 6005,
+      "name": "PoolNotActive",
+      "msg": "Pool is not active"
+    },
+    {
+      "code": 6006,
+      "name": "VaultPaused",
+      "msg": "Vault is paused"
+    },
+    {
+      "code": 6007,
+      "name": "PortfolioPriceStale",
+      "msg": "Portfolio price is stale"
+    },
+    {
+      "code": 6008,
+      "name": "PortfolioPricePending",
+      "msg": "Portfolio has an unaccepted pending price"
+    },
+    {
+      "code": 6009,
+      "name": "PoolPriceStale",
+      "msg": "A required pool price is stale"
+    },
+    {
+      "code": 6010,
+      "name": "PoolPricePending",
+      "msg": "A required pool has an unaccepted pending price"
+    },
+    {
+      "code": 6011,
+      "name": "WeightBandExceeded",
+      "msg": "Allocation would push the leg outside its weight band"
+    },
+    {
+      "code": 6012,
+      "name": "InsufficientCustodyBalance",
+      "msg": "Custody balance is insufficient"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidCustodyAccount",
+      "msg": "Custody account is not the canonical one"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidRecipientAccount",
+      "msg": "Recipient account is not the canonical one"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidWithdrawalRequest",
+      "msg": "Withdrawal request account is invalid"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidMint",
+      "msg": "Mint is neither the underlying nor a registered pool's shares mint"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidAllocatorRoleClaim",
+      "msg": "Allocator may only claim the AssetManager role"
+    },
+    {
+      "code": 6018,
+      "name": "UnwindNotJustified",
+      "msg": "Unwind is not justified by targets or pending withdrawals"
+    },
+    {
+      "code": 6019,
+      "name": "UnwindExceedsTickCap",
+      "msg": "Unwind exceeds the per-tick share cap"
+    },
+    {
+      "code": 6020,
+      "name": "PoolWithdrawalAlreadyPending",
+      "msg": "A withdrawal is already pending for this pool"
+    },
+    {
+      "code": 6021,
+      "name": "WithdrawalStillPending",
+      "msg": "Tracked withdrawal is still pending"
+    },
+    {
+      "code": 6022,
+      "name": "CustodianNotWhitelisted",
+      "msg": "Custodian is not on the pool's deposit whitelist"
+    },
+    {
+      "code": 6023,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6024,
+      "name": "PendingTargetsRequired",
+      "msg": "Effective pending targets account is required"
+    },
+    {
+      "code": 6025,
+      "name": "ApplyInFlight",
+      "msg": "A paged apply is in flight; wait for it to complete"
+    },
+    {
+      "code": 6026,
+      "name": "UnwindBelowMinimum",
+      "msg": "Unwind is below the dust floor and is not the full remainder"
+    },
+    {
+      "code": 6027,
+      "name": "NavInFlight",
+      "msg": "A paged NAV crank is in flight; wait for it to complete or restart"
+    },
+    {
+      "code": 6028,
+      "name": "LedgerRequired",
+      "msg": "Unwind ledger is required for pending-redemption unwinds"
+    },
+    {
+      "code": 6029,
+      "name": "UnwindExceedsShortfall",
+      "msg": "Unwind value exceeds the remaining redemption shortfall"
+    },
+    {
+      "code": 6030,
+      "name": "NothingToSettle",
+      "msg": "No turnover fee to settle"
     }
   ]
 }
