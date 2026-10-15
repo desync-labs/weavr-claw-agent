@@ -6,7 +6,7 @@
  * test/errors.test.js prove the embedded copy matches the checkout.
  */
 
-/** FactoryError (composable-portfolios-programs/programs/portfolio_factory/src/errors.rs): 66 variants. */
+/** FactoryError (composable-portfolios-programs/programs/portfolio_factory/src/errors.rs): 67 variants. */
 export const FACTORY_ERRORS = Object.freeze([
   'CreationPaused',
   'TooManyLegs',
@@ -74,9 +74,10 @@ export const FACTORY_ERRORS = Object.freeze([
   'InvalidAuthorityPda',
   'MathOverflow',
   'Unauthorized',
+  'RebalanceNotAuthorized',
 ]);
 
-/** STokenError (splyce-composable-core/programs/stoken/src/errors.rs): 129 variants. */
+/** STokenError (splyce-composable-core/programs/stoken/src/errors.rs): 131 variants. */
 export const STOKEN_ERRORS = Object.freeze([
   'Unauthorized',
   'InvalidFee',
@@ -207,4 +208,6 @@ export const STOKEN_ERRORS = Object.freeze([
   'SharesInCustodyRemain',
   'VaultSupplyNotZero',
   'CooldownNotRaised',
+  'TurnoverFeeTooLarge',
+  'TurnoverFeeExceedsSupplyCap',
 ]);
