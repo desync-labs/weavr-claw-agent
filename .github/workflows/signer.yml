@@ -1,18 +1,15 @@
-# The curator signer: tests on every pull request that touches signer/, and
-# on a push to main the image is built from signer/ and pushed to the public
-# Docker Hub repository intothefathom/curator-public with three tags:
+# The curator signer. Tests run on every pull request that touches signer/.
+# A push publishes one line and never the others:
 #
-#   <version>   signer/package.json "version"; refused if the tag already
-#               exists, so a change to the signer that reaches main must
-#               bump the version (curator/compose/curator.yml pins this tag)
-#   sha-<short> the commit built
-#   latest      the newest build; pin the version tag on a real host
+#   master             alpha-<full-sha>     prod (alpha). No latest, no version tag.
+#   dev                <sha7>-dev and dev   integration.
+#   demo               <sha7>-demo and demo the demo line, cut from the old main.
 #
-# A workflow_dispatch from release/alpha-1 publishes exactly one tag,
-# alpha-<full-sha>. That path never pushes latest, a version tag, or a
-# demo tag. Dispatch from any other ref does not publish.
+# workflow_dispatch from master or release/alpha-1 publishes alpha-<full-sha>.
+# Dispatch from dev or demo publishes that line. No other ref publishes.
+# main no longer publishes, so latest and the version tag stay where they are.
 #
-# Two repository secrets, the same names the backend's workflow uses:
+# Two repository secrets, the same names the backend workflow uses:
 # DOCKER_USERNAME and DOCKER_PASSWORD (a Docker Hub access token with write
 # on the repository). Nothing else here is secret.
 name: signer
@@ -24,7 +21,7 @@ on:
       - 'signer/**'
       - '.github/workflows/signer.yml'
   push:
-    branches: [main]
+    branches: [master, dev, demo]
     paths:
       - 'signer/**'
       - '.github/workflows/signer.yml'
@@ -64,15 +61,40 @@ jobs:
 
   publish:
     needs: test
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/release/alpha-1')
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+        (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' ||
+         github.ref == 'refs/heads/demo' || github.ref == 'refs/heads/release/alpha-1'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
-      - name: Read the version
-        id: version
-        run: echo "value=$(node -p "require('./signer/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Choose the line
+        id: line
+        run: |
+          short=$(printf '%s' "$GITHUB_SHA" | cut -c1-7)
+          case "$GITHUB_REF" in
+            refs/heads/master|refs/heads/release/alpha-1)
+              tags="$IMAGE:alpha-$GITHUB_SHA"
+              ;;
+            refs/heads/dev)
+              tags="$IMAGE:${short}-dev"$'\n'"$IMAGE:dev"
+              ;;
+            refs/heads/demo)
+              tags="$IMAGE:${short}-demo"$'\n'"$IMAGE:demo"
+              ;;
+            *)
+              echo "::error::refusing to publish $GITHUB_REF"
+              exit 1
+              ;;
+          esac
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
@@ -80,39 +102,18 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Refuse to overwrite a published version
-        if: github.ref != 'refs/heads/release/alpha-1'
-        env:
-          VERSION: ${{ steps.version.outputs.value }}
-        run: |
-          if docker manifest inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
-            echo "::error::$IMAGE:$VERSION is already published; bump the version in signer/package.json"
-            exit 1
-          fi
-
       - uses: docker/setup-buildx-action@v4
-
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.IMAGE }}
-          tags: |
-            type=raw,value=${{ steps.version.outputs.value }}
-            type=sha,prefix=sha-,format=short
-            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: signer
           push: true
-          tags: ${{ github.ref == 'refs/heads/release/alpha-1' && format('{0}:alpha-{1}', env.IMAGE, github.sha) || steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.line.outputs.tags }}
 
       - name: Image summary
         env:
-          TAGS: ${{ github.ref == 'refs/heads/release/alpha-1' && format('{0}:alpha-{1}', env.IMAGE, github.sha) || steps.meta.outputs.tags }}
+          TAGS: ${{ steps.line.outputs.tags }}
         run: |
           {
             echo "## Signer image published"

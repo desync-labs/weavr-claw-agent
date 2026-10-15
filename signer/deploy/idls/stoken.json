@@ -418,6 +418,56 @@
       "args": []
     },
     {
+      "name": "accrue_turnover_fee",
+      "docs": [
+        "Mint a turnover fee, in this vault's shares, to the accountant.",
+        "Only the vault's asset manager (the portfolio custodian) may call it."
+      ],
+      "discriminator": [
+        225,
+        128,
+        45,
+        30,
+        179,
+        86,
+        53,
+        71
+      ],
+      "accounts": [
+        {
+          "name": "vault_config",
+          "writable": true
+        },
+        {
+          "name": "asset_manager",
+          "signer": true
+        },
+        {
+          "name": "accountant"
+        },
+        {
+          "name": "accountant_s_token_account",
+          "writable": true
+        },
+        {
+          "name": "shares_mint",
+          "writable": true
+        },
+        {
+          "name": "underlying_mint"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_underlying",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "add_user_to_deposit_whitelist",
       "docs": [
         "Add a user to the vault deposit whitelist (manager or processor)"
@@ -2361,55 +2411,6 @@
           "type": "u64"
         }
       ]
-    },
-    {
-      "name": "accrue_turnover_fee",
-      "docs": [
-        "Mint a turnover fee, in vault shares, to the accountant. Asset manager only."
-      ],
-      "discriminator": [
-        225,
-        128,
-        45,
-        30,
-        179,
-        86,
-        53,
-        71
-      ],
-      "accounts": [
-        {
-          "name": "vault_config",
-          "writable": true
-        },
-        {
-          "name": "asset_manager",
-          "signer": true
-        },
-        {
-          "name": "accountant"
-        },
-        {
-          "name": "accountant_s_token_account",
-          "writable": true
-        },
-        {
-          "name": "shares_mint",
-          "writable": true
-        },
-        {
-          "name": "underlying_mint"
-        },
-        {
-          "name": "token_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "amount_underlying",
-          "type": "u64"
-        }
-      ]
     }
   ],
   "accounts": [
@@ -2490,1409 +2491,6 @@
         229,
         193
       ]
-    }
-  ],
-  "events": [
-    {
-      "name": "STokenAddressAddedToDepositWhitelist",
-      "discriminator": [
-        19,
-        222,
-        53,
-        96,
-        213,
-        234,
-        207,
-        119
-      ]
-    },
-    {
-      "name": "STokenAddressAddedToWithdrawalWhitelist",
-      "discriminator": [
-        180,
-        88,
-        73,
-        3,
-        18,
-        143,
-        148,
-        86
-      ]
-    },
-    {
-      "name": "STokenAddressRemovedFromDepositWhitelist",
-      "discriminator": [
-        214,
-        239,
-        98,
-        144,
-        168,
-        240,
-        113,
-        124
-      ]
-    },
-    {
-      "name": "STokenAddressRemovedFromWithdrawalWhitelist",
-      "discriminator": [
-        171,
-        60,
-        251,
-        30,
-        193,
-        58,
-        210,
-        204
-      ]
-    },
-    {
-      "name": "STokenAdminChangeCancelled",
-      "discriminator": [
-        218,
-        108,
-        191,
-        29,
-        33,
-        115,
-        197,
-        22
-      ]
-    },
-    {
-      "name": "STokenAdminChangePending",
-      "discriminator": [
-        205,
-        211,
-        166,
-        173,
-        62,
-        68,
-        137,
-        0
-      ]
-    },
-    {
-      "name": "STokenAdminCooldownChangeCancelled",
-      "discriminator": [
-        50,
-        208,
-        16,
-        251,
-        222,
-        238,
-        199,
-        239
-      ]
-    },
-    {
-      "name": "STokenAdminCooldownChangePending",
-      "discriminator": [
-        157,
-        85,
-        27,
-        3,
-        29,
-        255,
-        143,
-        14
-      ]
-    },
-    {
-      "name": "STokenAdminCooldownUpdated",
-      "discriminator": [
-        1,
-        8,
-        226,
-        234,
-        133,
-        152,
-        30,
-        67
-      ]
-    },
-    {
-      "name": "STokenAdminRecoverAccepted",
-      "discriminator": [
-        119,
-        140,
-        252,
-        244,
-        166,
-        232,
-        97,
-        107
-      ]
-    },
-    {
-      "name": "STokenAdminRecoverProposed",
-      "discriminator": [
-        113,
-        241,
-        145,
-        165,
-        149,
-        207,
-        172,
-        134
-      ]
-    },
-    {
-      "name": "STokenAdminUpdated",
-      "discriminator": [
-        195,
-        120,
-        237,
-        84,
-        206,
-        133,
-        240,
-        102
-      ]
-    },
-    {
-      "name": "STokenConfigChangeApplied",
-      "discriminator": [
-        239,
-        179,
-        216,
-        33,
-        193,
-        69,
-        44,
-        105
-      ]
-    },
-    {
-      "name": "STokenConfigChangeProposed",
-      "discriminator": [
-        142,
-        50,
-        204,
-        20,
-        101,
-        176,
-        247,
-        32
-      ]
-    },
-    {
-      "name": "STokenCooldownsChangePending",
-      "discriminator": [
-        134,
-        16,
-        2,
-        158,
-        50,
-        190,
-        50,
-        56
-      ]
-    },
-    {
-      "name": "STokenCooldownsUpdated",
-      "discriminator": [
-        233,
-        105,
-        130,
-        68,
-        148,
-        229,
-        76,
-        63
-      ]
-    },
-    {
-      "name": "STokenDeposit",
-      "discriminator": [
-        211,
-        75,
-        23,
-        133,
-        27,
-        143,
-        3,
-        243
-      ]
-    },
-    {
-      "name": "STokenDepositsProcessed",
-      "discriminator": [
-        14,
-        76,
-        223,
-        34,
-        199,
-        22,
-        204,
-        235
-      ]
-    },
-    {
-      "name": "STokenEmergencyWithdraw",
-      "discriminator": [
-        103,
-        179,
-        87,
-        33,
-        78,
-        229,
-        242,
-        199
-      ]
-    },
-    {
-      "name": "STokenEmergencyWithdrawTimelockActivated",
-      "discriminator": [
-        102,
-        27,
-        220,
-        64,
-        15,
-        108,
-        106,
-        201
-      ]
-    },
-    {
-      "name": "STokenFeesChangePending",
-      "discriminator": [
-        113,
-        21,
-        68,
-        207,
-        62,
-        73,
-        22,
-        112
-      ]
-    },
-    {
-      "name": "STokenFeesUpdated",
-      "discriminator": [
-        18,
-        63,
-        108,
-        204,
-        60,
-        126,
-        11,
-        242
-      ]
-    },
-    {
-      "name": "STokenFundsReturned",
-      "discriminator": [
-        49,
-        54,
-        33,
-        68,
-        172,
-        238,
-        123,
-        196
-      ]
-    },
-    {
-      "name": "STokenGlobalConfigInitialized",
-      "discriminator": [
-        86,
-        185,
-        89,
-        127,
-        235,
-        175,
-        116,
-        146
-      ]
-    },
-    {
-      "name": "STokenLimitsChangePending",
-      "discriminator": [
-        234,
-        190,
-        143,
-        60,
-        157,
-        254,
-        114,
-        50
-      ]
-    },
-    {
-      "name": "STokenLimitsUpdated",
-      "discriminator": [
-        22,
-        211,
-        212,
-        35,
-        241,
-        30,
-        71,
-        14
-      ]
-    },
-    {
-      "name": "STokenManagementFeeAccrued",
-      "discriminator": [
-        5,
-        82,
-        159,
-        255,
-        18,
-        67,
-        82,
-        103
-      ]
-    },
-    {
-      "name": "STokenPriceAccepted",
-      "discriminator": [
-        37,
-        223,
-        179,
-        31,
-        129,
-        150,
-        160,
-        103
-      ]
-    },
-    {
-      "name": "STokenPricePending",
-      "discriminator": [
-        55,
-        126,
-        14,
-        232,
-        86,
-        237,
-        116,
-        157
-      ]
-    },
-    {
-      "name": "STokenPriceRejected",
-      "discriminator": [
-        174,
-        87,
-        233,
-        4,
-        0,
-        218,
-        28,
-        12
-      ]
-    },
-    {
-      "name": "STokenPriceUpdated",
-      "discriminator": [
-        173,
-        65,
-        204,
-        249,
-        130,
-        76,
-        49,
-        220
-      ]
-    },
-    {
-      "name": "STokenRoleAssignmentAccepted",
-      "discriminator": [
-        54,
-        16,
-        4,
-        30,
-        3,
-        9,
-        204,
-        42
-      ]
-    },
-    {
-      "name": "STokenRolesChangeCancelled",
-      "discriminator": [
-        197,
-        65,
-        37,
-        255,
-        165,
-        191,
-        154,
-        117
-      ]
-    },
-    {
-      "name": "STokenRolesChangePending",
-      "discriminator": [
-        187,
-        157,
-        67,
-        130,
-        233,
-        50,
-        83,
-        216
-      ]
-    },
-    {
-      "name": "STokenSharesMintInitialized",
-      "discriminator": [
-        87,
-        109,
-        248,
-        58,
-        220,
-        195,
-        130,
-        113
-      ]
-    },
-    {
-      "name": "STokenSunsetAccepted",
-      "discriminator": [
-        192,
-        158,
-        176,
-        34,
-        149,
-        88,
-        124,
-        84
-      ]
-    },
-    {
-      "name": "STokenSunsetCancelled",
-      "discriminator": [
-        134,
-        66,
-        227,
-        20,
-        80,
-        134,
-        106,
-        108
-      ]
-    },
-    {
-      "name": "STokenSunsetProposed",
-      "discriminator": [
-        137,
-        164,
-        36,
-        0,
-        223,
-        18,
-        167,
-        248
-      ]
-    },
-    {
-      "name": "STokenSwapVaultAllowlistCancelled",
-      "discriminator": [
-        173,
-        6,
-        50,
-        249,
-        139,
-        102,
-        52,
-        43
-      ]
-    },
-    {
-      "name": "STokenSwapVaultAllowlisted",
-      "discriminator": [
-        187,
-        7,
-        197,
-        171,
-        90,
-        196,
-        41,
-        57
-      ]
-    },
-    {
-      "name": "STokenTokenSwap",
-      "discriminator": [
-        181,
-        151,
-        101,
-        212,
-        229,
-        81,
-        143,
-        89
-      ]
-    },
-    {
-      "name": "STokenUnexpectedDeposit",
-      "discriminator": [
-        208,
-        183,
-        67,
-        109,
-        31,
-        220,
-        183,
-        5
-      ]
-    },
-    {
-      "name": "STokenUnexpectedDepositWithdrawn",
-      "discriminator": [
-        151,
-        134,
-        172,
-        101,
-        43,
-        170,
-        197,
-        237
-      ]
-    },
-    {
-      "name": "STokenVaultClosed",
-      "discriminator": [
-        49,
-        61,
-        103,
-        60,
-        102,
-        78,
-        233,
-        186
-      ]
-    },
-    {
-      "name": "STokenVaultInitialized",
-      "discriminator": [
-        239,
-        3,
-        21,
-        143,
-        161,
-        175,
-        20,
-        215
-      ]
-    },
-    {
-      "name": "STokenVaultPaused",
-      "discriminator": [
-        69,
-        137,
-        38,
-        209,
-        130,
-        73,
-        228,
-        92
-      ]
-    },
-    {
-      "name": "STokenVaultTokenAccountClosed",
-      "discriminator": [
-        155,
-        74,
-        126,
-        113,
-        81,
-        161,
-        126,
-        173
-      ]
-    },
-    {
-      "name": "STokenVaultUnpaused",
-      "discriminator": [
-        39,
-        245,
-        134,
-        139,
-        103,
-        17,
-        112,
-        220
-      ]
-    },
-    {
-      "name": "STokenWhitelistChangePending",
-      "discriminator": [
-        25,
-        85,
-        10,
-        82,
-        37,
-        53,
-        41,
-        176
-      ]
-    },
-    {
-      "name": "STokenWhitelistInitialized",
-      "discriminator": [
-        58,
-        173,
-        15,
-        64,
-        187,
-        138,
-        86,
-        15
-      ]
-    },
-    {
-      "name": "STokenWhitelistToggled",
-      "discriminator": [
-        217,
-        182,
-        52,
-        211,
-        77,
-        174,
-        89,
-        75
-      ]
-    },
-    {
-      "name": "STokenWithdrawRequest",
-      "discriminator": [
-        2,
-        76,
-        189,
-        109,
-        139,
-        35,
-        113,
-        1
-      ]
-    },
-    {
-      "name": "STokenWithdrawalCancelled",
-      "discriminator": [
-        100,
-        203,
-        211,
-        144,
-        40,
-        226,
-        186,
-        237
-      ]
-    },
-    {
-      "name": "STokenWithdrawalFulfilled",
-      "discriminator": [
-        136,
-        23,
-        63,
-        16,
-        80,
-        97,
-        129,
-        191
-      ]
-    },
-    {
-      "name": "STokenWithdrawalMinimumUpdated",
-      "discriminator": [
-        188,
-        209,
-        92,
-        80,
-        0,
-        165,
-        236,
-        239
-      ]
-    },
-    {
-      "name": "STokenWithdrawalParamsChangePending",
-      "discriminator": [
-        38,
-        141,
-        189,
-        36,
-        228,
-        102,
-        31,
-        160
-      ]
-    },
-    {
-      "name": "STokenWithdrawalParamsUpdated",
-      "discriminator": [
-        10,
-        86,
-        62,
-        137,
-        205,
-        166,
-        216,
-        38
-      ]
-    },
-    {
-      "name": "VaultAtaInitialized",
-      "discriminator": [
-        206,
-        229,
-        105,
-        127,
-        53,
-        73,
-        69,
-        32
-      ]
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "Unauthorized",
-      "msg": "Unauthorized: Only the specified authority can perform this action"
-    },
-    {
-      "code": 6001,
-      "name": "InvalidFee",
-      "msg": "Invalid fee: Fee exceeds maximum allowed value"
-    },
-    {
-      "code": 6002,
-      "name": "InvalidPrice",
-      "msg": "Invalid price: Price must be greater than zero"
-    },
-    {
-      "code": 6003,
-      "name": "InvalidAmount",
-      "msg": "Invalid amount: Amount must be greater than zero"
-    },
-    {
-      "code": 6004,
-      "name": "InvalidArgument",
-      "msg": "Invalid argument: Argument is invalid"
-    },
-    {
-      "code": 6005,
-      "name": "InsufficientBalance",
-      "msg": "Insufficient balance: Not enough tokens available"
-    },
-    {
-      "code": 6006,
-      "name": "InsufficientShares",
-      "msg": "Insufficient shares: Not enough S-Tokens to burn"
-    },
-    {
-      "code": 6007,
-      "name": "MathOverflow",
-      "msg": "Math overflow: Calculation resulted in overflow"
-    },
-    {
-      "code": 6008,
-      "name": "InvalidUnderlyingMint",
-      "msg": "Invalid underlying mint: Underlying mint does not match vault configuration"
-    },
-    {
-      "code": 6009,
-      "name": "InvalidSharesMint",
-      "msg": "Invalid shares mint: Shares mint does not match vault configuration"
-    },
-    {
-      "code": 6010,
-      "name": "InvalidTokenAccountMint",
-      "msg": "Invalid token account mint: Token account mint does not match expected mint"
-    },
-    {
-      "code": 6011,
-      "name": "InvalidTokenAccountOwner",
-      "msg": "Invalid token account owner: Token account owner does not match expected owner"
-    },
-    {
-      "code": 6012,
-      "name": "InvalidAtaAddress",
-      "msg": "Invalid ATA address: Associated token account address does not match expected address"
-    },
-    {
-      "code": 6013,
-      "name": "InvalidTokenProgram",
-      "msg": "Invalid token program: Token mint is not owned by SPL Token program"
-    },
-    {
-      "code": 6014,
-      "name": "VaultNotInitialized",
-      "msg": "Vault not initialized: Vault must be initialized before use"
-    },
-    {
-      "code": 6015,
-      "name": "WithdrawalRequestNotFound",
-      "msg": "Withdrawal request not found: No pending withdrawal request for this user"
-    },
-    {
-      "code": 6016,
-      "name": "WithdrawalQueueFull",
-      "msg": "Withdrawal queue full: Maximum number of withdrawal requests reached"
-    },
-    {
-      "code": 6017,
-      "name": "InvalidTimestamp",
-      "msg": "Invalid timestamp: Timestamp cannot be in the future"
-    },
-    {
-      "code": 6018,
-      "name": "FeeCalculationError",
-      "msg": "Fee calculation error: Unable to calculate fee amount"
-    },
-    {
-      "code": 6019,
-      "name": "PriceTooOld",
-      "msg": "Price too old: Oracle price is outdated"
-    },
-    {
-      "code": 6020,
-      "name": "InvalidOracle",
-      "msg": "Invalid oracle: Oracle authority does not match"
-    },
-    {
-      "code": 6021,
-      "name": "InvalidManager",
-      "msg": "Invalid manager: Manager authority does not match"
-    },
-    {
-      "code": 6022,
-      "name": "InvalidProcessor",
-      "msg": "Invalid processor: Processor authority does not match"
-    },
-    {
-      "code": 6023,
-      "name": "InvalidAccountant",
-      "msg": "Invalid accountant: Accountant authority does not match"
-    },
-    {
-      "code": 6024,
-      "name": "InvalidAssetManager",
-      "msg": "Invalid asset manager: Asset manager authority does not match"
-    },
-    {
-      "code": 6025,
-      "name": "ZeroSharesCalculated",
-      "msg": "Zero shares calculated: Deposit amount too small or price too high"
-    },
-    {
-      "code": 6026,
-      "name": "ZeroAmountCalculated",
-      "msg": "Zero amount calculated: Share amount too small or price too low"
-    },
-    {
-      "code": 6027,
-      "name": "UserNotWhitelisted",
-      "msg": "User not whitelisted: Address is not authorized for this operation"
-    },
-    {
-      "code": 6028,
-      "name": "WhitelistNotEnabled",
-      "msg": "Whitelist not enabled: Whitelist functionality is disabled for this vault"
-    },
-    {
-      "code": 6029,
-      "name": "WhitelistAlreadyExists",
-      "msg": "Whitelist already exists: Cannot initialize whitelist twice"
-    },
-    {
-      "code": 6030,
-      "name": "WhitelistFull",
-      "msg": "Whitelist full: Cannot add more addresses to whitelist"
-    },
-    {
-      "code": 6031,
-      "name": "AddressAlreadyWhitelisted",
-      "msg": "Address already whitelisted: Address is already in the whitelist"
-    },
-    {
-      "code": 6032,
-      "name": "AddressNotWhitelisted",
-      "msg": "Address not whitelisted: Address is not in the whitelist"
-    },
-    {
-      "code": 6033,
-      "name": "InvalidWhitelist",
-      "msg": "Invalid whitelist: Whitelist account does not match vault"
-    },
-    {
-      "code": 6034,
-      "name": "InvalidUserWhitelist",
-      "msg": "Invalid user whitelist: User whitelist PDA does not match expected vault or user"
-    },
-    {
-      "code": 6035,
-      "name": "MaxTotalSharesExceeded",
-      "msg": "Max total shares exceeded: This operation would exceed the vault's maximum total shares"
-    },
-    {
-      "code": 6036,
-      "name": "MaxSharesPerUserExceeded",
-      "msg": "Max shares per user exceeded: This operation would exceed the user's maximum share limit"
-    },
-    {
-      "code": 6037,
-      "name": "MaxTotalIdleExceeded",
-      "msg": "Max total idle exceeded: This deposit would exceed the vault's maximum idle funds limit"
-    },
-    {
-      "code": 6038,
-      "name": "SlippageNotMet",
-      "msg": "Slippage constraint not met: Expected amount/shares not satisfied"
-    },
-    {
-      "code": 6039,
-      "name": "InvalidLimit",
-      "msg": "Invalid limit: Limit value is invalid"
-    },
-    {
-      "code": 6040,
-      "name": "LimitExceedsMaximum",
-      "msg": "Limit exceeds maximum: Limit value exceeds the maximum allowed value"
-    },
-    {
-      "code": 6041,
-      "name": "MinimumSharesNotMet",
-      "msg": "Minimum shares not met: Deposit does not meet minimum shares requirement"
-    },
-    {
-      "code": 6042,
-      "name": "PricePending",
-      "msg": "Price pending: A price update is already pending approval"
-    },
-    {
-      "code": 6043,
-      "name": "NoPendingPrice",
-      "msg": "No pending price: No price update is currently pending"
-    },
-    {
-      "code": 6044,
-      "name": "PriceDeviationTooHigh",
-      "msg": "Price deviation too high: Price change exceeds maximum allowed deviation"
-    },
-    {
-      "code": 6045,
-      "name": "PriceCooldownNotExpired",
-      "msg": "Price cooldown not expired: Cannot accept price before cooldown period"
-    },
-    {
-      "code": 6046,
-      "name": "PriceUpdateTooFrequent",
-      "msg": "Price update too frequent: Must wait for deviation cooldown before next update"
-    },
-    {
-      "code": 6047,
-      "name": "InvalidDeviationThreshold",
-      "msg": "Invalid deviation threshold: Deviation threshold is invalid"
-    },
-    {
-      "code": 6048,
-      "name": "InvalidWithdrawalIndex",
-      "msg": "Invalid withdrawal index: Withdrawal request index not found"
-    },
-    {
-      "code": 6049,
-      "name": "WithdrawalAlreadyFulfilled",
-      "msg": "Withdrawal already fulfilled: Cannot cancel already fulfilled withdrawal"
-    },
-    {
-      "code": 6050,
-      "name": "WithdrawalAlreadyCancelled",
-      "msg": "Withdrawal already cancelled: Withdrawal request was already cancelled"
-    },
-    {
-      "code": 6051,
-      "name": "InvalidWithdrawalRequestStatus",
-      "msg": "Invalid withdrawal request status: Operation not allowed for current request status"
-    },
-    {
-      "code": 6052,
-      "name": "WithdrawalQueueEmpty",
-      "msg": "Withdrawal queue empty: No withdrawal requests pending"
-    },
-    {
-      "code": 6053,
-      "name": "InvalidBatchSize",
-      "msg": "Invalid batch size: Batch size must be greater than zero"
-    },
-    {
-      "code": 6054,
-      "name": "NoUnexpectedDeposits",
-      "msg": "No unexpected deposits: No unexpected deposits available to withdraw"
-    },
-    {
-      "code": 6055,
-      "name": "UnexpectedDepositsCooldown",
-      "msg": "Unexpected deposits cooldown: Cannot withdraw unexpected deposits before cooldown"
-    },
-    {
-      "code": 6056,
-      "name": "VaultPaused",
-      "msg": "Vault paused: Vault is currently paused, only emergency operations allowed"
-    },
-    {
-      "code": 6057,
-      "name": "VaultNotPaused",
-      "msg": "Vault not paused: Vault is not currently paused"
-    },
-    {
-      "code": 6058,
-      "name": "EmergencyOnly",
-      "msg": "Emergency only: Only emergency withdrawals are allowed when paused"
-    },
-    {
-      "code": 6059,
-      "name": "ConfigChangePending",
-      "msg": "Config change pending: Configuration change is pending cooldown"
-    },
-    {
-      "code": 6060,
-      "name": "ConfigCooldownNotExpired",
-      "msg": "Config cooldown not expired: Cannot apply configuration change before cooldown"
-    },
-    {
-      "code": 6061,
-      "name": "NoConfigChangesPending",
-      "msg": "No config changes pending: No configuration changes are pending"
-    },
-    {
-      "code": 6062,
-      "name": "NoConfigChanges",
-      "msg": "No config changes: No configuration changes provided"
-    },
-    {
-      "code": 6063,
-      "name": "TooManyPendingChanges",
-      "msg": "Too many pending changes: Maximum number of pending configuration changes exceeded"
-    },
-    {
-      "code": 6064,
-      "name": "InvalidConfigChange",
-      "msg": "Invalid config change: Configuration change value is invalid"
-    },
-    {
-      "code": 6065,
-      "name": "InvalidWithdrawalRequest",
-      "msg": "Invalid withdrawal request: Withdrawal request does not belong to this vault"
-    },
-    {
-      "code": 6066,
-      "name": "InvalidUserTokenAccount",
-      "msg": "Invalid user token account: Token account does not belong to the withdrawal request user"
-    },
-    {
-      "code": 6067,
-      "name": "InsufficientVaultFunds",
-      "msg": "Insufficient vault funds: Not enough funds in vault to fulfill withdrawal requests"
-    },
-    {
-      "code": 6068,
-      "name": "EmergencyWithdrawalTimelockActive",
-      "msg": "Emergency withdrawal timelock active: Cannot withdraw before timelock expires"
-    },
-    {
-      "code": 6069,
-      "name": "EmergencyWithdrawalTokenMismatch",
-      "msg": "Emergency withdrawal token mint mismatch"
-    },
-    {
-      "code": 6070,
-      "name": "EmergencyWithdrawalAmountMismatch",
-      "msg": "Emergency withdrawal amount mismatch"
-    },
-    {
-      "code": 6071,
-      "name": "RoleChangeTimelockActive",
-      "msg": "Role change timelock active: Cannot change roles before timelock expires"
-    },
-    {
-      "code": 6072,
-      "name": "InvalidRole",
-      "msg": "Invalid role: Role address cannot be zero"
-    },
-    {
-      "code": 6073,
-      "name": "NoPendingRolesChange",
-      "msg": "No pending roles change: No roles change is currently pending"
-    },
-    {
-      "code": 6074,
-      "name": "NoRoleChangeProvided",
-      "msg": "No role change provided: At least one role change must be specified"
-    },
-    {
-      "code": 6075,
-      "name": "RoleNotPending",
-      "msg": "Role not pending: No proposal exists for the requested role"
-    },
-    {
-      "code": 6076,
-      "name": "NotProposedHolder",
-      "msg": "Not proposed holder: Caller is not the address proposed for this role"
-    },
-    {
-      "code": 6077,
-      "name": "FeeChangeTimelockActive",
-      "msg": "Fee change timelock is still active"
-    },
-    {
-      "code": 6078,
-      "name": "NoPendingFeesChange",
-      "msg": "No pending fee changes to accept"
-    },
-    {
-      "code": 6079,
-      "name": "NoFeeChanges",
-      "msg": "No fee changes specified"
-    },
-    {
-      "code": 6080,
-      "name": "LimitsChangeTimelockActive",
-      "msg": "Limits change timelock is still active"
-    },
-    {
-      "code": 6081,
-      "name": "NoPendingLimitsChange",
-      "msg": "No pending limits changes to accept"
-    },
-    {
-      "code": 6082,
-      "name": "NoLimitsChanges",
-      "msg": "No limits changes specified"
-    },
-    {
-      "code": 6083,
-      "name": "WhitelistChangeTimelockActive",
-      "msg": "Whitelist change timelock is still active"
-    },
-    {
-      "code": 6084,
-      "name": "NoPendingWhitelistChange",
-      "msg": "No pending whitelist changes to accept"
-    },
-    {
-      "code": 6085,
-      "name": "NoWhitelistChanges",
-      "msg": "No whitelist changes specified"
-    },
-    {
-      "code": 6086,
-      "name": "CooldownChangeTimelockActive",
-      "msg": "Cooldown change timelock is still active"
-    },
-    {
-      "code": 6087,
-      "name": "NoPendingCooldownChange",
-      "msg": "No pending cooldown changes to accept"
-    },
-    {
-      "code": 6088,
-      "name": "NoCooldownChanges",
-      "msg": "No cooldown changes specified"
-    },
-    {
-      "code": 6089,
-      "name": "CooldownUpdateBlockedByPendingChanges",
-      "msg": "Cannot update cooldowns while other changes are pending"
-    },
-    {
-      "code": 6090,
-      "name": "InvalidCooldownDuration",
-      "msg": "Invalid cooldown duration"
-    },
-    {
-      "code": 6091,
-      "name": "InvalidOracleData",
-      "msg": "Invalid oracle data: Oracle data type does not match oracle module"
-    },
-    {
-      "code": 6092,
-      "name": "InvalidRecipient",
-      "msg": "Invalid recipient: Recipient address does not match fee splitter configuration"
-    },
-    {
-      "code": 6093,
-      "name": "InvalidSwapSameVault",
-      "msg": "Invalid swap: Source and destination vaults must be different"
-    },
-    {
-      "code": 6094,
-      "name": "IncompatibleUnderlyingTokens",
-      "msg": "Incompatible vaults: Vaults must use the same underlying token for swapping"
-    },
-    {
-      "code": 6095,
-      "name": "MissingAssetManager",
-      "msg": "Missing asset manager: Both vaults must have asset managers for swapping"
-    },
-    {
-      "code": 6096,
-      "name": "InvalidSwapFee",
-      "msg": "Invalid swap fee: Swap fee exceeds maximum allowed value"
-    },
-    {
-      "code": 6097,
-      "name": "ZeroSwapAmount",
-      "msg": "Zero swap amount: Calculated swap amount is zero"
-    },
-    {
-      "code": 6098,
-      "name": "SwapAmountTooSmall",
-      "msg": "Swap amount too small: Amount too small to generate meaningful destination tokens"
-    },
-    {
-      "code": 6099,
-      "name": "UnderlyingMintMismatch",
-      "msg": "Underlying mint mismatch: Vaults must share the same underlying token"
-    },
-    {
-      "code": 6100,
-      "name": "VaultsMustHaveAssetManagers",
-      "msg": "Vaults must have asset managers for direct swaps"
-    },
-    {
-      "code": 6101,
-      "name": "AssetManagerMismatch",
-      "msg": "Asset manager mismatch: Both vaults must have the same asset manager for swapping"
-    },
-    {
-      "code": 6102,
-      "name": "VaultSunset",
-      "msg": "Vault sunset: deposits and inbound swaps are disabled"
-    },
-    {
-      "code": 6103,
-      "name": "IncompatibleSwapPolicy",
-      "msg": "Swap policy mismatch: vault staleness/deviation policies are incompatible"
-    },
-    {
-      "code": 6104,
-      "name": "DestinationNotAllowlisted",
-      "msg": "Destination vault is not allowlisted for swaps"
-    },
-    {
-      "code": 6105,
-      "name": "MigrationInProgress",
-      "msg": "Asset manager migration is already in progress"
-    },
-    {
-      "code": 6106,
-      "name": "MinimumCannotIncrease",
-      "msg": "Minimum cannot increase: New minimum amount cannot be higher than current minimum"
-    },
-    {
-      "code": 6107,
-      "name": "InsufficientLiquidity",
-      "msg": "Insufficient liquidity: Asset manager does not have enough liquidity to fulfill withdrawal"
-    },
-    {
-      "code": 6108,
-      "name": "PriceDropExceedsDownsideCap",
-      "msg": "Price drop exceeds downside cap: Price decrease is beyond configured tolerance"
-    },
-    {
-      "code": 6109,
-      "name": "WithdrawalTtlNotExpired",
-      "msg": "Withdrawal TTL not expired: Cannot cancel withdrawal request before time-to-live expires"
-    },
-    {
-      "code": 6110,
-      "name": "InvalidWithdrawalMinimum",
-      "msg": "Invalid withdrawal minimum: Minimum amount out cannot be greater than theoretical amount"
-    },
-    {
-      "code": 6111,
-      "name": "BotCancellationForbidden",
-      "msg": "Bot cancellation forbidden: Only users can cancel their own withdrawal requests before TTL"
-    },
-    {
-      "code": 6112,
-      "name": "WithdrawalAmountTooLow",
-      "msg": "Withdrawal amount too low"
-    },
-    {
-      "code": 6113,
-      "name": "MinimumTooHigh",
-      "msg": "Minimum amount out too high relative to downside tolerance"
-    },
-    {
-      "code": 6114,
-      "name": "TokenDecimalMismatch",
-      "msg": "Token decimal mismatch: Source and destination tokens must have the same decimal count"
-    },
-    {
-      "code": 6115,
-      "name": "AdminChangeTimelockActive",
-      "msg": "Admin change timelock is still active"
-    },
-    {
-      "code": 6116,
-      "name": "NoPendingAdminChange",
-      "msg": "No pending admin change to accept"
-    },
-    {
-      "code": 6117,
-      "name": "AdminChangeCooldownNotExpired",
-      "msg": "Admin change cooldown not expired: Cannot accept admin change before cooldown"
-    },
-    {
-      "code": 6118,
-      "name": "AdminCooldownChangePending",
-      "msg": "Admin cooldown change pending: A cooldown change is already pending"
-    },
-    {
-      "code": 6119,
-      "name": "NoPendingAdminCooldownChange",
-      "msg": "No pending admin cooldown change: No admin cooldown change is currently pending"
-    },
-    {
-      "code": 6120,
-      "name": "AdminCooldownChangeTimelockActive",
-      "msg": "Admin cooldown change timelock active: Cannot accept cooldown change before timelock expires"
-    },
-    {
-      "code": 6121,
-      "name": "InvalidProgramData",
-      "msg": "Invalid program data: Program data account does not match expected address"
-    },
-    {
-      "code": 6122,
-      "name": "TokenAccountNotEmpty",
-      "msg": "Token account is not empty"
-    },
-    {
-      "code": 6123,
-      "name": "VaultNotPausedOrSunset",
-      "msg": "Vault is not paused or sunset"
-    },
-    {
-      "code": 6124,
-      "name": "VaultNotSunset",
-      "msg": "Vault is not sunset"
-    },
-    {
-      "code": 6125,
-      "name": "PendingWithdrawalsRemain",
-      "msg": "Pending withdrawals remain"
-    },
-    {
-      "code": 6126,
-      "name": "SharesInCustodyRemain",
-      "msg": "Shares remain in custody"
-    },
-    {
-      "code": 6127,
-      "name": "VaultSupplyNotZero",
-      "msg": "Vault still has share supply"
-    },
-    {
-      "code": 6128,
-      "name": "CooldownNotRaised",
-      "msg": "New cooldown must be strictly greater than the current value"
     }
   ],
   "types": [
@@ -4321,7 +2919,6 @@
     {
       "name": "STokenAddressAddedToDepositWhitelist",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4339,13 +2936,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenAddressAddedToWithdrawalWhitelist",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4363,13 +2960,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenAddressRemovedFromDepositWhitelist",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4387,13 +2984,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenAddressRemovedFromWithdrawalWhitelist",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4411,16 +3008,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenAdminChangeCancelled",
       "docs": [
         "Event emitted when a pending admin change is cancelled"
       ],
+      "name": "STokenAdminChangeCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4438,16 +3035,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenAdminChangePending",
       "docs": [
         "Event emitted when an admin change is proposed and pending timelock"
       ],
+      "name": "STokenAdminChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4469,16 +3066,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenAdminCooldownChangeCancelled",
       "docs": [
         "Event emitted when admin cooldown change is cancelled"
       ],
+      "name": "STokenAdminCooldownChangeCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4496,16 +3093,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenAdminCooldownChangePending",
       "docs": [
         "Event emitted when admin cooldown change is proposed"
       ],
+      "name": "STokenAdminCooldownChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4531,16 +3128,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenAdminCooldownUpdated",
       "docs": [
         "Event emitted when admin cooldown is updated"
       ],
+      "name": "STokenAdminCooldownUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4558,13 +3155,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenAdminRecoverAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4582,13 +3179,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenAdminRecoverProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4614,13 +3211,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenAdminUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -4638,13 +3235,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenConfigChangeApplied",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4662,13 +3259,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenConfigChangeProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4690,16 +3287,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenCooldownsChangePending",
       "docs": [
         "Event emitted when cooldowns are proposed and pending timelock"
       ],
+      "name": "STokenCooldownsChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4759,16 +3356,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenCooldownsUpdated",
       "docs": [
         "Event emitted when cooldowns are updated"
       ],
+      "name": "STokenCooldownsUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4810,13 +3407,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenDeposit",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4850,13 +3447,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenDepositsProcessed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4886,13 +3483,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenEmergencyWithdraw",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4930,16 +3527,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenEmergencyWithdrawTimelockActivated",
       "docs": [
         "Event emitted when emergency withdrawal timelock is activated"
       ],
+      "name": "STokenEmergencyWithdrawTimelockActivated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -4969,16 +3566,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenFeesChangePending",
       "docs": [
         "Event emitted when a fee change is proposed and pending timelock"
       ],
+      "name": "STokenFeesChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5028,13 +3625,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenFeesUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5088,13 +3685,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenFundsReturned",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5112,13 +3709,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenGlobalConfigInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "config",
@@ -5136,16 +3733,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenLimitsChangePending",
       "docs": [
         "Event emitted when a limits change is proposed and pending timelock"
       ],
+      "name": "STokenLimitsChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5203,13 +3800,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenLimitsUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5263,13 +3860,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenManagementFeeAccrued",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5291,13 +3888,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenPriceAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5319,13 +3916,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenPricePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5351,13 +3948,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenPriceRejected",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5379,13 +3976,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenPriceUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5407,16 +4004,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenRoleAssignmentAccepted",
       "docs": [
         "Event emitted when a single pending role is claimed by its incoming holder"
       ],
+      "name": "STokenRoleAssignmentAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5442,16 +4039,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenRolesChangeCancelled",
       "docs": [
         "Event emitted when the manager cancels a pending roles proposal"
       ],
+      "name": "STokenRolesChangeCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5465,16 +4062,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenRolesChangePending",
       "docs": [
         "Event emitted when a roles change is proposed and pending timelock"
       ],
+      "name": "STokenRolesChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5528,16 +4125,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenSharesMintInitialized",
       "docs": [
         "Event emitted when shares mint is initialized (step 2)"
       ],
+      "name": "STokenSharesMintInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5552,10 +4149,10 @@
             "type": "u8"
           },
           {
-            "name": "underlying_token",
             "docs": [
               "Details of the underlying token"
             ],
+            "name": "underlying_token",
             "type": {
               "defined": {
                 "name": "TokenData"
@@ -5563,23 +4160,23 @@
             }
           },
           {
-            "name": "share_token",
             "docs": [
               "Details of the vault's share token"
             ],
+            "name": "share_token",
             "type": {
               "defined": {
                 "name": "TokenData"
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenSunsetAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5589,13 +4186,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenSunsetCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5605,13 +4202,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenSunsetProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5625,13 +4222,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenSwapVaultAllowlistCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "source_vault",
@@ -5649,13 +4246,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenSwapVaultAllowlisted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "source_vault",
@@ -5673,108 +4270,144 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenTokenSwap",
       "docs": [
         "Event emitted when tokens are swapped between vaults"
       ],
+      "name": "STokenTokenSwap",
       "type": {
-        "kind": "struct",
         "fields": [
           {
-            "name": "source_vault",
             "docs": [
               "Source vault (tokens burned from)"
             ],
+            "name": "source_vault",
             "type": "pubkey"
           },
           {
-            "name": "destination_vault",
             "docs": [
               "Destination vault (tokens minted to)"
             ],
+            "name": "destination_vault",
             "type": "pubkey"
           },
           {
-            "name": "user",
             "docs": [
               "User performing the swap"
             ],
+            "name": "user",
             "type": "pubkey"
           },
           {
-            "name": "source_amount_burned",
             "docs": [
               "Amount of source tokens burned"
             ],
+            "name": "source_amount_burned",
             "type": "u64"
           },
           {
-            "name": "destination_amount_minted",
             "docs": [
               "Amount of destination tokens minted"
             ],
+            "name": "destination_amount_minted",
             "type": "u64"
           },
           {
-            "name": "source_price",
             "docs": [
               "Price of source token at time of swap"
             ],
+            "name": "source_price",
             "type": "u64"
           },
           {
-            "name": "destination_price",
             "docs": [
               "Price of destination token at time of swap"
             ],
+            "name": "destination_price",
             "type": "u64"
           },
           {
-            "name": "underlying_value",
             "docs": [
               "Underlying value transferred (after fee)"
             ],
+            "name": "underlying_value",
             "type": "u64"
           },
           {
-            "name": "swap_fee_bps",
             "docs": [
               "Swap fee in basis points"
             ],
+            "name": "swap_fee_bps",
             "type": "u16"
           },
           {
-            "name": "swap_fee_amount",
             "docs": [
               "Fee amount collected in underlying tokens"
             ],
+            "name": "swap_fee_amount",
             "type": "u64"
           },
           {
-            "name": "fee_shares",
             "docs": [
               "Fee shares minted to accountant"
             ],
+            "name": "fee_shares",
+            "type": "u64"
+          },
+          {
+            "docs": [
+              "Timestamp of the swap"
+            ],
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "STokenTurnoverFeeAccrued",
+      "type": {
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_underlying",
+            "type": "u64"
+          },
+          {
+            "name": "shares_minted",
+            "type": "u64"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
             "type": "u64"
           },
           {
             "name": "timestamp",
-            "docs": [
-              "Timestamp of the swap"
-            ],
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenUnexpectedDeposit",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5796,13 +4429,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenUnexpectedDepositWithdrawn",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5824,13 +4457,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenVaultClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5844,13 +4477,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenVaultInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5888,36 +4521,36 @@
             "name": "management_fee_bps_per_year",
             "type": "u16"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenVaultPaused",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
             "type": "pubkey"
           },
           {
-            "name": "authority",
             "docs": [
               "The authority who paused the vault (manager or guardian)"
             ],
+            "name": "authority",
             "type": "pubkey"
           },
           {
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenVaultTokenAccountClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5935,13 +4568,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenVaultUnpaused",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -5955,16 +4588,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenWhitelistChangePending",
       "docs": [
         "Event emitted when a whitelist change is proposed and pending timelock"
       ],
+      "name": "STokenWhitelistChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6002,13 +4635,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenWhitelistInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6022,13 +4655,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenWhitelistToggled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6050,13 +4683,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenWithdrawRequest",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6094,13 +4727,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenWithdrawalCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6138,13 +4771,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenWithdrawalFulfilled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6174,13 +4807,13 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "STokenWithdrawalMinimumUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6206,16 +4839,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenWithdrawalParamsChangePending",
       "docs": [
         "Event emitted when withdrawal params change is proposed and pending timelock"
       ],
+      "name": "STokenWithdrawalParamsChangePending",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6263,16 +4896,16 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "STokenWithdrawalParamsUpdated",
       "docs": [
         "Event emitted when withdrawal params are updated"
       ],
+      "name": "STokenWithdrawalParamsUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6310,7 +4943,8 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -6343,66 +4977,66 @@
       }
     },
     {
-      "name": "TokenData",
       "docs": [
         "Comprehensive token information used throughout events.",
         "Combines the mint, token account, decimals and human-readable metadata."
       ],
+      "name": "TokenData",
       "type": {
-        "kind": "struct",
         "fields": [
           {
-            "name": "mint",
             "docs": [
               "Token mint address"
             ],
+            "name": "mint",
             "type": "pubkey"
           },
           {
-            "name": "decimals",
             "docs": [
               "Token decimal precision"
             ],
+            "name": "decimals",
             "type": "u8"
           },
           {
-            "name": "metadata",
             "docs": [
               "Human-readable name and symbol"
             ],
+            "name": "metadata",
             "type": {
               "defined": {
                 "name": "TokenMetaData"
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "TokenMetaData",
       "docs": [
         "Token metadata containing human-readable name and symbol.",
         "Used in event logs to provide better context for token references."
       ],
+      "name": "TokenMetaData",
       "type": {
-        "kind": "struct",
         "fields": [
           {
-            "name": "name",
             "docs": [
               "Human-readable token name"
             ],
+            "name": "name",
             "type": "string"
           },
           {
-            "name": "symbol",
             "docs": [
               "Token symbol (e.g., \"BTC\", \"USDC\")"
             ],
+            "name": "symbol",
             "type": "string"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -6470,7 +5104,6 @@
     {
       "name": "VaultAtaInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -6496,7 +5129,8 @@
             "name": "timestamp",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7147,42 +5781,1433 @@
           }
         ]
       }
+    }
+  ],
+  "constants": [],
+  "events": [
+    {
+      "discriminator": [
+        19,
+        222,
+        53,
+        96,
+        213,
+        234,
+        207,
+        119
+      ],
+      "name": "STokenAddressAddedToDepositWhitelist"
     },
     {
-      "name": "STokenTurnoverFeeAccrued",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "asset_manager",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount_underlying",
-            "type": "u64"
-          },
-          {
-            "name": "shares_minted",
-            "type": "u64"
-          },
-          {
-            "name": "accountant",
-            "type": "pubkey"
-          },
-          {
-            "name": "price",
-            "type": "u64"
-          },
-          {
-            "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
+      "discriminator": [
+        180,
+        88,
+        73,
+        3,
+        18,
+        143,
+        148,
+        86
+      ],
+      "name": "STokenAddressAddedToWithdrawalWhitelist"
+    },
+    {
+      "discriminator": [
+        214,
+        239,
+        98,
+        144,
+        168,
+        240,
+        113,
+        124
+      ],
+      "name": "STokenAddressRemovedFromDepositWhitelist"
+    },
+    {
+      "discriminator": [
+        171,
+        60,
+        251,
+        30,
+        193,
+        58,
+        210,
+        204
+      ],
+      "name": "STokenAddressRemovedFromWithdrawalWhitelist"
+    },
+    {
+      "discriminator": [
+        218,
+        108,
+        191,
+        29,
+        33,
+        115,
+        197,
+        22
+      ],
+      "name": "STokenAdminChangeCancelled"
+    },
+    {
+      "discriminator": [
+        205,
+        211,
+        166,
+        173,
+        62,
+        68,
+        137,
+        0
+      ],
+      "name": "STokenAdminChangePending"
+    },
+    {
+      "discriminator": [
+        50,
+        208,
+        16,
+        251,
+        222,
+        238,
+        199,
+        239
+      ],
+      "name": "STokenAdminCooldownChangeCancelled"
+    },
+    {
+      "discriminator": [
+        157,
+        85,
+        27,
+        3,
+        29,
+        255,
+        143,
+        14
+      ],
+      "name": "STokenAdminCooldownChangePending"
+    },
+    {
+      "discriminator": [
+        1,
+        8,
+        226,
+        234,
+        133,
+        152,
+        30,
+        67
+      ],
+      "name": "STokenAdminCooldownUpdated"
+    },
+    {
+      "discriminator": [
+        119,
+        140,
+        252,
+        244,
+        166,
+        232,
+        97,
+        107
+      ],
+      "name": "STokenAdminRecoverAccepted"
+    },
+    {
+      "discriminator": [
+        113,
+        241,
+        145,
+        165,
+        149,
+        207,
+        172,
+        134
+      ],
+      "name": "STokenAdminRecoverProposed"
+    },
+    {
+      "discriminator": [
+        195,
+        120,
+        237,
+        84,
+        206,
+        133,
+        240,
+        102
+      ],
+      "name": "STokenAdminUpdated"
+    },
+    {
+      "discriminator": [
+        239,
+        179,
+        216,
+        33,
+        193,
+        69,
+        44,
+        105
+      ],
+      "name": "STokenConfigChangeApplied"
+    },
+    {
+      "discriminator": [
+        142,
+        50,
+        204,
+        20,
+        101,
+        176,
+        247,
+        32
+      ],
+      "name": "STokenConfigChangeProposed"
+    },
+    {
+      "discriminator": [
+        134,
+        16,
+        2,
+        158,
+        50,
+        190,
+        50,
+        56
+      ],
+      "name": "STokenCooldownsChangePending"
+    },
+    {
+      "discriminator": [
+        233,
+        105,
+        130,
+        68,
+        148,
+        229,
+        76,
+        63
+      ],
+      "name": "STokenCooldownsUpdated"
+    },
+    {
+      "discriminator": [
+        211,
+        75,
+        23,
+        133,
+        27,
+        143,
+        3,
+        243
+      ],
+      "name": "STokenDeposit"
+    },
+    {
+      "discriminator": [
+        14,
+        76,
+        223,
+        34,
+        199,
+        22,
+        204,
+        235
+      ],
+      "name": "STokenDepositsProcessed"
+    },
+    {
+      "discriminator": [
+        103,
+        179,
+        87,
+        33,
+        78,
+        229,
+        242,
+        199
+      ],
+      "name": "STokenEmergencyWithdraw"
+    },
+    {
+      "discriminator": [
+        102,
+        27,
+        220,
+        64,
+        15,
+        108,
+        106,
+        201
+      ],
+      "name": "STokenEmergencyWithdrawTimelockActivated"
+    },
+    {
+      "discriminator": [
+        113,
+        21,
+        68,
+        207,
+        62,
+        73,
+        22,
+        112
+      ],
+      "name": "STokenFeesChangePending"
+    },
+    {
+      "discriminator": [
+        18,
+        63,
+        108,
+        204,
+        60,
+        126,
+        11,
+        242
+      ],
+      "name": "STokenFeesUpdated"
+    },
+    {
+      "discriminator": [
+        49,
+        54,
+        33,
+        68,
+        172,
+        238,
+        123,
+        196
+      ],
+      "name": "STokenFundsReturned"
+    },
+    {
+      "discriminator": [
+        86,
+        185,
+        89,
+        127,
+        235,
+        175,
+        116,
+        146
+      ],
+      "name": "STokenGlobalConfigInitialized"
+    },
+    {
+      "discriminator": [
+        234,
+        190,
+        143,
+        60,
+        157,
+        254,
+        114,
+        50
+      ],
+      "name": "STokenLimitsChangePending"
+    },
+    {
+      "discriminator": [
+        22,
+        211,
+        212,
+        35,
+        241,
+        30,
+        71,
+        14
+      ],
+      "name": "STokenLimitsUpdated"
+    },
+    {
+      "discriminator": [
+        5,
+        82,
+        159,
+        255,
+        18,
+        67,
+        82,
+        103
+      ],
+      "name": "STokenManagementFeeAccrued"
+    },
+    {
+      "discriminator": [
+        37,
+        223,
+        179,
+        31,
+        129,
+        150,
+        160,
+        103
+      ],
+      "name": "STokenPriceAccepted"
+    },
+    {
+      "discriminator": [
+        55,
+        126,
+        14,
+        232,
+        86,
+        237,
+        116,
+        157
+      ],
+      "name": "STokenPricePending"
+    },
+    {
+      "discriminator": [
+        174,
+        87,
+        233,
+        4,
+        0,
+        218,
+        28,
+        12
+      ],
+      "name": "STokenPriceRejected"
+    },
+    {
+      "discriminator": [
+        173,
+        65,
+        204,
+        249,
+        130,
+        76,
+        49,
+        220
+      ],
+      "name": "STokenPriceUpdated"
+    },
+    {
+      "discriminator": [
+        54,
+        16,
+        4,
+        30,
+        3,
+        9,
+        204,
+        42
+      ],
+      "name": "STokenRoleAssignmentAccepted"
+    },
+    {
+      "discriminator": [
+        197,
+        65,
+        37,
+        255,
+        165,
+        191,
+        154,
+        117
+      ],
+      "name": "STokenRolesChangeCancelled"
+    },
+    {
+      "discriminator": [
+        187,
+        157,
+        67,
+        130,
+        233,
+        50,
+        83,
+        216
+      ],
+      "name": "STokenRolesChangePending"
+    },
+    {
+      "discriminator": [
+        87,
+        109,
+        248,
+        58,
+        220,
+        195,
+        130,
+        113
+      ],
+      "name": "STokenSharesMintInitialized"
+    },
+    {
+      "discriminator": [
+        192,
+        158,
+        176,
+        34,
+        149,
+        88,
+        124,
+        84
+      ],
+      "name": "STokenSunsetAccepted"
+    },
+    {
+      "discriminator": [
+        134,
+        66,
+        227,
+        20,
+        80,
+        134,
+        106,
+        108
+      ],
+      "name": "STokenSunsetCancelled"
+    },
+    {
+      "discriminator": [
+        137,
+        164,
+        36,
+        0,
+        223,
+        18,
+        167,
+        248
+      ],
+      "name": "STokenSunsetProposed"
+    },
+    {
+      "discriminator": [
+        173,
+        6,
+        50,
+        249,
+        139,
+        102,
+        52,
+        43
+      ],
+      "name": "STokenSwapVaultAllowlistCancelled"
+    },
+    {
+      "discriminator": [
+        187,
+        7,
+        197,
+        171,
+        90,
+        196,
+        41,
+        57
+      ],
+      "name": "STokenSwapVaultAllowlisted"
+    },
+    {
+      "discriminator": [
+        181,
+        151,
+        101,
+        212,
+        229,
+        81,
+        143,
+        89
+      ],
+      "name": "STokenTokenSwap"
+    },
+    {
+      "discriminator": [
+        115,
+        55,
+        38,
+        191,
+        246,
+        218,
+        54,
+        164
+      ],
+      "name": "STokenTurnoverFeeAccrued"
+    },
+    {
+      "discriminator": [
+        208,
+        183,
+        67,
+        109,
+        31,
+        220,
+        183,
+        5
+      ],
+      "name": "STokenUnexpectedDeposit"
+    },
+    {
+      "discriminator": [
+        151,
+        134,
+        172,
+        101,
+        43,
+        170,
+        197,
+        237
+      ],
+      "name": "STokenUnexpectedDepositWithdrawn"
+    },
+    {
+      "discriminator": [
+        49,
+        61,
+        103,
+        60,
+        102,
+        78,
+        233,
+        186
+      ],
+      "name": "STokenVaultClosed"
+    },
+    {
+      "discriminator": [
+        239,
+        3,
+        21,
+        143,
+        161,
+        175,
+        20,
+        215
+      ],
+      "name": "STokenVaultInitialized"
+    },
+    {
+      "discriminator": [
+        69,
+        137,
+        38,
+        209,
+        130,
+        73,
+        228,
+        92
+      ],
+      "name": "STokenVaultPaused"
+    },
+    {
+      "discriminator": [
+        155,
+        74,
+        126,
+        113,
+        81,
+        161,
+        126,
+        173
+      ],
+      "name": "STokenVaultTokenAccountClosed"
+    },
+    {
+      "discriminator": [
+        39,
+        245,
+        134,
+        139,
+        103,
+        17,
+        112,
+        220
+      ],
+      "name": "STokenVaultUnpaused"
+    },
+    {
+      "discriminator": [
+        25,
+        85,
+        10,
+        82,
+        37,
+        53,
+        41,
+        176
+      ],
+      "name": "STokenWhitelistChangePending"
+    },
+    {
+      "discriminator": [
+        58,
+        173,
+        15,
+        64,
+        187,
+        138,
+        86,
+        15
+      ],
+      "name": "STokenWhitelistInitialized"
+    },
+    {
+      "discriminator": [
+        217,
+        182,
+        52,
+        211,
+        77,
+        174,
+        89,
+        75
+      ],
+      "name": "STokenWhitelistToggled"
+    },
+    {
+      "discriminator": [
+        2,
+        76,
+        189,
+        109,
+        139,
+        35,
+        113,
+        1
+      ],
+      "name": "STokenWithdrawRequest"
+    },
+    {
+      "discriminator": [
+        100,
+        203,
+        211,
+        144,
+        40,
+        226,
+        186,
+        237
+      ],
+      "name": "STokenWithdrawalCancelled"
+    },
+    {
+      "discriminator": [
+        136,
+        23,
+        63,
+        16,
+        80,
+        97,
+        129,
+        191
+      ],
+      "name": "STokenWithdrawalFulfilled"
+    },
+    {
+      "discriminator": [
+        188,
+        209,
+        92,
+        80,
+        0,
+        165,
+        236,
+        239
+      ],
+      "name": "STokenWithdrawalMinimumUpdated"
+    },
+    {
+      "discriminator": [
+        38,
+        141,
+        189,
+        36,
+        228,
+        102,
+        31,
+        160
+      ],
+      "name": "STokenWithdrawalParamsChangePending"
+    },
+    {
+      "discriminator": [
+        10,
+        86,
+        62,
+        137,
+        205,
+        166,
+        216,
+        38
+      ],
+      "name": "STokenWithdrawalParamsUpdated"
+    },
+    {
+      "discriminator": [
+        206,
+        229,
+        105,
+        127,
+        53,
+        73,
+        69,
+        32
+      ],
+      "name": "VaultAtaInitialized"
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: Only the specified authority can perform this action"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidFee",
+      "msg": "Invalid fee: Fee exceeds maximum allowed value"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidPrice",
+      "msg": "Invalid price: Price must be greater than zero"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount: Amount must be greater than zero"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidArgument",
+      "msg": "Invalid argument: Argument is invalid"
+    },
+    {
+      "code": 6005,
+      "name": "InsufficientBalance",
+      "msg": "Insufficient balance: Not enough tokens available"
+    },
+    {
+      "code": 6006,
+      "name": "InsufficientShares",
+      "msg": "Insufficient shares: Not enough S-Tokens to burn"
+    },
+    {
+      "code": 6007,
+      "name": "MathOverflow",
+      "msg": "Math overflow: Calculation resulted in overflow"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidUnderlyingMint",
+      "msg": "Invalid underlying mint: Underlying mint does not match vault configuration"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidSharesMint",
+      "msg": "Invalid shares mint: Shares mint does not match vault configuration"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidTokenAccountMint",
+      "msg": "Invalid token account mint: Token account mint does not match expected mint"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidTokenAccountOwner",
+      "msg": "Invalid token account owner: Token account owner does not match expected owner"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidAtaAddress",
+      "msg": "Invalid ATA address: Associated token account address does not match expected address"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidTokenProgram",
+      "msg": "Invalid token program: Token mint is not owned by SPL Token program"
+    },
+    {
+      "code": 6014,
+      "name": "VaultNotInitialized",
+      "msg": "Vault not initialized: Vault must be initialized before use"
+    },
+    {
+      "code": 6015,
+      "name": "WithdrawalRequestNotFound",
+      "msg": "Withdrawal request not found: No pending withdrawal request for this user"
+    },
+    {
+      "code": 6016,
+      "name": "WithdrawalQueueFull",
+      "msg": "Withdrawal queue full: Maximum number of withdrawal requests reached"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidTimestamp",
+      "msg": "Invalid timestamp: Timestamp cannot be in the future"
+    },
+    {
+      "code": 6018,
+      "name": "FeeCalculationError",
+      "msg": "Fee calculation error: Unable to calculate fee amount"
+    },
+    {
+      "code": 6019,
+      "name": "PriceTooOld",
+      "msg": "Price too old: Oracle price is outdated"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidOracle",
+      "msg": "Invalid oracle: Oracle authority does not match"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidManager",
+      "msg": "Invalid manager: Manager authority does not match"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidProcessor",
+      "msg": "Invalid processor: Processor authority does not match"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidAccountant",
+      "msg": "Invalid accountant: Accountant authority does not match"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidAssetManager",
+      "msg": "Invalid asset manager: Asset manager authority does not match"
+    },
+    {
+      "code": 6025,
+      "name": "ZeroSharesCalculated",
+      "msg": "Zero shares calculated: Deposit amount too small or price too high"
+    },
+    {
+      "code": 6026,
+      "name": "ZeroAmountCalculated",
+      "msg": "Zero amount calculated: Share amount too small or price too low"
+    },
+    {
+      "code": 6027,
+      "name": "UserNotWhitelisted",
+      "msg": "User not whitelisted: Address is not authorized for this operation"
+    },
+    {
+      "code": 6028,
+      "name": "WhitelistNotEnabled",
+      "msg": "Whitelist not enabled: Whitelist functionality is disabled for this vault"
+    },
+    {
+      "code": 6029,
+      "name": "WhitelistAlreadyExists",
+      "msg": "Whitelist already exists: Cannot initialize whitelist twice"
+    },
+    {
+      "code": 6030,
+      "name": "WhitelistFull",
+      "msg": "Whitelist full: Cannot add more addresses to whitelist"
+    },
+    {
+      "code": 6031,
+      "name": "AddressAlreadyWhitelisted",
+      "msg": "Address already whitelisted: Address is already in the whitelist"
+    },
+    {
+      "code": 6032,
+      "name": "AddressNotWhitelisted",
+      "msg": "Address not whitelisted: Address is not in the whitelist"
+    },
+    {
+      "code": 6033,
+      "name": "InvalidWhitelist",
+      "msg": "Invalid whitelist: Whitelist account does not match vault"
+    },
+    {
+      "code": 6034,
+      "name": "InvalidUserWhitelist",
+      "msg": "Invalid user whitelist: User whitelist PDA does not match expected vault or user"
+    },
+    {
+      "code": 6035,
+      "name": "MaxTotalSharesExceeded",
+      "msg": "Max total shares exceeded: This operation would exceed the vault's maximum total shares"
+    },
+    {
+      "code": 6036,
+      "name": "MaxSharesPerUserExceeded",
+      "msg": "Max shares per user exceeded: This operation would exceed the user's maximum share limit"
+    },
+    {
+      "code": 6037,
+      "name": "MaxTotalIdleExceeded",
+      "msg": "Max total idle exceeded: This deposit would exceed the vault's maximum idle funds limit"
+    },
+    {
+      "code": 6038,
+      "name": "SlippageNotMet",
+      "msg": "Slippage constraint not met: Expected amount/shares not satisfied"
+    },
+    {
+      "code": 6039,
+      "name": "InvalidLimit",
+      "msg": "Invalid limit: Limit value is invalid"
+    },
+    {
+      "code": 6040,
+      "name": "LimitExceedsMaximum",
+      "msg": "Limit exceeds maximum: Limit value exceeds the maximum allowed value"
+    },
+    {
+      "code": 6041,
+      "name": "MinimumSharesNotMet",
+      "msg": "Minimum shares not met: Deposit does not meet minimum shares requirement"
+    },
+    {
+      "code": 6042,
+      "name": "PricePending",
+      "msg": "Price pending: A price update is already pending approval"
+    },
+    {
+      "code": 6043,
+      "name": "NoPendingPrice",
+      "msg": "No pending price: No price update is currently pending"
+    },
+    {
+      "code": 6044,
+      "name": "PriceDeviationTooHigh",
+      "msg": "Price deviation too high: Price change exceeds maximum allowed deviation"
+    },
+    {
+      "code": 6045,
+      "name": "PriceCooldownNotExpired",
+      "msg": "Price cooldown not expired: Cannot accept price before cooldown period"
+    },
+    {
+      "code": 6046,
+      "name": "PriceUpdateTooFrequent",
+      "msg": "Price update too frequent: Must wait for deviation cooldown before next update"
+    },
+    {
+      "code": 6047,
+      "name": "InvalidDeviationThreshold",
+      "msg": "Invalid deviation threshold: Deviation threshold is invalid"
+    },
+    {
+      "code": 6048,
+      "name": "InvalidWithdrawalIndex",
+      "msg": "Invalid withdrawal index: Withdrawal request index not found"
+    },
+    {
+      "code": 6049,
+      "name": "WithdrawalAlreadyFulfilled",
+      "msg": "Withdrawal already fulfilled: Cannot cancel already fulfilled withdrawal"
+    },
+    {
+      "code": 6050,
+      "name": "WithdrawalAlreadyCancelled",
+      "msg": "Withdrawal already cancelled: Withdrawal request was already cancelled"
+    },
+    {
+      "code": 6051,
+      "name": "InvalidWithdrawalRequestStatus",
+      "msg": "Invalid withdrawal request status: Operation not allowed for current request status"
+    },
+    {
+      "code": 6052,
+      "name": "WithdrawalQueueEmpty",
+      "msg": "Withdrawal queue empty: No withdrawal requests pending"
+    },
+    {
+      "code": 6053,
+      "name": "InvalidBatchSize",
+      "msg": "Invalid batch size: Batch size must be greater than zero"
+    },
+    {
+      "code": 6054,
+      "name": "NoUnexpectedDeposits",
+      "msg": "No unexpected deposits: No unexpected deposits available to withdraw"
+    },
+    {
+      "code": 6055,
+      "name": "UnexpectedDepositsCooldown",
+      "msg": "Unexpected deposits cooldown: Cannot withdraw unexpected deposits before cooldown"
+    },
+    {
+      "code": 6056,
+      "name": "VaultPaused",
+      "msg": "Vault paused: Vault is currently paused, only emergency operations allowed"
+    },
+    {
+      "code": 6057,
+      "name": "VaultNotPaused",
+      "msg": "Vault not paused: Vault is not currently paused"
+    },
+    {
+      "code": 6058,
+      "name": "EmergencyOnly",
+      "msg": "Emergency only: Only emergency withdrawals are allowed when paused"
+    },
+    {
+      "code": 6059,
+      "name": "ConfigChangePending",
+      "msg": "Config change pending: Configuration change is pending cooldown"
+    },
+    {
+      "code": 6060,
+      "name": "ConfigCooldownNotExpired",
+      "msg": "Config cooldown not expired: Cannot apply configuration change before cooldown"
+    },
+    {
+      "code": 6061,
+      "name": "NoConfigChangesPending",
+      "msg": "No config changes pending: No configuration changes are pending"
+    },
+    {
+      "code": 6062,
+      "name": "NoConfigChanges",
+      "msg": "No config changes: No configuration changes provided"
+    },
+    {
+      "code": 6063,
+      "name": "TooManyPendingChanges",
+      "msg": "Too many pending changes: Maximum number of pending configuration changes exceeded"
+    },
+    {
+      "code": 6064,
+      "name": "InvalidConfigChange",
+      "msg": "Invalid config change: Configuration change value is invalid"
+    },
+    {
+      "code": 6065,
+      "name": "InvalidWithdrawalRequest",
+      "msg": "Invalid withdrawal request: Withdrawal request does not belong to this vault"
+    },
+    {
+      "code": 6066,
+      "name": "InvalidUserTokenAccount",
+      "msg": "Invalid user token account: Token account does not belong to the withdrawal request user"
+    },
+    {
+      "code": 6067,
+      "name": "InsufficientVaultFunds",
+      "msg": "Insufficient vault funds: Not enough funds in vault to fulfill withdrawal requests"
+    },
+    {
+      "code": 6068,
+      "name": "EmergencyWithdrawalTimelockActive",
+      "msg": "Emergency withdrawal timelock active: Cannot withdraw before timelock expires"
+    },
+    {
+      "code": 6069,
+      "name": "EmergencyWithdrawalTokenMismatch",
+      "msg": "Emergency withdrawal token mint mismatch"
+    },
+    {
+      "code": 6070,
+      "name": "EmergencyWithdrawalAmountMismatch",
+      "msg": "Emergency withdrawal amount mismatch"
+    },
+    {
+      "code": 6071,
+      "name": "RoleChangeTimelockActive",
+      "msg": "Role change timelock active: Cannot change roles before timelock expires"
+    },
+    {
+      "code": 6072,
+      "name": "InvalidRole",
+      "msg": "Invalid role: Role address cannot be zero"
+    },
+    {
+      "code": 6073,
+      "name": "NoPendingRolesChange",
+      "msg": "No pending roles change: No roles change is currently pending"
+    },
+    {
+      "code": 6074,
+      "name": "NoRoleChangeProvided",
+      "msg": "No role change provided: At least one role change must be specified"
+    },
+    {
+      "code": 6075,
+      "name": "RoleNotPending",
+      "msg": "Role not pending: No proposal exists for the requested role"
+    },
+    {
+      "code": 6076,
+      "name": "NotProposedHolder",
+      "msg": "Not proposed holder: Caller is not the address proposed for this role"
+    },
+    {
+      "code": 6077,
+      "name": "FeeChangeTimelockActive",
+      "msg": "Fee change timelock is still active"
+    },
+    {
+      "code": 6078,
+      "name": "NoPendingFeesChange",
+      "msg": "No pending fee changes to accept"
+    },
+    {
+      "code": 6079,
+      "name": "NoFeeChanges",
+      "msg": "No fee changes specified"
+    },
+    {
+      "code": 6080,
+      "name": "LimitsChangeTimelockActive",
+      "msg": "Limits change timelock is still active"
+    },
+    {
+      "code": 6081,
+      "name": "NoPendingLimitsChange",
+      "msg": "No pending limits changes to accept"
+    },
+    {
+      "code": 6082,
+      "name": "NoLimitsChanges",
+      "msg": "No limits changes specified"
+    },
+    {
+      "code": 6083,
+      "name": "WhitelistChangeTimelockActive",
+      "msg": "Whitelist change timelock is still active"
+    },
+    {
+      "code": 6084,
+      "name": "NoPendingWhitelistChange",
+      "msg": "No pending whitelist changes to accept"
+    },
+    {
+      "code": 6085,
+      "name": "NoWhitelistChanges",
+      "msg": "No whitelist changes specified"
+    },
+    {
+      "code": 6086,
+      "name": "CooldownChangeTimelockActive",
+      "msg": "Cooldown change timelock is still active"
+    },
+    {
+      "code": 6087,
+      "name": "NoPendingCooldownChange",
+      "msg": "No pending cooldown changes to accept"
+    },
+    {
+      "code": 6088,
+      "name": "NoCooldownChanges",
+      "msg": "No cooldown changes specified"
+    },
+    {
+      "code": 6089,
+      "name": "CooldownUpdateBlockedByPendingChanges",
+      "msg": "Cannot update cooldowns while other changes are pending"
+    },
+    {
+      "code": 6090,
+      "name": "InvalidCooldownDuration",
+      "msg": "Invalid cooldown duration"
+    },
+    {
+      "code": 6091,
+      "name": "InvalidOracleData",
+      "msg": "Invalid oracle data: Oracle data type does not match oracle module"
+    },
+    {
+      "code": 6092,
+      "name": "InvalidRecipient",
+      "msg": "Invalid recipient: Recipient address does not match fee splitter configuration"
+    },
+    {
+      "code": 6093,
+      "name": "InvalidSwapSameVault",
+      "msg": "Invalid swap: Source and destination vaults must be different"
+    },
+    {
+      "code": 6094,
+      "name": "IncompatibleUnderlyingTokens",
+      "msg": "Incompatible vaults: Vaults must use the same underlying token for swapping"
+    },
+    {
+      "code": 6095,
+      "name": "MissingAssetManager",
+      "msg": "Missing asset manager: Both vaults must have asset managers for swapping"
+    },
+    {
+      "code": 6096,
+      "name": "InvalidSwapFee",
+      "msg": "Invalid swap fee: Swap fee exceeds maximum allowed value"
+    },
+    {
+      "code": 6097,
+      "name": "ZeroSwapAmount",
+      "msg": "Zero swap amount: Calculated swap amount is zero"
+    },
+    {
+      "code": 6098,
+      "name": "SwapAmountTooSmall",
+      "msg": "Swap amount too small: Amount too small to generate meaningful destination tokens"
+    },
+    {
+      "code": 6099,
+      "name": "UnderlyingMintMismatch",
+      "msg": "Underlying mint mismatch: Vaults must share the same underlying token"
+    },
+    {
+      "code": 6100,
+      "name": "VaultsMustHaveAssetManagers",
+      "msg": "Vaults must have asset managers for direct swaps"
+    },
+    {
+      "code": 6101,
+      "name": "AssetManagerMismatch",
+      "msg": "Asset manager mismatch: Both vaults must have the same asset manager for swapping"
+    },
+    {
+      "code": 6102,
+      "name": "VaultSunset",
+      "msg": "Vault sunset: deposits and inbound swaps are disabled"
+    },
+    {
+      "code": 6103,
+      "name": "IncompatibleSwapPolicy",
+      "msg": "Swap policy mismatch: vault staleness/deviation policies are incompatible"
+    },
+    {
+      "code": 6104,
+      "name": "DestinationNotAllowlisted",
+      "msg": "Destination vault is not allowlisted for swaps"
+    },
+    {
+      "code": 6105,
+      "name": "MigrationInProgress",
+      "msg": "Asset manager migration is already in progress"
+    },
+    {
+      "code": 6106,
+      "name": "MinimumCannotIncrease",
+      "msg": "Minimum cannot increase: New minimum amount cannot be higher than current minimum"
+    },
+    {
+      "code": 6107,
+      "name": "InsufficientLiquidity",
+      "msg": "Insufficient liquidity: Asset manager does not have enough liquidity to fulfill withdrawal"
+    },
+    {
+      "code": 6108,
+      "name": "PriceDropExceedsDownsideCap",
+      "msg": "Price drop exceeds downside cap: Price decrease is beyond configured tolerance"
+    },
+    {
+      "code": 6109,
+      "name": "WithdrawalTtlNotExpired",
+      "msg": "Withdrawal TTL not expired: Cannot cancel withdrawal request before time-to-live expires"
+    },
+    {
+      "code": 6110,
+      "name": "InvalidWithdrawalMinimum",
+      "msg": "Invalid withdrawal minimum: Minimum amount out cannot be greater than theoretical amount"
+    },
+    {
+      "code": 6111,
+      "name": "BotCancellationForbidden",
+      "msg": "Bot cancellation forbidden: Only users can cancel their own withdrawal requests before TTL"
+    },
+    {
+      "code": 6112,
+      "name": "WithdrawalAmountTooLow",
+      "msg": "Withdrawal amount too low"
+    },
+    {
+      "code": 6113,
+      "name": "MinimumTooHigh",
+      "msg": "Minimum amount out too high relative to downside tolerance"
+    },
+    {
+      "code": 6114,
+      "name": "TokenDecimalMismatch",
+      "msg": "Token decimal mismatch: Source and destination tokens must have the same decimal count"
+    },
+    {
+      "code": 6115,
+      "name": "AdminChangeTimelockActive",
+      "msg": "Admin change timelock is still active"
+    },
+    {
+      "code": 6116,
+      "name": "NoPendingAdminChange",
+      "msg": "No pending admin change to accept"
+    },
+    {
+      "code": 6117,
+      "name": "AdminChangeCooldownNotExpired",
+      "msg": "Admin change cooldown not expired: Cannot accept admin change before cooldown"
+    },
+    {
+      "code": 6118,
+      "name": "AdminCooldownChangePending",
+      "msg": "Admin cooldown change pending: A cooldown change is already pending"
+    },
+    {
+      "code": 6119,
+      "name": "NoPendingAdminCooldownChange",
+      "msg": "No pending admin cooldown change: No admin cooldown change is currently pending"
+    },
+    {
+      "code": 6120,
+      "name": "AdminCooldownChangeTimelockActive",
+      "msg": "Admin cooldown change timelock active: Cannot accept cooldown change before timelock expires"
+    },
+    {
+      "code": 6121,
+      "name": "InvalidProgramData",
+      "msg": "Invalid program data: Program data account does not match expected address"
+    },
+    {
+      "code": 6122,
+      "name": "TokenAccountNotEmpty",
+      "msg": "Token account is not empty"
+    },
+    {
+      "code": 6123,
+      "name": "VaultNotPausedOrSunset",
+      "msg": "Vault is not paused or sunset"
+    },
+    {
+      "code": 6124,
+      "name": "VaultNotSunset",
+      "msg": "Vault is not sunset"
+    },
+    {
+      "code": 6125,
+      "name": "PendingWithdrawalsRemain",
+      "msg": "Pending withdrawals remain"
+    },
+    {
+      "code": 6126,
+      "name": "SharesInCustodyRemain",
+      "msg": "Shares remain in custody"
+    },
+    {
+      "code": 6127,
+      "name": "VaultSupplyNotZero",
+      "msg": "Vault still has share supply"
+    },
+    {
+      "code": 6128,
+      "name": "CooldownNotRaised",
+      "msg": "New cooldown must be strictly greater than the current value"
+    },
+    {
+      "code": 6129,
+      "name": "TurnoverFeeTooLarge",
+      "msg": "Turnover fee exceeds the per-call cap"
+    },
+    {
+      "code": 6130,
+      "name": "TurnoverFeeExceedsSupplyCap",
+      "msg": "Turnover fee would exceed the share supply cap"
     }
   ]
 }
