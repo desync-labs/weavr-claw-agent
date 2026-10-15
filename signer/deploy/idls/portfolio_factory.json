@@ -276,6 +276,45 @@
       "args": []
     },
     {
+      "name": "accept_portfolio_treasury",
+      "docs": [
+        "Anyone finishes a treasury rotation after the accountant cooldown."
+      ],
+      "discriminator": [
+        244,
+        23,
+        40,
+        35,
+        217,
+        34,
+        31,
+        191
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "signer": true
+        },
+        {
+          "name": "factory_config"
+        },
+        {
+          "name": "portfolio"
+        },
+        {
+          "name": "factory_authority"
+        },
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "accountant_program"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "activate_portfolio",
       "docs": [
         "Re-verifies every structural invariant and sets the portfolio Live.",
@@ -2602,10 +2641,18 @@
         },
         {
           "name": "creator_access_record",
+          "docs": [
+            "Present when this creator has an access record. Program id when absent."
+          ],
           "optional": true
         },
         {
           "name": "curator_access_record",
+          "docs": [
+            "Present when this curator has an access record. Program id when absent.",
+            "When creator and curator are the same key, pass this as absent and use",
+            "`creator_access_record` \u2014 both seeds are the same account."
+          ],
           "optional": true
         }
       ],
@@ -2661,10 +2708,18 @@
         },
         {
           "name": "creator_access_record",
+          "docs": [
+            "Present when this creator has an access record. Program id when absent."
+          ],
           "optional": true
         },
         {
           "name": "curator_access_record",
+          "docs": [
+            "Present when this curator has an access record. Program id when absent.",
+            "When creator and curator are the same key, pass this as absent and use",
+            "`creator_access_record` \u2014 both seeds are the same account."
+          ],
           "optional": true
         }
       ],
@@ -3098,6 +3153,92 @@
       ]
     },
     {
+      "name": "rotate_portfolio_treasury",
+      "docs": [
+        "Governance points a book's treasury at the protocol treasury."
+      ],
+      "discriminator": [
+        161,
+        206,
+        180,
+        139,
+        30,
+        68,
+        197,
+        117
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "signer": true
+        },
+        {
+          "name": "factory_config"
+        },
+        {
+          "name": "portfolio"
+        },
+        {
+          "name": "factory_authority"
+        },
+        {
+          "name": "accountant",
+          "writable": true
+        },
+        {
+          "name": "accountant_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_access_record",
+      "docs": [
+        "Governance: grant or revoke propose rights and the short notice for one key."
+      ],
+      "discriminator": [
+        143,
+        61,
+        21,
+        155,
+        165,
+        1,
+        177,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "factory_config"
+        },
+        {
+          "name": "access_record",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "can_rebalance",
+          "type": "bool"
+        },
+        {
+          "name": "trusted_delay",
+          "type": "bool"
+        }
+      ]
+    },
+    {
       "name": "set_pool_escrow_destination_hook",
       "discriminator": [
         14,
@@ -3321,6 +3462,92 @@
         {
           "name": "uri",
           "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "set_rebalance_whitelist_config",
+      "docs": [
+        "Governance: turn the rebalance whitelist on or off, and set the short",
+        "notice floor. 0 disables the short floor."
+      ],
+      "discriminator": [
+        202,
+        53,
+        247,
+        165,
+        48,
+        118,
+        234,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "factory_config",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "enabled",
+          "type": "bool"
+        },
+        {
+          "name": "trusted_min_rebalance_delay_secs",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_royalty_bounds",
+      "docs": [
+        "Governance sets the global royalty floor and ceiling."
+      ],
+      "discriminator": [
+        2,
+        204,
+        196,
+        145,
+        13,
+        77,
+        47,
+        246
+      ],
+      "accounts": [
+        {
+          "name": "governance",
+          "signer": true
+        },
+        {
+          "name": "factory_config"
+        },
+        {
+          "name": "factory_authority"
+        },
+        {
+          "name": "accountant_config",
+          "writable": true
+        },
+        {
+          "name": "accountant_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "min_royalty_bps",
+          "type": "u16"
+        },
+        {
+          "name": "max_royalty_bps",
+          "type": "u16"
         }
       ]
     },
@@ -3826,211 +4053,22 @@
           "type": "u64"
         }
       ]
-    },
-    {
-      "name": "set_royalty_bounds",
-      "discriminator": [
-        2,
-        204,
-        196,
-        145,
-        13,
-        77,
-        47,
-        246
-      ],
-      "accounts": [
-        {
-          "name": "governance",
-          "signer": true
-        },
-        {
-          "name": "factory_config"
-        },
-        {
-          "name": "factory_authority"
-        },
-        {
-          "name": "accountant_config",
-          "writable": true
-        },
-        {
-          "name": "accountant_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "min_royalty_bps",
-          "type": "u16"
-        },
-        {
-          "name": "max_royalty_bps",
-          "type": "u16"
-        }
-      ]
-    },
-    {
-      "name": "rotate_portfolio_treasury",
-      "discriminator": [
-        161,
-        206,
-        180,
-        139,
-        30,
-        68,
-        197,
-        117
-      ],
-      "accounts": [
-        {
-          "name": "governance",
-          "signer": true
-        },
-        {
-          "name": "factory_config"
-        },
-        {
-          "name": "portfolio"
-        },
-        {
-          "name": "factory_authority"
-        },
-        {
-          "name": "accountant",
-          "writable": true
-        },
-        {
-          "name": "accountant_program"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "accept_portfolio_treasury",
-      "discriminator": [
-        244,
-        23,
-        40,
-        35,
-        217,
-        34,
-        31,
-        191
-      ],
-      "accounts": [
-        {
-          "name": "caller",
-          "signer": true
-        },
-        {
-          "name": "factory_config"
-        },
-        {
-          "name": "portfolio"
-        },
-        {
-          "name": "factory_authority"
-        },
-        {
-          "name": "accountant",
-          "writable": true
-        },
-        {
-          "name": "accountant_program"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "set_rebalance_whitelist_config",
-      "docs": [
-        "Governance: turn the rebalance whitelist on or off, and set the short notice floor.",
-        "0 disables the short floor."
-      ],
-      "discriminator": [
-        202,
-        53,
-        247,
-        165,
-        48,
-        118,
-        234,
-        46
-      ],
-      "accounts": [
-        {
-          "name": "governance",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "factory_config",
-          "writable": true
-        },
-        {
-          "name": "system_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "enabled",
-          "type": "bool"
-        },
-        {
-          "name": "trusted_min_rebalance_delay_secs",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "set_access_record",
-      "docs": [
-        "Governance: grant or revoke propose rights and the short notice for one key."
-      ],
-      "discriminator": [
-        143,
-        61,
-        21,
-        155,
-        165,
-        1,
-        177,
-        21
-      ],
-      "accounts": [
-        {
-          "name": "governance",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "factory_config"
-        },
-        {
-          "name": "access_record",
-          "writable": true
-        },
-        {
-          "name": "system_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "authority",
-          "type": "pubkey"
-        },
-        {
-          "name": "can_rebalance",
-          "type": "bool"
-        },
-        {
-          "name": "trusted_delay",
-          "type": "bool"
-        }
-      ]
     }
   ],
   "accounts": [
+    {
+      "name": "AccessRecord",
+      "discriminator": [
+        224,
+        96,
+        239,
+        97,
+        225,
+        133,
+        153,
+        188
+      ]
+    },
     {
       "name": "Accountant",
       "discriminator": [
@@ -4081,19 +4119,6 @@
         48,
         54,
         97
-      ]
-    },
-    {
-      "name": "Config",
-      "discriminator": [
-        155,
-        12,
-        170,
-        224,
-        30,
-        250,
-        204,
-        130
       ]
     },
     {
@@ -4201,24 +4226,91 @@
       ]
     },
     {
-      "name": "AccessRecord",
+      "name": "accountant::state::config::Config",
       "discriminator": [
+        155,
+        12,
+        170,
         224,
-        96,
-        239,
-        97,
-        225,
-        133,
-        153,
-        188
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "asset_manager_escrow::state::config::Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
       ]
     }
   ],
   "types": [
     {
+      "name": "AccessRecord",
+      "docs": [
+        "Governance-owned privilege for one authority.",
+        "",
+        "`can_rebalance` admits `propose_targets` while the whitelist is on.",
+        "`trusted_delay` selects `FactoryConfig.trusted_min_rebalance_delay_secs`.",
+        "The two flags are independent. A record with both false is not a grant."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "can_rebalance",
+            "type": "bool"
+          },
+          {
+            "name": "trusted_delay",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessRecordUpdated",
+      "type": {
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "can_rebalance",
+            "type": "bool"
+          },
+          {
+            "name": "trusted_delay",
+            "type": "bool"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
       "name": "Accountant",
       "docs": [
-        "Accountant program state - THIS IS THE MAIN PDA"
+        "Accountant program state. One instance per portfolio (and per pool vault).",
+        "",
+        "The royalty / treasury split is not stored. `distribute_tokens` takes the",
+        "share for that payout and checks it against `Config` bounds."
       ],
       "type": {
         "kind": "struct",
@@ -4228,20 +4320,12 @@
             "type": "u64"
           },
           {
-            "name": "recipient1",
+            "name": "royalty_recipient",
             "type": "pubkey"
           },
           {
-            "name": "recipient2",
+            "name": "treasury",
             "type": "pubkey"
-          },
-          {
-            "name": "weight1",
-            "type": "u64"
-          },
-          {
-            "name": "weight2",
-            "type": "u64"
           },
           {
             "name": "manager",
@@ -4257,9 +4341,6 @@
           },
           {
             "name": "pending_manager",
-            "docs": [
-              "Pending manager change awaiting approval"
-            ],
             "type": {
               "option": {
                 "defined": {
@@ -4270,16 +4351,10 @@
           },
           {
             "name": "manager_change_cooldown_secs",
-            "docs": [
-              "Manager change cooldown period in seconds (default 48 hours)"
-            ],
             "type": "u64"
           },
           {
             "name": "pending_manager_change_cooldown",
-            "docs": [
-              "Pending manager change cooldown awaiting approval"
-            ],
             "type": {
               "option": {
                 "defined": {
@@ -4289,21 +4364,21 @@
             }
           },
           {
-            "name": "pending_recipients",
+            "name": "pending_royalty_recipient",
             "type": {
               "option": {
                 "defined": {
-                  "name": "PendingRecipients"
+                  "name": "PendingRecipient"
                 }
               }
             }
           },
           {
-            "name": "pending_split_ratio",
+            "name": "pending_treasury",
             "type": {
               "option": {
                 "defined": {
-                  "name": "PendingSplitRatio"
+                  "name": "PendingRecipient"
                 }
               }
             }
@@ -4318,7 +4393,6 @@
     {
       "name": "AccountantManagerCooldownRaised",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "accountant",
@@ -4328,7 +4402,8 @@
             "name": "new_cooldown_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -4353,6 +4428,27 @@
                 }
               }
             }
+          },
+          {
+            "name": "turnover_pending_underlying",
+            "docs": [
+              "Completed rebalance sales not yet settled, in underlying units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "turnover_fee_period_start",
+            "docs": [
+              "Start of the current turnover-fee cap window."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "turnover_fee_charged_in_period",
+            "docs": [
+              "Turnover fee already charged in the current window, in underlying units."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -4430,7 +4526,6 @@
     {
       "name": "ApplyScratchClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -4440,7 +4535,8 @@
             "name": "closed_by",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -4674,121 +4770,8 @@
       }
     },
     {
-      "name": "Config",
-      "docs": [
-        "Global configuration account for the Cross-Chain Asset Manager program.",
-        "Stores CCTP program IDs, authority, and global pause state.",
-        "",
-        "Layout is append-only: do not insert or reorder fields. `schema_version`",
-        "may be absent on not-yet-realloc'd accounts and deserializes as zero."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "authority",
-            "docs": [
-              "Authority that can manage global settings and force-pause asset managers"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "usdc_mint",
-            "docs": [
-              "USDC mint address (required for CCTP operations)"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "token_messenger_v2",
-            "docs": [
-              "Circle CCTP v2 Token Messenger Minter program ID"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "message_transmitter_v2",
-            "docs": [
-              "Circle CCTP v2 Message Transmitter program ID"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "stoken_program_id",
-            "docs": [
-              "S-Token program ID for CPI validation"
-            ],
-            "type": "pubkey"
-          },
-          {
-            "name": "paused",
-            "docs": [
-              "Whether the entire program is globally paused"
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "next_asset_manager_index",
-            "docs": [
-              "Counter for unique asset manager indices"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "docs": [
-              "PDA bump seed"
-            ],
-            "type": "u8"
-          },
-          {
-            "name": "created_at",
-            "docs": [
-              "Timestamp when config was created"
-            ],
-            "type": "i64"
-          },
-          {
-            "name": "updated_at",
-            "docs": [
-              "Timestamp when config was last updated"
-            ],
-            "type": "i64"
-          },
-          {
-            "name": "authority_change_cooldown",
-            "docs": [
-              "Cooldown period before proposed authority can be accepted (seconds)"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "pending_authority",
-            "docs": [
-              "Pending authority change awaiting acceptance after cooldown"
-            ],
-            "type": {
-              "option": {
-                "defined": {
-                  "name": "PendingAuthority"
-                }
-              }
-            }
-          },
-          {
-            "name": "schema_version",
-            "docs": [
-              "Set to 1 when this binary wrote the account."
-            ],
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
       "name": "CoreAdminCooldownRaised",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "program",
@@ -4798,13 +4781,13 @@
             "name": "new_cooldown_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CoreAdminProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "program",
@@ -4814,7 +4797,8 @@
             "name": "new_admin",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -4951,7 +4935,7 @@
           {
             "name": "rebalance_delay_secs",
             "docs": [
-              "Ignored when the composition is locked."
+              "Kept so existing create transactions still decode. Notice is global."
             ],
             "type": "u64"
           },
@@ -4969,7 +4953,6 @@
     {
       "name": "CreationPauseToggled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "paused",
@@ -4979,7 +4962,8 @@
             "name": "actor",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -4989,26 +4973,44 @@
         "fields": [
           {
             "name": "deposit_fee_bps",
+            "docs": [
+              "Charged on every deposit into a book created under this policy."
+            ],
             "type": "u16"
           },
           {
             "name": "withdraw_fee_bps",
+            "docs": [
+              "Charged on every withdrawal from a book created under this policy."
+            ],
             "type": "u16"
           },
           {
             "name": "management_fee_bps_per_year",
+            "docs": [
+              "Annual management fee written onto new books. Launch value is 0."
+            ],
             "type": "u16"
           },
           {
             "name": "turnover_fee_bps",
+            "docs": [
+              "Charged on a completed rebalance sale, in bps of the sale."
+            ],
             "type": "u16"
           },
           {
             "name": "turnover_fee_cap_bps_per_period",
+            "docs": [
+              "Most a book may be charged for turnover in one period, in bps of NAV."
+            ],
             "type": "u16"
           },
           {
             "name": "turnover_fee_period_secs",
+            "docs": [
+              "Length of the turnover cap window, in seconds."
+            ],
             "type": "u64"
           },
           {
@@ -5111,7 +5113,6 @@
     {
       "name": "CuratorAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -5125,13 +5126,13 @@
             "name": "new_curator",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CuratorCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -5141,13 +5142,13 @@
             "name": "cancelled_curator",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "CuratorProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -5161,7 +5162,8 @@
             "name": "proposed_curator",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -5232,7 +5234,6 @@
     {
       "name": "CustodyReadinessProbed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "escrow_asset_manager",
@@ -5255,13 +5256,13 @@
             "name": "probe_slot",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "DefaultOracleProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pending",
@@ -5275,13 +5276,13 @@
             "name": "delay_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "DefaultOracleUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old_key",
@@ -5291,7 +5292,8 @@
             "name": "new_key",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -5583,14 +5585,15 @@
           {
             "name": "trusted_min_rebalance_delay_secs",
             "docs": [
-              "Short notice floor. 0 disables it."
+              "Short notice floor. 0 disables it. An `AccessRecord` with",
+              "`trusted_delay` may use this instead of `policy.min_rebalance_delay_secs`."
             ],
             "type": "u64"
           },
           {
             "name": "deprecated_trusted_creators",
             "docs": [
-              "Unused. Bytes stay so existing configs still decode."
+              "ADR-0367 fixed slots. Unused. Bytes stay so existing configs still decode."
             ],
             "type": {
               "array": [
@@ -5602,7 +5605,9 @@
           {
             "name": "rebalance_whitelist_enabled",
             "docs": [
-              "When set, propose requires an AccessRecord with can_rebalance for the creator or curator."
+              "When set, `propose_targets` requires an `AccessRecord` with",
+              "`can_rebalance` for the portfolio creator or curator.",
+              "Absent on pre-whitelist accounts (read as false)."
             ],
             "type": "bool"
           }
@@ -5612,7 +5617,6 @@
     {
       "name": "FactoryInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "governance",
@@ -5642,13 +5646,13 @@
             "name": "underlying_mint",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "FactoryRentWithdrawn",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "amount",
@@ -5662,13 +5666,13 @@
             "name": "treasury",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "FeeRecipientAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -5682,13 +5686,13 @@
             "name": "recipient",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "FeeRecipientProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -5706,13 +5710,13 @@
             "name": "new_recipient",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "GovernanceAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old",
@@ -5722,13 +5726,13 @@
             "name": "new",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "GovernanceProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pending",
@@ -5742,13 +5746,13 @@
             "name": "delay_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "GovernanceRotationDelayRaised",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old",
@@ -5758,7 +5762,8 @@
             "name": "new",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -5832,7 +5837,6 @@
     {
       "name": "KeeperRiskPauseToggled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "paused",
@@ -5842,7 +5846,8 @@
             "name": "actor",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -5886,6 +5891,44 @@
             "docs": [
               "When this pending change was proposed (used for cooldown calculation)"
             ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdmin",
+      "docs": [
+        "Pending admin change waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAdminChangeCooldown",
+      "docs": [
+        "Pending admin change cooldown waiting for approval"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_cooldown_secs",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
             "type": "i64"
           }
         ]
@@ -6068,16 +6111,15 @@
       }
     },
     {
-      "name": "PendingRecipients",
+      "name": "PendingRecipient",
+      "docs": [
+        "A timelocked recipient change. Used for the royalty recipient and the treasury."
+      ],
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "recipient1",
-            "type": "pubkey"
-          },
-          {
-            "name": "recipient2",
+            "name": "recipient",
             "type": "pubkey"
           },
           {
@@ -6133,26 +6175,6 @@
           },
           {
             "name": "timestamp",
-            "type": "i64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "PendingSplitRatio",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "weight1",
-            "type": "u64"
-          },
-          {
-            "name": "weight2",
-            "type": "u64"
-          },
-          {
-            "name": "eligible_at",
             "type": "i64"
           }
         ]
@@ -6229,7 +6251,6 @@
     {
       "name": "PendingTargetsClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -6239,7 +6260,8 @@
             "name": "closed_by",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -6265,6 +6287,14 @@
           },
           {
             "name": "shares_requested",
+            "type": "u64"
+          },
+          {
+            "name": "turnover_underlying",
+            "docs": [
+              "`expected_out` of a sale this book chose. Zero for redemption and halt exits.",
+              "Counted into `turnover_pending_underlying` only when the request closes."
+            ],
             "type": "u64"
           }
         ]
@@ -6333,7 +6363,6 @@
     {
       "name": "PolicyAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old",
@@ -6351,25 +6380,25 @@
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PolicyCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pending_at",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PolicyProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pending_at",
@@ -6379,13 +6408,13 @@
             "name": "delay_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PolicyUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old",
@@ -6403,7 +6432,8 @@
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -6486,7 +6516,7 @@
           {
             "name": "redemption_estimate_secs",
             "docs": [
-              "Conservative estimate; floors `Portfolio.rebalance_delay_secs`.",
+              "Conservative estimate. Propose notice is at least this long.",
               "Capped at 30 days at registration (`MAX_NOTICE_SECS`)."
             ],
             "type": "u64"
@@ -6546,7 +6576,6 @@
     {
       "name": "PoolAdapterAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6560,13 +6589,13 @@
             "name": "adapter_binding",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6580,13 +6609,13 @@
             "name": "adapter_binding",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6600,13 +6629,13 @@
             "name": "adapter_binding",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterCooldownAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6616,13 +6645,13 @@
             "name": "escrow_asset_manager",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterCooldownProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6636,13 +6665,13 @@
             "name": "new_cooldown",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterDisabled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6656,13 +6685,13 @@
             "name": "adapter_binding",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterEnabled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6676,13 +6705,13 @@
             "name": "adapter_binding",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6704,13 +6733,13 @@
             "name": "native_asset_mint",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAdapterRegistryInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6724,13 +6753,13 @@
             "name": "adapter_registry",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolAssetMintUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6744,13 +6773,13 @@
             "name": "new_mint",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolCctpDestinationAdded",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6773,13 +6802,13 @@
               ]
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolCctpDestinationRemoved",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6802,13 +6831,13 @@
               ]
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6818,13 +6847,13 @@
             "name": "pool_vault",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowAssetManagerClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6834,13 +6863,13 @@
             "name": "escrow_asset_manager",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowCooldownsRaised",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6850,13 +6879,13 @@
             "name": "escrow_asset_manager",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowCustodyClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6870,13 +6899,13 @@
             "name": "mint",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowDestinationHookSet",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6908,13 +6937,13 @@
               ]
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowDivestOverrideSet",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6932,13 +6961,13 @@
             "name": "actor",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowDustSwept",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6956,13 +6985,13 @@
             "name": "max",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowEmergencyCctpReceive",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6976,13 +7005,13 @@
             "name": "actor",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowEmergencyReturnFunds",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -6996,13 +7025,13 @@
             "name": "amount",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowLimitsAccepted",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7012,13 +7041,13 @@
             "name": "escrow_asset_manager",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowLimitsProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7028,13 +7057,13 @@
             "name": "escrow_asset_manager",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowManagerProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7048,13 +7077,13 @@
             "name": "new_manager",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowPauseToggled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7072,13 +7101,13 @@
             "name": "actor",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowPolicySet",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7088,13 +7117,13 @@
             "name": "escrow_asset_manager",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowProcessorProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7108,13 +7137,13 @@
             "name": "new_processor",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolEscrowTokenAccountInitialized",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7132,13 +7161,13 @@
             "name": "token_account",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolInflightCleared",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7157,7 +7186,8 @@
               ]
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7256,7 +7286,6 @@
     {
       "name": "PoolRedemptionEstimateUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7270,13 +7299,13 @@
             "name": "new_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolRegistered",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7314,13 +7343,13 @@
             "name": "volatile",
             "type": "bool"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolReserveRatioUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7334,13 +7363,13 @@
             "name": "new_bps",
             "type": "u16"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolRiskParamsUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7362,7 +7391,8 @@
             "name": "new_max_price_age_secs",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7382,7 +7412,6 @@
     {
       "name": "PoolStatusChanged",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "pool",
@@ -7404,13 +7433,13 @@
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PoolVaultCreated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "vault",
@@ -7436,7 +7465,8 @@
             "name": "tvl_cap",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7510,10 +7540,11 @@
           },
           {
             "name": "deprecated_rebalance_delay_secs",
-            "type": "u64",
             "docs": [
-              "Unused. Notice is resolved from FactoryConfig and AccessRecord at propose."
-            ]
+              "Unused. Bytes stay so existing portfolio headers still decode.",
+              "Notice is resolved from `FactoryConfig` and `AccessRecord` at propose."
+            ],
+            "type": "u64"
           },
           {
             "name": "last_rebalance_at",
@@ -7575,15 +7606,14 @@
       }
     },
     {
-      "name": "PortfolioActivated",
       "docs": [
         "Live snapshot. Repeats the create-time band / idle floor so a subscriber",
         "that starts at activation still has them. `targets` is the full set when",
         "the book is a single page; empty when paged (use `TargetsApplied` from the",
         "last `create_portfolio_page`, or `PortfolioCreated.targets` on the inline path)."
       ],
+      "name": "PortfolioActivated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -7619,13 +7649,13 @@
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PortfolioClosed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -7635,19 +7665,19 @@
             "name": "vault",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "PortfolioCreated",
       "docs": [
         "Create-time snapshot. `idle_target_bps` and `drift_band_bps` never change",
         "after this. `targets` is the committed set on the inline path; it is empty",
         "on a paged draft \u2014 the last `create_portfolio_page` then emits",
         "`TargetsApplied` with the full set so drift is event-derivable either way."
       ],
+      "name": "PortfolioCreated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -7695,13 +7725,13 @@
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PortfolioMetadataUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -7711,33 +7741,13 @@
             "name": "uri",
             "type": "string"
           }
-        ]
-      }
-    },
-    {
-      "name": "PortfolioRebalanceDelayUpdated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "portfolio",
-            "type": "pubkey"
-          },
-          {
-            "name": "old_secs",
-            "type": "u64"
-          },
-          {
-            "name": "new_secs",
-            "type": "u64"
-          }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "PortfolioSharesReady",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -7751,7 +7761,8 @@
             "name": "shares_mint",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7769,6 +7780,46 @@
             "name": "Live"
           }
         ]
+      }
+    },
+    {
+      "name": "PortfolioTreasuryAccepted",
+      "type": {
+        "fields": [
+          {
+            "name": "portfolio",
+            "type": "pubkey"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PortfolioTreasuryProposed",
+      "type": {
+        "fields": [
+          {
+            "name": "portfolio",
+            "type": "pubkey"
+          },
+          {
+            "name": "accountant",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          }
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7808,7 +7859,6 @@
     {
       "name": "PositionRetired",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -7818,7 +7868,8 @@
             "name": "pool",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7935,9 +7986,24 @@
       }
     },
     {
+      "name": "RebalanceWhitelistConfigSet",
+      "type": {
+        "fields": [
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "trusted_min_rebalance_delay_secs",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
       "name": "RentMarginsUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old_factory",
@@ -7955,7 +8021,24 @@
             "name": "new_custodian",
             "type": "u64"
           }
-        ]
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "RoyaltyBoundsSet",
+      "type": {
+        "fields": [
+          {
+            "name": "min_royalty_bps",
+            "type": "u16"
+          },
+          {
+            "name": "max_royalty_bps",
+            "type": "u16"
+          }
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -7978,7 +8061,6 @@
     {
       "name": "ServiceRoleReplaced",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "role",
@@ -7996,7 +8078,8 @@
             "name": "new_key",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -8074,7 +8157,6 @@
     {
       "name": "TargetsApplied",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -8100,13 +8182,13 @@
             "name": "applied_at",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
       "name": "TargetsCancelled",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -8120,17 +8202,17 @@
             "name": "cancelled_by",
             "type": "pubkey"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
-      "name": "TargetsProposed",
       "docs": [
         "The user-facing notice. The UI renders a diff and a countdown from this, so",
         "it carries both sets rather than only the new one."
       ],
+      "name": "TargetsProposed",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "portfolio",
@@ -8164,7 +8246,8 @@
             "name": "effective_at",
             "type": "i64"
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -8572,7 +8655,6 @@
     {
       "name": "VaultProfileUpdated",
       "type": {
-        "kind": "struct",
         "fields": [
           {
             "name": "old",
@@ -8590,7 +8672,8 @@
               }
             }
           }
-        ]
+        ],
+        "kind": "struct"
       }
     },
     {
@@ -8608,6 +8691,79 @@
           {
             "name": "timestamp",
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "accountant::state::config::Config",
+      "docs": [
+        "Global configuration for Accountant program"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Admin who can initialize accountants and update configuration"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "next_accountant_index",
+            "docs": [
+              "Global accountant counter for unique indexing"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin",
+            "docs": [
+              "Pending admin change awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdmin"
+                }
+              }
+            }
+          },
+          {
+            "name": "admin_change_cooldown_secs",
+            "docs": [
+              "Admin change cooldown period in seconds (default 48 hours)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin_change_cooldown",
+            "docs": [
+              "Pending admin change cooldown awaiting approval"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAdminChangeCooldown"
+                }
+              }
+            }
+          },
+          {
+            "name": "min_royalty_bps",
+            "docs": [
+              "Lowest royalty share `distribute_*` will accept, in bps."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "max_royalty_bps",
+            "docs": [
+              "Highest royalty share `distribute_*` will accept, in bps.",
+              "Treasury receives `10_000 - royalty_bps`, so this is also the treasury floor."
+            ],
+            "type": "u16"
           }
         ]
       }
@@ -8680,6 +8836,118 @@
       }
     },
     {
+      "name": "asset_manager_escrow::state::config::Config",
+      "docs": [
+        "Global configuration account for the Cross-Chain Asset Manager program.",
+        "Stores CCTP program IDs, authority, and global pause state.",
+        "",
+        "Layout is append-only: do not insert or reorder fields. `schema_version`",
+        "may be absent on not-yet-realloc'd accounts and deserializes as zero."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "Authority that can manage global settings and force-pause asset managers"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_mint",
+            "docs": [
+              "USDC mint address (required for CCTP operations)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "token_messenger_v2",
+            "docs": [
+              "Circle CCTP v2 Token Messenger Minter program ID"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "message_transmitter_v2",
+            "docs": [
+              "Circle CCTP v2 Message Transmitter program ID"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "stoken_program_id",
+            "docs": [
+              "S-Token program ID for CPI validation"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "Whether the entire program is globally paused"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "next_asset_manager_index",
+            "docs": [
+              "Counter for unique asset manager indices"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "Timestamp when config was created"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "updated_at",
+            "docs": [
+              "Timestamp when config was last updated"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "authority_change_cooldown",
+            "docs": [
+              "Cooldown period before proposed authority can be accepted (seconds)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_authority",
+            "docs": [
+              "Pending authority change awaiting acceptance after cooldown"
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "PendingAuthority"
+                }
+              }
+            }
+          },
+          {
+            "name": "schema_version",
+            "docs": [
+              "Set to 1 when this binary wrote the account."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "stoken::state::vault::PendingLimits",
       "docs": [
         "Pending limits changes waiting for approval"
@@ -8723,66 +8991,1334 @@
           }
         ]
       }
+    }
+  ],
+  "constants": [],
+  "events": [
+    {
+      "discriminator": [
+        116,
+        120,
+        63,
+        184,
+        124,
+        136,
+        108,
+        190
+      ],
+      "name": "AccessRecordUpdated"
     },
     {
-      "name": "AccessRecord",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "bump",
-            "type": "u8"
-          },
-          {
-            "name": "authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "can_rebalance",
-            "type": "bool"
-          },
-          {
-            "name": "trusted_delay",
-            "type": "bool"
-          }
-        ]
-      }
+      "discriminator": [
+        60,
+        183,
+        182,
+        194,
+        246,
+        134,
+        214,
+        202
+      ],
+      "name": "AccountantManagerCooldownRaised"
     },
     {
-      "name": "AccessRecordUpdated",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "can_rebalance",
-            "type": "bool"
-          },
-          {
-            "name": "trusted_delay",
-            "type": "bool"
-          }
-        ]
-      }
+      "discriminator": [
+        139,
+        170,
+        134,
+        169,
+        38,
+        5,
+        31,
+        236
+      ],
+      "name": "ApplyScratchClosed"
     },
     {
-      "name": "RebalanceWhitelistConfigSet",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "enabled",
-            "type": "bool"
-          },
-          {
-            "name": "trusted_min_rebalance_delay_secs",
-            "type": "u64"
-          }
-        ]
-      }
+      "discriminator": [
+        108,
+        119,
+        253,
+        102,
+        123,
+        113,
+        160,
+        61
+      ],
+      "name": "CoreAdminCooldownRaised"
+    },
+    {
+      "discriminator": [
+        149,
+        213,
+        255,
+        62,
+        222,
+        211,
+        110,
+        158
+      ],
+      "name": "CoreAdminProposed"
+    },
+    {
+      "discriminator": [
+        46,
+        68,
+        38,
+        144,
+        201,
+        161,
+        223,
+        38
+      ],
+      "name": "CreationPauseToggled"
+    },
+    {
+      "discriminator": [
+        150,
+        169,
+        63,
+        100,
+        117,
+        141,
+        36,
+        159
+      ],
+      "name": "CuratorAccepted"
+    },
+    {
+      "discriminator": [
+        20,
+        218,
+        211,
+        182,
+        57,
+        34,
+        19,
+        169
+      ],
+      "name": "CuratorCancelled"
+    },
+    {
+      "discriminator": [
+        85,
+        33,
+        153,
+        84,
+        133,
+        163,
+        253,
+        73
+      ],
+      "name": "CuratorProposed"
+    },
+    {
+      "discriminator": [
+        244,
+        221,
+        128,
+        247,
+        80,
+        116,
+        121,
+        227
+      ],
+      "name": "CustodyReadinessProbed"
+    },
+    {
+      "discriminator": [
+        118,
+        140,
+        5,
+        236,
+        140,
+        21,
+        3,
+        101
+      ],
+      "name": "DefaultOracleProposed"
+    },
+    {
+      "discriminator": [
+        131,
+        72,
+        62,
+        154,
+        180,
+        163,
+        119,
+        187
+      ],
+      "name": "DefaultOracleUpdated"
+    },
+    {
+      "discriminator": [
+        20,
+        86,
+        103,
+        75,
+        20,
+        220,
+        162,
+        63
+      ],
+      "name": "FactoryInitialized"
+    },
+    {
+      "discriminator": [
+        187,
+        106,
+        24,
+        69,
+        176,
+        238,
+        210,
+        71
+      ],
+      "name": "FactoryRentWithdrawn"
+    },
+    {
+      "discriminator": [
+        133,
+        34,
+        50,
+        73,
+        228,
+        20,
+        215,
+        115
+      ],
+      "name": "FeeRecipientAccepted"
+    },
+    {
+      "discriminator": [
+        39,
+        153,
+        121,
+        120,
+        156,
+        94,
+        78,
+        224
+      ],
+      "name": "FeeRecipientProposed"
+    },
+    {
+      "discriminator": [
+        58,
+        188,
+        56,
+        73,
+        240,
+        184,
+        32,
+        89
+      ],
+      "name": "GovernanceAccepted"
+    },
+    {
+      "discriminator": [
+        159,
+        228,
+        224,
+        214,
+        100,
+        69,
+        40,
+        198
+      ],
+      "name": "GovernanceProposed"
+    },
+    {
+      "discriminator": [
+        155,
+        8,
+        60,
+        11,
+        226,
+        91,
+        61,
+        207
+      ],
+      "name": "GovernanceRotationDelayRaised"
+    },
+    {
+      "discriminator": [
+        27,
+        151,
+        215,
+        20,
+        178,
+        87,
+        72,
+        225
+      ],
+      "name": "KeeperRiskPauseToggled"
+    },
+    {
+      "discriminator": [
+        208,
+        253,
+        147,
+        158,
+        115,
+        166,
+        73,
+        86
+      ],
+      "name": "PendingTargetsClosed"
+    },
+    {
+      "discriminator": [
+        52,
+        103,
+        210,
+        210,
+        182,
+        56,
+        172,
+        117
+      ],
+      "name": "PolicyAccepted"
+    },
+    {
+      "discriminator": [
+        33,
+        213,
+        35,
+        84,
+        4,
+        212,
+        181,
+        237
+      ],
+      "name": "PolicyCancelled"
+    },
+    {
+      "discriminator": [
+        218,
+        131,
+        42,
+        156,
+        255,
+        118,
+        219,
+        223
+      ],
+      "name": "PolicyProposed"
+    },
+    {
+      "discriminator": [
+        225,
+        112,
+        112,
+        67,
+        95,
+        236,
+        245,
+        161
+      ],
+      "name": "PolicyUpdated"
+    },
+    {
+      "discriminator": [
+        112,
+        110,
+        81,
+        178,
+        103,
+        100,
+        201,
+        20
+      ],
+      "name": "PoolAdapterAccepted"
+    },
+    {
+      "discriminator": [
+        123,
+        187,
+        99,
+        234,
+        60,
+        251,
+        64,
+        16
+      ],
+      "name": "PoolAdapterCancelled"
+    },
+    {
+      "discriminator": [
+        48,
+        12,
+        58,
+        150,
+        94,
+        15,
+        243,
+        159
+      ],
+      "name": "PoolAdapterClosed"
+    },
+    {
+      "discriminator": [
+        93,
+        125,
+        172,
+        68,
+        215,
+        14,
+        177,
+        75
+      ],
+      "name": "PoolAdapterCooldownAccepted"
+    },
+    {
+      "discriminator": [
+        226,
+        15,
+        9,
+        191,
+        137,
+        186,
+        245,
+        153
+      ],
+      "name": "PoolAdapterCooldownProposed"
+    },
+    {
+      "discriminator": [
+        210,
+        93,
+        194,
+        52,
+        1,
+        169,
+        66,
+        175
+      ],
+      "name": "PoolAdapterDisabled"
+    },
+    {
+      "discriminator": [
+        224,
+        52,
+        37,
+        215,
+        152,
+        69,
+        99,
+        171
+      ],
+      "name": "PoolAdapterEnabled"
+    },
+    {
+      "discriminator": [
+        140,
+        17,
+        144,
+        115,
+        225,
+        126,
+        170,
+        93
+      ],
+      "name": "PoolAdapterProposed"
+    },
+    {
+      "discriminator": [
+        175,
+        55,
+        176,
+        188,
+        90,
+        181,
+        209,
+        87
+      ],
+      "name": "PoolAdapterRegistryInitialized"
+    },
+    {
+      "discriminator": [
+        93,
+        22,
+        143,
+        60,
+        23,
+        201,
+        221,
+        213
+      ],
+      "name": "PoolAssetMintUpdated"
+    },
+    {
+      "discriminator": [
+        229,
+        82,
+        134,
+        207,
+        108,
+        45,
+        36,
+        204
+      ],
+      "name": "PoolCctpDestinationAdded"
+    },
+    {
+      "discriminator": [
+        27,
+        121,
+        164,
+        48,
+        20,
+        149,
+        179,
+        98
+      ],
+      "name": "PoolCctpDestinationRemoved"
+    },
+    {
+      "discriminator": [
+        106,
+        46,
+        29,
+        231,
+        42,
+        44,
+        73,
+        119
+      ],
+      "name": "PoolClosed"
+    },
+    {
+      "discriminator": [
+        134,
+        185,
+        95,
+        166,
+        170,
+        57,
+        143,
+        129
+      ],
+      "name": "PoolEscrowAssetManagerClosed"
+    },
+    {
+      "discriminator": [
+        22,
+        44,
+        52,
+        51,
+        130,
+        79,
+        240,
+        213
+      ],
+      "name": "PoolEscrowCooldownsRaised"
+    },
+    {
+      "discriminator": [
+        215,
+        33,
+        152,
+        48,
+        253,
+        15,
+        190,
+        84
+      ],
+      "name": "PoolEscrowCustodyClosed"
+    },
+    {
+      "discriminator": [
+        181,
+        178,
+        54,
+        210,
+        54,
+        47,
+        16,
+        225
+      ],
+      "name": "PoolEscrowDestinationHookSet"
+    },
+    {
+      "discriminator": [
+        77,
+        176,
+        188,
+        102,
+        182,
+        177,
+        239,
+        208
+      ],
+      "name": "PoolEscrowDivestOverrideSet"
+    },
+    {
+      "discriminator": [
+        10,
+        92,
+        145,
+        239,
+        10,
+        136,
+        8,
+        197
+      ],
+      "name": "PoolEscrowDustSwept"
+    },
+    {
+      "discriminator": [
+        239,
+        81,
+        45,
+        75,
+        55,
+        232,
+        158,
+        131
+      ],
+      "name": "PoolEscrowEmergencyCctpReceive"
+    },
+    {
+      "discriminator": [
+        236,
+        145,
+        213,
+        91,
+        142,
+        73,
+        56,
+        116
+      ],
+      "name": "PoolEscrowEmergencyReturnFunds"
+    },
+    {
+      "discriminator": [
+        196,
+        173,
+        1,
+        130,
+        60,
+        211,
+        126,
+        60
+      ],
+      "name": "PoolEscrowLimitsAccepted"
+    },
+    {
+      "discriminator": [
+        71,
+        83,
+        12,
+        161,
+        41,
+        170,
+        228,
+        40
+      ],
+      "name": "PoolEscrowLimitsProposed"
+    },
+    {
+      "discriminator": [
+        2,
+        220,
+        213,
+        150,
+        201,
+        84,
+        202,
+        74
+      ],
+      "name": "PoolEscrowManagerProposed"
+    },
+    {
+      "discriminator": [
+        200,
+        161,
+        201,
+        96,
+        9,
+        125,
+        241,
+        160
+      ],
+      "name": "PoolEscrowPauseToggled"
+    },
+    {
+      "discriminator": [
+        201,
+        15,
+        214,
+        50,
+        116,
+        243,
+        15,
+        237
+      ],
+      "name": "PoolEscrowPolicySet"
+    },
+    {
+      "discriminator": [
+        113,
+        221,
+        28,
+        124,
+        58,
+        127,
+        23,
+        217
+      ],
+      "name": "PoolEscrowProcessorProposed"
+    },
+    {
+      "discriminator": [
+        134,
+        2,
+        176,
+        191,
+        105,
+        122,
+        46,
+        179
+      ],
+      "name": "PoolEscrowTokenAccountInitialized"
+    },
+    {
+      "discriminator": [
+        72,
+        152,
+        147,
+        83,
+        146,
+        59,
+        202,
+        52
+      ],
+      "name": "PoolInflightCleared"
+    },
+    {
+      "discriminator": [
+        41,
+        184,
+        240,
+        101,
+        217,
+        124,
+        218,
+        23
+      ],
+      "name": "PoolRedemptionEstimateUpdated"
+    },
+    {
+      "discriminator": [
+        77,
+        114,
+        165,
+        230,
+        33,
+        230,
+        135,
+        215
+      ],
+      "name": "PoolRegistered"
+    },
+    {
+      "discriminator": [
+        147,
+        221,
+        10,
+        93,
+        60,
+        204,
+        127,
+        210
+      ],
+      "name": "PoolReserveRatioUpdated"
+    },
+    {
+      "discriminator": [
+        206,
+        205,
+        110,
+        61,
+        31,
+        231,
+        90,
+        125
+      ],
+      "name": "PoolRiskParamsUpdated"
+    },
+    {
+      "discriminator": [
+        148,
+        190,
+        81,
+        62,
+        81,
+        239,
+        137,
+        188
+      ],
+      "name": "PoolStatusChanged"
+    },
+    {
+      "discriminator": [
+        218,
+        154,
+        115,
+        177,
+        243,
+        174,
+        204,
+        189
+      ],
+      "name": "PoolVaultCreated"
+    },
+    {
+      "discriminator": [
+        240,
+        50,
+        112,
+        33,
+        177,
+        226,
+        84,
+        108
+      ],
+      "name": "PortfolioActivated"
+    },
+    {
+      "discriminator": [
+        5,
+        50,
+        67,
+        30,
+        6,
+        200,
+        213,
+        130
+      ],
+      "name": "PortfolioClosed"
+    },
+    {
+      "discriminator": [
+        182,
+        62,
+        36,
+        207,
+        179,
+        142,
+        199,
+        76
+      ],
+      "name": "PortfolioCreated"
+    },
+    {
+      "discriminator": [
+        221,
+        177,
+        176,
+        67,
+        115,
+        40,
+        216,
+        250
+      ],
+      "name": "PortfolioMetadataUpdated"
+    },
+    {
+      "discriminator": [
+        101,
+        87,
+        178,
+        116,
+        231,
+        208,
+        204,
+        130
+      ],
+      "name": "PortfolioSharesReady"
+    },
+    {
+      "discriminator": [
+        196,
+        19,
+        21,
+        167,
+        207,
+        45,
+        252,
+        232
+      ],
+      "name": "PortfolioTreasuryAccepted"
+    },
+    {
+      "discriminator": [
+        61,
+        23,
+        17,
+        22,
+        68,
+        91,
+        237,
+        154
+      ],
+      "name": "PortfolioTreasuryProposed"
+    },
+    {
+      "discriminator": [
+        241,
+        89,
+        117,
+        226,
+        156,
+        152,
+        160,
+        120
+      ],
+      "name": "PositionRetired"
+    },
+    {
+      "discriminator": [
+        120,
+        98,
+        233,
+        188,
+        88,
+        32,
+        61,
+        197
+      ],
+      "name": "RebalanceWhitelistConfigSet"
+    },
+    {
+      "discriminator": [
+        244,
+        36,
+        234,
+        222,
+        9,
+        67,
+        121,
+        248
+      ],
+      "name": "RentMarginsUpdated"
+    },
+    {
+      "discriminator": [
+        198,
+        230,
+        14,
+        42,
+        174,
+        145,
+        81,
+        60
+      ],
+      "name": "RoyaltyBoundsSet"
+    },
+    {
+      "discriminator": [
+        25,
+        78,
+        28,
+        137,
+        139,
+        126,
+        58,
+        57
+      ],
+      "name": "ServiceRoleReplaced"
+    },
+    {
+      "discriminator": [
+        123,
+        193,
+        251,
+        68,
+        219,
+        194,
+        16,
+        239
+      ],
+      "name": "TargetsApplied"
+    },
+    {
+      "discriminator": [
+        15,
+        161,
+        194,
+        149,
+        215,
+        241,
+        96,
+        92
+      ],
+      "name": "TargetsCancelled"
+    },
+    {
+      "discriminator": [
+        156,
+        177,
+        52,
+        11,
+        233,
+        173,
+        58,
+        116
+      ],
+      "name": "TargetsProposed"
+    },
+    {
+      "discriminator": [
+        98,
+        205,
+        5,
+        217,
+        215,
+        121,
+        0,
+        94
+      ],
+      "name": "VaultProfileUpdated"
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "CreationPaused",
+      "msg": "Creation is paused"
+    },
+    {
+      "code": 6001,
+      "name": "TooManyLegs",
+      "msg": "Too many legs for one portfolio"
+    },
+    {
+      "code": 6002,
+      "name": "DuplicatePool",
+      "msg": "A pool appears more than once in targets"
+    },
+    {
+      "code": 6003,
+      "name": "PoolAccountMismatch",
+      "msg": "Pool account does not match the target entry"
+    },
+    {
+      "code": 6004,
+      "name": "PoolNotActive",
+      "msg": "Pool is not active"
+    },
+    {
+      "code": 6005,
+      "name": "WeightsMustSumToBps",
+      "msg": "Target weights must sum to exactly 10000 bps"
+    },
+    {
+      "code": 6006,
+      "name": "WeightExceedsPoolCap",
+      "msg": "Weight exceeds the pool's maximum allowed weight"
+    },
+    {
+      "code": 6007,
+      "name": "ZeroWeight",
+      "msg": "A target weight is zero; omit the pool instead"
+    },
+    {
+      "code": 6008,
+      "name": "FeeExceedsCap",
+      "msg": "Fee exceeds the factory cap"
+    },
+    {
+      "code": 6009,
+      "name": "SpreadTooLow",
+      "msg": "Combined entry and exit spread is below the minimum"
+    },
+    {
+      "code": 6010,
+      "name": "IdleTargetTooLow",
+      "msg": "Idle target is below the minimum"
+    },
+    {
+      "code": 6011,
+      "name": "DriftBandOutOfRange",
+      "msg": "Drift band is outside the allowed range"
+    },
+    {
+      "code": 6012,
+      "name": "CreatorFeeOutOfRange",
+      "msg": "Creator fee must be strictly between 0 and 10000 bps"
+    },
+    {
+      "code": 6013,
+      "name": "CreatorIsTreasury",
+      "msg": "Creator address must differ from the treasury"
+    },
+    {
+      "code": 6014,
+      "name": "InsufficientRent",
+      "msg": "Insufficient lamports supplied for rent"
+    },
+    {
+      "code": 6015,
+      "name": "WrongPortfolioState",
+      "msg": "Portfolio is not in the required state"
+    },
+    {
+      "code": 6016,
+      "name": "ActivationInvariantFailed",
+      "msg": "Activation invariant check failed"
+    },
+    {
+      "code": 6017,
+      "name": "CompositionLocked",
+      "msg": "Composition is permanently locked for this portfolio"
+    },
+    {
+      "code": 6018,
+      "name": "TargetsChangePending",
+      "msg": "A composition change is already pending"
+    },
+    {
+      "code": 6019,
+      "name": "NoTargetsChangePending",
+      "msg": "No composition change is pending"
+    },
+    {
+      "code": 6020,
+      "name": "RebalanceTooSoon",
+      "msg": "Rebalance requested before the previous delay elapsed"
+    },
+    {
+      "code": 6021,
+      "name": "RebalanceDelayTooShort",
+      "msg": "Rebalance delay is shorter than the conservative redemption estimate"
+    },
+    {
+      "code": 6022,
+      "name": "TargetsNotEffective",
+      "msg": "Composition change is not yet effective"
+    },
+    {
+      "code": 6023,
+      "name": "TooManyConcurrentPositions",
+      "msg": "Active and exiting positions exceed the portfolio limit"
+    },
+    {
+      "code": 6024,
+      "name": "PositionStillTargeted",
+      "msg": "Position is still present in current or pending targets"
+    },
+    {
+      "code": 6025,
+      "name": "PositionBalanceNonZero",
+      "msg": "Position custody balance must be zero before retirement"
+    },
+    {
+      "code": 6026,
+      "name": "PositionUnwindPending",
+      "msg": "Position has a tracked unwind that is not reconciled"
+    },
+    {
+      "code": 6027,
+      "name": "MissingCustodyForNewPool",
+      "msg": "A newly added pool has no custody account"
+    },
+    {
+      "code": 6028,
+      "name": "HeldPoolAccountSetInvalid",
+      "msg": "Held/new pool account set is incomplete or mismatched"
+    },
+    {
+      "code": 6029,
+      "name": "ApplyInFlight",
+      "msg": "A paged apply is in flight; retire after it completes"
+    },
+    {
+      "code": 6030,
+      "name": "PagedWindowExpired",
+      "msg": "A paged draft or apply exceeded its slot window"
+    },
+    {
+      "code": 6031,
+      "name": "NoPendingCurator",
+      "msg": "No curator transfer is pending"
+    },
+    {
+      "code": 6032,
+      "name": "PortfolioPriceMissing",
+      "msg": "Portfolio price has not been published"
+    },
+    {
+      "code": 6033,
+      "name": "PortfolioPriceStale",
+      "msg": "Portfolio price is stale"
+    },
+    {
+      "code": 6034,
+      "name": "PortfolioPricePending",
+      "msg": "Portfolio has an unaccepted pending price"
+    },
+    {
+      "code": 6035,
+      "name": "PoolPriceStale",
+      "msg": "A required pool price is stale"
+    },
+    {
+      "code": 6036,
+      "name": "PoolPricePending",
+      "msg": "A required pool has an unaccepted pending price"
+    },
+    {
+      "code": 6037,
+      "name": "VaultPaused",
+      "msg": "Vault is paused"
+    },
+    {
+      "code": 6038,
+      "name": "RequiredPoolPaused",
+      "msg": "A required pool is paused or halted"
+    },
+    {
+      "code": 6039,
+      "name": "AlreadyInThatPauseState",
+      "msg": "Vault is already in the requested pause state"
+    },
+    {
+      "code": 6040,
+      "name": "PendingWithdrawalsBlockTargets",
+      "msg": "Pending withdrawals block this composition change"
+    },
+    {
+      "code": 6041,
+      "name": "PoolReserveRatioOutOfRange",
+      "msg": "Pool reserve ratio must be within 1..=10000 bps"
+    },
+    {
+      "code": 6042,
+      "name": "MaxPriceAgeOutOfRange",
+      "msg": "Pool max_price_age_secs must be within 1..=86400"
+    },
+    {
+      "code": 6043,
+      "name": "UnauthorizedPoolReserveUpdate",
+      "msg": "Only governance may change the pool reserve ratio"
+    },
+    {
+      "code": 6044,
+      "name": "PoolVaultNotOwnedByCore",
+      "msg": "Pool vault is not owned by the core program"
+    },
+    {
+      "code": 6045,
+      "name": "PoolMintMismatch",
+      "msg": "Pool mint does not match"
+    },
+    {
+      "code": 6046,
+      "name": "PoolDecimalsMismatch",
+      "msg": "Pool share decimals do not match the mint"
+    },
+    {
+      "code": 6047,
+      "name": "LiquidityTierOutOfRange",
+      "msg": "Liquidity tier is out of range"
+    },
+    {
+      "code": 6048,
+      "name": "RiskTierOutOfRange",
+      "msg": "Risk tier is out of range"
+    },
+    {
+      "code": 6049,
+      "name": "RiskDisclosureHashMissing",
+      "msg": "Risk disclosure hash must be non-zero"
+    },
+    {
+      "code": 6050,
+      "name": "ExecutionLossPolicyExceeded",
+      "msg": "Execution loss bound exceeds governance policy"
+    },
+    {
+      "code": 6051,
+      "name": "DownsideCapExceedsExecutionLoss",
+      "msg": "Vault downside cap exceeds the pool execution-loss bound (H-1)"
+    },
+    {
+      "code": 6052,
+      "name": "InvalidSymbol",
+      "msg": "Symbol is empty or too long"
+    },
+    {
+      "code": 6053,
+      "name": "EscrowMismatch",
+      "msg": "Pool escrow account or manager does not match"
+    },
+    {
+      "code": 6054,
+      "name": "TokenExtensionMismatch",
+      "msg": "Token-2022 extension or hook snapshot does not match"
+    },
+    {
+      "code": 6055,
+      "name": "CustodyPathNotReady",
+      "msg": "Custody path readiness proof is missing or stale"
+    },
+    {
+      "code": 6056,
+      "name": "ServiceNotPaused",
+      "msg": "Service must be paused before its key is replaced"
+    },
+    {
+      "code": 6057,
+      "name": "DefaultKeyNotAllowed",
+      "msg": "Default pubkey is not allowed"
+    },
+    {
+      "code": 6058,
+      "name": "RoleUnchanged",
+      "msg": "Role already holds this key"
+    },
+    {
+      "code": 6059,
+      "name": "ServiceRoleCollision",
+      "msg": "Service roles must be distinct"
+    },
+    {
+      "code": 6060,
+      "name": "GovernanceIsTreasury",
+      "msg": "Governance address must differ from the treasury"
+    },
+    {
+      "code": 6061,
+      "name": "InvalidPolicyValue",
+      "msg": "Policy value is invalid"
+    },
+    {
+      "code": 6062,
+      "name": "RentMarginNotSet",
+      "msg": "Rent margins must be non-zero"
+    },
+    {
+      "code": 6063,
+      "name": "InvalidAuthorityPda",
+      "msg": "Authority PDA is not system-owned and dataless"
+    },
+    {
+      "code": 6064,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6065,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6066,
+      "name": "RebalanceNotAuthorized",
+      "msg": "Rebalance is limited to an authorized creator or curator"
     }
   ]
 }
