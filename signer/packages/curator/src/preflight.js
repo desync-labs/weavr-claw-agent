@@ -20,6 +20,7 @@
  *   program checks each pool's own `pending_price`. So the leg gates read
  *   `pools[].pendingPrice` / `pools[].priceState`, never the book's.
  */
+import { evaluateTargets } from './policy.js';
 
 /** Solana's target slot time; a slot wait is expressed in seconds for the loop. */
 const SECS_PER_SLOT = 0.4;
@@ -137,6 +138,43 @@ function keeperOk(health) {
   return status == null ? null : status === 'ok';
 }
 
+/** Codes of `evaluateTargets` that mean a rule could not run, not that one refused. */
+const NOT_EVALUATED = new Set(['BAD_REQUEST', 'INPUTS_INCOMPLETE']);
+
+/**
+ * The pending change against the policy this signer runs now: the rules
+ * about what a target set is (`evaluateTargets`: universe, shape, turnover,
+ * cost). The signer reads its policy only at startup and the loop re-arms
+ * from the chain, so after a restart with a stricter document this is where
+ * a change proposed under the old one meets the new one. Cadence and reason
+ * are not re-checked: they are about when and why a change is proposed, and
+ * were checked when it was.
+ *
+ * The target set is the api row's; the program refuses an empty set or a
+ * zero weight, so an empty set or an unnamed pool is an unreadable account,
+ * never a change, and waits like any other unknown.
+ * @returns {object | null} a CHANGE_OUTSIDE_POLICY or CHANGE_UNCHECKED blocker, or null when the change passes
+ */
+function changeBlocker(snapshot, policy, tickSecs) {
+  const unchecked = (message) => blocker('CHANGE_UNCHECKED', 'wait', message,
+    { waitSecs: tickSecs, escalateAfterSecs: escalateSecs(policy, 'CHANGE_UNCHECKED', 1800) });
+  const listed = snapshot.portfolioRow?.pendingTargets?.targets;
+  if (!Array.isArray(listed) || listed.length === 0 || listed.some((target) => !target?.poolId)) {
+    return unchecked('the pending target set is unreadable, so the policy cannot be checked against it');
+  }
+  const targets = listed.map((target) => ({ poolId: String(target.poolId), weightBps: Number(target.weightBps) }));
+  const pools = snapshot.pools instanceof Map ? [...snapshot.pools.values()] : snapshot.pools;
+  const { refusals } = evaluateTargets({ policy, targets, snapshot: { ...snapshot, pools } });
+  const broken = refusals.filter((refusal) => !NOT_EVALUATED.has(refusal.code));
+  if (broken.length > 0) {
+    return blocker('CHANGE_OUTSIDE_POLICY', 'blocked',
+      `the pending change breaks the policy this signer runs: ${broken.map((r) => `${r.code} ${r.message}`).join('; ')}; cancel it and re-propose`,
+      { refusals: broken, escalateAfterSecs: escalateSecs(policy, 'CHANGE_OUTSIDE_POLICY', 0) });
+  }
+  if (refusals.length > 0) return unchecked(`the policy cannot be checked: ${refusals.map((r) => r.message).join('; ')}`);
+  return null;
+}
+
 /**
  * Blockers for an apply, in evaluation order (README §5 table). Each blocker
  * carries an action: 'wait' (re-run next tick), 'blocked' (the LLM must
@@ -155,8 +193,10 @@ function keeperOk(health) {
  * LEG_STALE, PoolPricePending → LEG_PENDING_PRICE (Pyth-cranked pools wait,
  * publisher-marked pools escalate at once: nobody cranks those), and
  * MissingCustodyForNewPool → MISSING_CUSTODY when `snapshot.custody` knows.
+ * Not a program check: the pending change must still pass this signer's
+ * policy (CHANGE_OUTSIDE_POLICY, CHANGE_UNCHECKED; see `changeBlocker`).
  * @param {object} snapshot README §4.2
- * @param {object} policy loadPolicy() result (`apply.*` timings)
+ * @param {object} policy loadPolicy() result (`apply.*` timings; universe, shape, turnover and cost for the change)
  * @param {number} now unix secs
  * @param {number} [slot] current slot; defaults to `snapshot.slot`
  * @returns {{ ok: true } | { ok: false, blockers: Array<{ code: string, action: 'wait' | 'blocked' | 'escalate' | 'done', waitSecs?: number, escalateAfterSecs: number | null, message: string }> }}
@@ -196,6 +236,9 @@ export function applyGates(snapshot, policy, now, slot = snapshot?.slot ?? null)
     blockers.push(blocker('VAULT_PAUSED', 'blocked', 'the book vault is paused (VaultPaused); only governance unpauses',
       { escalateAfterSecs: escalateSecs(policy, 'VAULT_PAUSED', 0) }));
   }
+
+  const outsidePolicy = changeBlocker(snapshot, policy, tickSecs);
+  if (outsidePolicy) blockers.push(outsidePolicy);
 
   const row = snapshot.portfolioRow ?? null;
   const pools = poolIndex(snapshot.pools);

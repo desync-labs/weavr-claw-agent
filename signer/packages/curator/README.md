@@ -140,10 +140,10 @@ status from `REFUSAL_STATUS` (errors.js). Default `422`; overrides:
 | 401 | `UNAUTHORIZED` |
 | 403 | `OPS_ONLY`, `VERB_DENIED`, `WITHDRAW_CRON_BLOCKED`, `PORTFOLIO_NOT_ALLOWED` |
 | 404 | `NOT_FOUND` |
-| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`, `NOT_CURATOR`, `METADATA_TAGS_FULL`, `METADATA_LINKS_FULL`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
+| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`, `CHANGE_OUTSIDE_POLICY`, `NOT_CURATOR`, `METADATA_TAGS_FULL`, `METADATA_LINKS_FULL`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
 | 429 | `RATE_LIMITED`, `PROPOSAL_QUOTA`, `DEPOSIT_DAILY_CAP`, `WITHDRAW_DAILY_CAP` |
 | 502 | `UPSTREAM` (api HTTP ≥ 500, unreachable, timed out or non-JSON), `BUILD_REFUSED` (api 4xx on a build — its `error.code` is in `detail`), `SEND_FAILED`, and the decode.js codes `NOT_A_TRANSACTION`, `WRONG_PAYER`, `FOREIGN_PROGRAM`, `FOREIGN_LOOKUP_TABLE`, `UNKNOWN_INSTRUCTION`, `UNEXPECTED_INSTRUCTIONS`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH`, `UNEXPECTED_STEP`, `PAGED_PROPOSE_UNSUPPORTED` — the api built something the signer would not sign; `METADATA_REFUSED` (the metadata service's 4xx, its `error.code` in `detail`), `METADATA_MESSAGE_MISMATCH` (the service asked for a signature over a text that is not the expected one), `NOT_TEXT` |
-| 503 | `LOW_SOL`, `INVARIANT_DRIFT`, `INVARIANTS_UNVERIFIED` (writes held while the accountant or FactoryConfig could not be read on the last tick), `BOOK_NOT_FRESH`, `MISSING_CUSTODY` |
+| 503 | `LOW_SOL`, `INVARIANT_DRIFT`, `INVARIANTS_UNVERIFIED` (writes held while the accountant or FactoryConfig could not be read on the last tick), `BOOK_NOT_FRESH`, `MISSING_CUSTODY`, `CHANGE_UNCHECKED` |
 | 500 | `INTERNAL` — a verb crashed; the message is URL-scrubbed and carries no stack |
 | 422 | `CAP_HEADROOM`, `INSUFFICIENT_SHARES` (listed), and by default everything else: the remaining §4.4 policy codes, `INPUTS_INCOMPLETE`, the `proposeGates` codes `COMPOSITION_LOCKED` / `WRONG_PORTFOLIO_STATE` / `REBALANCE_TOO_SOON`. `CONFIG` (keys.js, weavr.js) is a boot-time refusal that never reaches HTTP |
 
@@ -261,12 +261,13 @@ Which module raises which:
 |---|---|
 | `policy.verbAllowed` | `VERB_DENIED`, `OPS_ONLY`, `WITHDRAW_CRON_BLOCKED` |
 | `policy.evaluateWrite` | `PORTFOLIO_NOT_ALLOWED`, `SELF_LOCKED`, `PAUSED`, `RATE_LIMITED`, `LOW_SOL` |
-| `policy.evaluateProposal` | `BAD_REQUEST` (shape, returned alone), then every violation collected: `INPUTS_INCOMPLETE`, `CHAIN_DENIED`, `POOL_DENIED`, `POOL_NOT_ACTIVE`, `POOL_COST_TOO_HIGH`, `MIN_LEGS`, `MAX_LEGS`, `PAGE_LIMIT`, `LEG_WEIGHT_CAP`, `STABLE_BAND`, `CATEGORY_CAP`, `WEIGHTS_SUM`, `TURNOVER_CAP`, `COST_CAP`, `PROPOSAL_TOO_SOON`, `PROPOSAL_QUOTA`, `TARGETS_PENDING`, `OUTSIDE_WINDOW`, `WHY_REQUIRED` |
+| `policy.evaluateTargets` | `BAD_REQUEST` (shape, returned alone), then every violation collected: `INPUTS_INCOMPLETE` (no catalogue, or no holdings), `CHAIN_DENIED`, `POOL_DENIED`, `POOL_NOT_ACTIVE`, `POOL_COST_TOO_HIGH`, `MIN_LEGS`, `MAX_LEGS`, `PAGE_LIMIT`, `LEG_WEIGHT_CAP`, `STABLE_BAND`, `CATEGORY_CAP`, `WEIGHTS_SUM`, `TURNOVER_CAP`, `COST_CAP` |
+| `policy.evaluateProposal` | `evaluateTargets`' codes, then `PROPOSAL_TOO_SOON`, `PROPOSAL_QUOTA`, `TARGETS_PENDING`, `INPUTS_INCOMPLETE` (a targeted pool missing an input), `OUTSIDE_WINDOW`, `WHY_REQUIRED` |
 | `policy.evaluateDeposit` | `BAD_REQUEST`, `DEPOSIT_DAILY_CAP`, `BOOK_NOT_FRESH`, `CAP_HEADROOM` |
 | `policy.evaluateWithdraw` | `BAD_REQUEST`, `WITHDRAW_CRON_BLOCKED`, `WITHDRAW_DAILY_CAP`, `BOOK_NOT_FRESH`, `INSUFFICIENT_SHARES` |
 | `policy.evaluateInvariants` | `INVARIANT_DRIFT` (pure twin of `preflight.checkInvariants` over `{ policy, chain, config }`; exported, not on the runtime path) |
 | `preflight.checkInvariants` | no code: `{ ok, drift, unverified }`; the loop turns `ok:false` into a self-lock + alert `INVARIANT_DRIFT`, `/unlock` refuses `INVARIANT_DRIFT` while it holds |
-| `preflight.applyGates` | blocker codes, §5 below (`NO_PENDING_CHANGE`, `WINDOW_CLOSED`, `NOTICE_NOT_ELAPSED`, `VAULT_PAUSED`, `LEG_STALE`, `LEG_NOT_ACTIVE`, `LEG_PENDING_PRICE`, `BOOK_NOT_FRESH`, `BOOK_PENDING_PRICE`, `WITHDRAWALS_PENDING`, `APPLY_IN_FLIGHT`, `MISSING_CUSTODY`) |
+| `preflight.applyGates` | blocker codes, §5 below (`NO_PENDING_CHANGE`, `WINDOW_CLOSED`, `NOTICE_NOT_ELAPSED`, `VAULT_PAUSED`, `CHANGE_OUTSIDE_POLICY`, `CHANGE_UNCHECKED`, `LEG_STALE`, `LEG_NOT_ACTIVE`, `LEG_PENDING_PRICE`, `BOOK_NOT_FRESH`, `BOOK_PENDING_PRICE`, `WITHDRAWALS_PENDING`, `APPLY_IN_FLIGHT`, `MISSING_CUSTODY`) |
 | `preflight.proposeGates` | six blocker codes: `COMPOSITION_LOCKED`, `WRONG_PORTFOLIO_STATE`, `TARGETS_PENDING`, `REBALANCE_TOO_SOON`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED` |
 | `decode.verifyBuilt` | `NOT_A_TRANSACTION`, `FOREIGN_LOOKUP_TABLE`, `FOREIGN_PROGRAM`, `UNKNOWN_INSTRUCTION`, `WRONG_PAYER`, `UNEXPECTED_STEP`, `UNEXPECTED_INSTRUCTIONS`, `PAGED_PROPOSE_UNSUPPORTED`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH` — §6 below |
 | `keys.loadSigner` | `CONFIG` at load; `NOT_A_TRANSACTION` from `sign()`; `NOT_TEXT` from `signText()` |
@@ -521,6 +522,8 @@ export const APPLY_STATES = ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CO
 | `WINDOW_CLOSED` | escalate | immediately |
 | `NOTICE_NOT_ELAPSED` (also when `effectiveAt` is unreadable) | wait | until `effectiveAt` |
 | `VAULT_PAUSED` | blocked | immediately |
+| `CHANGE_OUTSIDE_POLICY` (the pending set breaks a rule of `policy.evaluateTargets` — universe, shape, turnover or cost — under the policy this signer runs; carries `refusals`) | blocked | immediately |
+| `CHANGE_UNCHECKED` (those rules cannot run: the row's pending set is empty, names a pool without a `poolId` or a weight that is not a number — the program holds none of these, so the account was unreadable — or the catalogue or holdings are unknown) | wait | 30 min |
 | per held-or-new leg, unless retirable (omitted from the proposal, custody 0, no pending unwind): `LEG_STALE` (no catalogue row or `priceState !== 'fresh'`) | wait | 30 min |
 | … `LEG_NOT_ACTIVE` (`status !== 'active'`; `escalate` instead when the leg is omitted with empty custody but its unwind state is unknown) | blocked | immediately |
 | … `LEG_PENDING_PRICE` (`pendingPrice` set or `priceState === 'pending_acceptance'`; Pyth-cranked pools wait, publisher-marked escalate at once) | wait / escalate | 10 min / immediately |
@@ -529,6 +532,14 @@ export const APPLY_STATES = ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CO
 | `WITHDRAWALS_PENDING` (`totalWithdrawalsPending > 0` or unreadable) | wait | 60 min |
 | `APPLY_IN_FLIGHT` (`applyNextPage !== 0`) | wait ≥ 320 slots from `applyScratch.startedSlot`, restart at page 0 | 3 attempts (`maxAttempts`) |
 | `MISSING_CUSTODY` (`snapshot.custody[poolId] === false` for a new pool — `readSnapshot` leaves `custody` null, so today this row comes from the api's `MissingCustodyForNewPool` build refusal via `verbs.refuseFromClient`, not from the gate) | wait; retry once after the ATA is confirmed | then escalate |
+
+The two `CHANGE_*` rows are the signer's own, not the program's. The signer
+reads its policy only at startup and the machine re-arms from the chain, so
+after a restart with a stricter document (a tightened template, an owner's
+limits) the change proposed under the old one meets the new one here. Only
+the rules about what a change is are re-checked; cadence and reason are about
+when and why it was proposed, were checked then, and bind the next proposal.
+A rule that refuses outranks an input that is unknown.
 
 `proposeGates(snapshot, policy, now)` — chain-state checks that are not policy, mirroring `validate_proposal` in order, then the two that would make the proposal un-applyable; same blocker shape, always `blocked` with `escalateAfterSecs: 0`:
 `COMPOSITION_LOCKED`, `WRONG_PORTFOLIO_STATE` (`state !== 'live'`), `TARGETS_PENDING`, `REBALANCE_TOO_SOON` (`now − lastRebalanceAt < rebalanceDelaySecs`, or either unreadable), `APPLY_IN_FLIGHT`, `VAULT_PAUSED`. `/propose` refuses with the first blocker's code and all of them in `detail.blockers`; `/simulate` appends them to `refusals`.
@@ -675,7 +686,10 @@ export function verbAllowed(policy, verb, { session, tokenKind }) → { ok:true 
 /** The pre-check every write verb runs first: portfolio, lock, pause, rate, SOL. `cancel` passes `PAUSED`. A missing `allowedPortfolio` refuses PORTFOLIO_NOT_ALLOWED (fail closed). */
 export function evaluateWrite({ policy, verb, portfolio, allowedPortfolio, state, ledger, lamports, now }) → { ok:true } | { ok:false, code, message }
 
-/** §4.4 universe, shape, turnover, cost, cadence and reason rules. A malformed `targets` is BAD_REQUEST alone; otherwise `refusals` lists every violation and `code`/`message` are the first. */
+/** §4.4 universe, shape, turnover and cost: what a target set is, against the book's current targets. Run by evaluateProposal and, on the pending change, by preflight.applyGates. `checked:false` when no rule could run (BAD_REQUEST, or INPUTS_INCOMPLETE for no catalogue). */
+export function evaluateTargets({ policy, targets, snapshot }) → { checked, refusals:[{code,message}], turnoverBps, estimatedCostBps, legs, categories, poolById, held, newPools, removed }
+
+/** evaluateTargets plus the §4.4 cadence and reason rules. A malformed `targets` is BAD_REQUEST alone; otherwise `refusals` lists every violation and `code`/`message` are the first. */
 export function evaluateProposal({ policy, targets, why, snapshot, ledger, now, session }) → { ok:true, summary, intent } | { ok:false, code, message, refusals:[{code,message}], summary }
 // summary = { turnoverBps, estimatedCostBps, legs:[{poolId,symbol,fromBps,toBps,deltaBps,maxExecutionLossBps}], categories:{<name>:bps}, nextProposeAt }
 

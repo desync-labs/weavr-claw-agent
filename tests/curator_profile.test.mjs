@@ -347,7 +347,7 @@ test('ERRORS.md names every refusal code of the signer and all 66 factory error 
     LEG_WEIGHT_CAP CATEGORY_CAP WEIGHTS_SUM TURNOVER_CAP COST_CAP PROPOSAL_TOO_SOON PROPOSAL_QUOTA TARGETS_PENDING
     INPUTS_INCOMPLETE OUTSIDE_WINDOW WHY_REQUIRED DEPOSIT_DAILY_CAP BOOK_NOT_FRESH CAP_HEADROOM WITHDRAW_CRON_BLOCKED
     WITHDRAW_DAILY_CAP VERB_DENIED OPS_ONLY RATE_LIMITED LOW_SOL SELF_LOCKED INVARIANT_DRIFT PAUSED INVARIANTS_UNVERIFIED
-    PAGED_PROPOSE_UNSUPPORTED UPSTREAM BUILD_REFUSED SEND_FAILED`.split(/\s+/).filter(Boolean);
+    PAGED_PROPOSE_UNSUPPORTED UPSTREAM BUILD_REFUSED SEND_FAILED CHANGE_OUTSIDE_POLICY CHANGE_UNCHECKED`.split(/\s+/).filter(Boolean);
   for (const code of codes) assert.ok(errors.includes(code), `ERRORS.md lacks ${code}`);
   // No programs repo here to cross-check names against errors.rs; the table
   // must still carry every code 6000..6065 exactly once, in the row shape.

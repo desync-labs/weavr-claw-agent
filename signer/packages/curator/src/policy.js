@@ -404,7 +404,7 @@ export function evaluateWrite(input) {
 }
 
 // ---------------------------------------------------------------------------
-// evaluateProposal: universe, shape, turnover, cost, cadence, reason.
+// evaluateTargets (universe, shape, turnover, cost) and evaluateProposal (+ cadence, reason).
 // ---------------------------------------------------------------------------
 
 /** Every leg the book carries (targets ∪ positions), as `{ poolId, symbol, targetWeightBps }`; `null` when unknown. */
@@ -478,10 +478,12 @@ function recentProposals(ledger, nowSecs, windowSecs) {
 }
 
 /**
- * §4.4 universe, shape, turnover, cost, cadence and reason rules over a
- * proposed target set. `refusals` lists every violation found, in the
- * table's order; `code` and `message` are the first, so a verb throws one
- * Refusal while `/simulate` shows the LLM the whole list.
+ * §4.4 universe, shape, turnover and cost: the rules about what a target set
+ * is. `evaluateProposal` runs them before a change is proposed and adds
+ * cadence and reason, which are about when and why. `preflight.applyGates`
+ * runs them alone on the change pending on chain before every apply, so a
+ * change the running policy no longer admits is never applied: a restart
+ * with a stricter document re-arms the loop from the chain.
  *
  * Definitions the rules rely on:
  * - a pool's category is the one naming its symbol, else the one listing
@@ -494,48 +496,37 @@ function recentProposals(ledger, nowSecs, windowSecs) {
  *   `|held ∪ new| ≤ pageLimit` mirrors the api's one-page apply;
  * - turnover = Σ|Δw| / 2 over held ∪ new; estimated cost = Σ|Δw_i| ×
  *   maxExecutionLossBps_i / 10000 with both sides of every move charged at
- *   the pool's own loss cap (a removed leg is charged at its own);
- * - a risk exit is a proposal that adds no pool and drops at least one held
- *   leg; it is exempt from INPUTS_INCOMPLETE because the broken pool is the
- *   one whose inputs go missing;
- * - `simulate: true` skips the reason rule only (nothing else differs, so a
- *   simulation that passes is a proposal that passes given a `why`).
+ *   the pool's own loss cap (a removed leg is charged at its own).
  *
- * `session` is accepted for parity with the other verbs and journaling; no
- * proposal rule depends on it (the window applies to chat and cron alike:
- * it is about when `effectiveAt` lands, not who is present now).
- * @param {{ policy: object, targets: Array<{ poolId: string, weightBps: number }>, why?: string, snapshot: object, ledger: object, now: number, session?: 'cron' | 'chat', simulate?: boolean }} input
- * @returns {{ ok: true, summary: object, intent: object } | { ok: false, code: string, message: string, refusals: Array<{ code: string, message: string }>, summary: object }}
- *   summary = { turnoverBps, estimatedCostBps, legs: [{ poolId, symbol, fromBps, toBps, deltaBps, maxExecutionLossBps }], categories: { [name]: bps }, nextProposeAt }
- *   intent  = { targets: [{ poolId, weightBps }], why, turnoverBps, estimatedCostBps }
+ * `checked` is false when no rule could run: a malformed target set
+ * (`BAD_REQUEST`) or no catalogue (`INPUTS_INCOMPLETE`). Unknown holdings
+ * also refuse `INPUTS_INCOMPLETE`, for the rules that need them.
+ * @param {{ policy: object, targets: Array<{ poolId: string, weightBps: number }>, snapshot: object }} input
+ * @returns {{ checked: boolean, refusals: Array<{ code: string, message: string }>, turnoverBps: number | null, estimatedCostBps: number | null, legs: object[], categories: { [name: string]: number }, poolById: Map<string, object>, held: object[] | null, newPools: string[], removed: object[] }}
  */
-export function evaluateProposal(input) {
-  const { policy, targets, why, snapshot, ledger, simulate = false } = input;
-  const nowSecs = toSecs(input.now);
+export function evaluateTargets({ policy, targets, snapshot }) {
   const refusals = [];
   const add = (code, message) => refusals.push({ code, message });
-  const emptySummary = () => ({
-    turnoverBps: null,
-    estimatedCostBps: null,
-    legs: [],
-    categories: Object.fromEntries(Object.keys(policy.universe.categories).map((name) => [name, 0])),
-    nextProposeAt: null,
-  });
-  const done = (summary, intent) => {
-    if (refusals.length) return { ok: false, code: refusals[0].code, message: refusals[0].message, refusals, summary };
-    return { ok: true, summary, intent };
+  const categories = Object.fromEntries(Object.keys(policy.universe.categories).map((name) => [name, 0]));
+  const out = {
+    checked: false, refusals, turnoverBps: null, estimatedCostBps: null, legs: [], categories,
+    poolById: new Map(), held: null, newPools: [], removed: [],
   };
 
-  const shape = validateTargets(targets);
-  if (!shape.ok) return { ...shape, refusals: [{ code: shape.code, message: shape.message }], summary: emptySummary() };
-
+  const valid = validateTargets(targets);
+  if (!valid.ok) {
+    add(valid.code, valid.message);
+    return out;
+  }
   const pools = Array.isArray(snapshot?.pools) ? snapshot.pools : null;
   if (!pools) {
     add('INPUTS_INCOMPLETE', 'pool catalogue unavailable; nothing can be evaluated');
-    return done(emptySummary());
+    return out;
   }
+  out.checked = true;
   const poolById = new Map(pools.filter((pool) => pool?.poolId).map((pool) => [pool.poolId, pool]));
-  const { universe, shape: shp, turnover, cost, cadence, reason } = policy;
+  out.poolById = poolById;
+  const { universe, shape: shp, turnover, cost } = policy;
   const categoryOf = new Map();
   for (const [name, symbols] of Object.entries(universe.categories)) for (const s of symbols) categoryOf.set(s, name);
   const anyPool = universe.allowlist.includes(ANY_POOL);
@@ -562,6 +553,7 @@ export function evaluateProposal(input) {
 
   // Shape.
   const held = heldLegs(snapshot?.portfolioRow);
+  out.held = held;
   const legsKnown = held !== null;
   if (targets.length < shp.minLegs) add('MIN_LEGS', `${targets.length} legs, fewer than ${shp.minLegs}`);
   if (targets.length > shp.maxLegs) add('MAX_LEGS', `${targets.length} legs, more than ${shp.maxLegs}`);
@@ -571,7 +563,6 @@ export function evaluateProposal(input) {
   } else {
     add('INPUTS_INCOMPLETE', 'portfolio holdings unavailable; page limit, turnover and cost cannot be evaluated');
   }
-  const categoryBps = Object.fromEntries(Object.keys(universe.categories).map((name) => [name, 0]));
   let sum = 0;
   for (const { poolId, weightBps } of targets) {
     const pool = poolById.get(poolId);
@@ -582,27 +573,23 @@ export function evaluateProposal(input) {
     if (weightBps < shp.minLegWeightBps) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is under the ${shp.minLegWeightBps} bps leg minimum`);
     else if (weightBps > cap) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is over its ${cap} bps cap`);
     const category = pool ? categoryOf.get(pool.symbol) ?? categoryOf.get(ANY_POOL) : undefined;
-    if (category) categoryBps[category] += weightBps;
+    if (category) categories[category] += weightBps;
   }
-  const stable = categoryBps[shp.stableCategory] ?? 0;
+  const stable = categories[shp.stableCategory] ?? 0;
   if (stable < shp.stableMinBps) add('STABLE_BAND', `${shp.stableCategory} at ${stable} bps is under the ${shp.stableMinBps} bps floor`);
   else if (stable > shp.stableMaxBps) add('STABLE_BAND', `${shp.stableCategory} at ${stable} bps is over the ${shp.stableMaxBps} bps ceiling`);
-  for (const [name, bps] of Object.entries(categoryBps)) {
+  for (const [name, bps] of Object.entries(categories)) {
     if (bps > shp.categoryMaxBps) add('CATEGORY_CAP', `${name} at ${bps} bps is over the ${shp.categoryMaxBps} bps category cap`);
   }
   if (sum !== shp.sumBps) add('WEIGHTS_SUM', `weights sum to ${sum} bps, not ${shp.sumBps}`);
 
   // Turnover and cost over held ∪ new (targets first, then removed legs).
-  const legs = [];
-  let turnoverBps = null;
-  let estimatedCostBps = null;
-  let newPools = [];
-  let removed = [];
+  const { legs } = out;
   if (legsKnown) {
     const heldById = new Map(held.map((leg) => [leg.poolId, leg]));
     const targetIds = new Set(targets.map((t) => t.poolId));
-    newPools = targets.filter((t) => !heldById.has(t.poolId)).map((t) => t.poolId);
-    removed = held.filter((leg) => !targetIds.has(leg.poolId) && leg.targetWeightBps > 0);
+    out.newPools = targets.filter((t) => !heldById.has(t.poolId)).map((t) => t.poolId);
+    out.removed = held.filter((leg) => !targetIds.has(leg.poolId) && leg.targetWeightBps > 0);
     let absDelta = 0;
     let costNumerator = 0;
     let lossKnown = true;
@@ -617,15 +604,53 @@ export function evaluateProposal(input) {
     };
     for (const { poolId, weightBps } of targets) legOf(poolId, heldById.get(poolId)?.targetWeightBps ?? 0, weightBps, heldById.get(poolId)?.symbol);
     for (const leg of held) if (!targetIds.has(leg.poolId)) legOf(leg.poolId, leg.targetWeightBps, 0, leg.symbol);
-    turnoverBps = absDelta / 2;
-    if (turnoverBps > turnover.maxTurnoverBps) add('TURNOVER_CAP', `turnover ${turnoverBps} bps exceeds the ${turnover.maxTurnoverBps} bps cap`);
+    out.turnoverBps = absDelta / 2;
+    if (out.turnoverBps > turnover.maxTurnoverBps) add('TURNOVER_CAP', `turnover ${out.turnoverBps} bps exceeds the ${turnover.maxTurnoverBps} bps cap`);
     if (lossKnown) {
-      estimatedCostBps = costNumerator / 10_000;
-      if (estimatedCostBps > cost.maxEstimatedCostBps) add('COST_CAP', `estimated cost ${estimatedCostBps.toFixed(2)} bps exceeds the ${cost.maxEstimatedCostBps} bps cap`);
+      out.estimatedCostBps = costNumerator / 10_000;
+      if (out.estimatedCostBps > cost.maxEstimatedCostBps) add('COST_CAP', `estimated cost ${out.estimatedCostBps.toFixed(2)} bps exceeds the ${cost.maxEstimatedCostBps} bps cap`);
     } else {
       add('COST_CAP', 'a leg has no maxExecutionLossBps; the cost cannot be bounded');
     }
   }
+
+  return out;
+}
+
+/**
+ * `evaluateTargets` plus §4.4 cadence and reason: every rule a proposal
+ * must pass. `refusals` lists every violation found, in the table's order;
+ * `code` and `message` are the first, so a verb throws one Refusal while
+ * `/simulate` shows the LLM the whole list.
+ *
+ * - a risk exit is a proposal that adds no pool and drops at least one held
+ *   leg; it is exempt from INPUTS_INCOMPLETE because the broken pool is the
+ *   one whose inputs go missing;
+ * - `simulate: true` skips the reason rule only (nothing else differs, so a
+ *   simulation that passes is a proposal that passes given a `why`).
+ *
+ * `session` is accepted for parity with the other verbs and journaling; no
+ * proposal rule depends on it (the window applies to chat and cron alike:
+ * it is about when `effectiveAt` lands, not who is present now).
+ * @param {{ policy: object, targets: Array<{ poolId: string, weightBps: number }>, why?: string, snapshot: object, ledger: object, now: number, session?: 'cron' | 'chat', simulate?: boolean }} input
+ * @returns {{ ok: true, summary: object, intent: object } | { ok: false, code: string, message: string, refusals: Array<{ code: string, message: string }>, summary: object }}
+ *   summary = { turnoverBps, estimatedCostBps, legs: [{ poolId, symbol, fromBps, toBps, deltaBps, maxExecutionLossBps }], categories: { [name]: bps }, nextProposeAt }
+ *   intent  = { targets: [{ poolId, weightBps }], why, turnoverBps, estimatedCostBps }
+ */
+export function evaluateProposal(input) {
+  const { policy, targets, why, snapshot, ledger, simulate = false } = input;
+  const nowSecs = toSecs(input.now);
+  const what = evaluateTargets({ policy, targets, snapshot });
+  const { refusals, turnoverBps, estimatedCostBps } = what;
+  const add = (code, message) => refusals.push({ code, message });
+  const done = (summary, intent) => {
+    if (refusals.length) return { ok: false, code: refusals[0].code, message: refusals[0].message, refusals, summary };
+    return { ok: true, summary, intent };
+  };
+  if (!what.checked) {
+    return done({ turnoverBps: null, estimatedCostBps: null, legs: [], categories: what.categories, nextProposeAt: null });
+  }
+  const { cadence, reason } = policy;
 
   // Cadence.
   const account = snapshot?.portfolioAccount;
@@ -659,10 +684,10 @@ export function evaluateProposal(input) {
     add('TARGETS_PENDING', `a change is already pending (effective ${effectiveAt ?? 'unknown'}); apply or cancel it first`);
   }
   if (cadence.requireInputsComplete) {
-    const riskExit = cadence.riskExitExemptFromInputs && legsKnown && newPools.length === 0 && removed.length > 0;
+    const riskExit = cadence.riskExitExemptFromInputs && what.held !== null && what.newPools.length === 0 && what.removed.length > 0;
     if (!riskExit) {
       for (const { poolId } of targets) {
-        const pool = poolById.get(poolId);
+        const pool = what.poolById.get(poolId);
         if (!pool) continue; // already POOL_DENIED
         const missing = ['trailingYieldBps', 'tvlUsdc', 'riskTier'].filter((key) => toNumber(pool[key]) == null);
         if (missing.length) add('INPUTS_INCOMPLETE', `${pool.symbol ?? poolId} is missing ${missing.join(', ')}`);
@@ -684,8 +709,8 @@ export function evaluateProposal(input) {
   const summary = {
     turnoverBps,
     estimatedCostBps,
-    legs,
-    categories: categoryBps,
+    legs: what.legs,
+    categories: what.categories,
     nextProposeAt: nextInsideWindow(earliest, window),
   };
   const intent = {

@@ -10,6 +10,8 @@ import anchor from '@coral-xyz/anchor';
 import { fakeCtx, fakeSnapshot, meta, NEW_TARGETS, LEGS, LEGS_AFTER, POLICY, T0, KEYS, WALLET } from './fakes.js';
 import { stepApply, applyOutcome, createLoop, gaugesOf, APPLY_STATES } from '../src/loop.js';
 import { initialApplyState, propose, alerts } from '../src/verbs.js';
+import { applyGates } from '../src/preflight.js';
+import { loadPolicy } from '../src/policy.js';
 import { Refusal } from '../src/errors.js';
 
 const { BN } = anchor;
@@ -235,6 +237,28 @@ test('tick: a blocked pre-flight never sends', async () => {
   assert.ok(!ctx.trace.includes('buildApply') && !ctx.trace.includes('sign') && !ctx.trace.includes('send'));
   assert.ok(ctx.state.alerts.has('apply:VAULT_PAUSED'));
   assert.equal(ctx.journal.records().filter((r) => r.kind === 'apply').at(-1).to, 'BLOCKED');
+});
+
+test('tick: after a restart with a stricter policy, the re-armed change is blocked on the real gates, never sent', async () => {
+  // NEW_TARGETS cost 30 bps: proposed under a 400 bps cap, the signer restarts with v1's 25.
+  const snapshot = fakeSnapshot({ pending: ROW_PENDING, at: EFF + 5 });
+  const before = mk({ snapshot, policy: loadPolicy({ ...POLICY, cost: { maxEstimatedCostBps: 400 } }), depsOverrides: { applyGates } });
+  before.clock.set((EFF + 5) * 1000);
+  await createLoop({ ctx: before }).tick();
+  assert.ok(before.trace.includes('send'), 'the looser policy admits the change');
+
+  const ctx = mk({ snapshot, policy: loadPolicy(POLICY), depsOverrides: { applyGates } });
+  ctx.clock.set((EFF + 5) * 1000);
+  const out = await createLoop({ ctx }).tick();
+  assert.equal(out.applyState, 'BLOCKED');
+  assert.equal(out.blockers[0].code, 'CHANGE_OUTSIDE_POLICY');
+  assert.deepEqual(out.blockers[0].refusals.map((refusal) => refusal.code), ['COST_CAP']);
+  assert.ok(!ctx.trace.includes('buildApply') && !ctx.trace.includes('sign') && !ctx.trace.includes('send'));
+  assert.ok(ctx.state.alerts.has('apply:CHANGE_OUTSIDE_POLICY'));
+  assert.equal(ctx.journal.records().filter((r) => r.kind === 'apply').at(-1).to, 'BLOCKED');
+  ctx.clock.advance(30);
+  await createLoop({ ctx }).tick();
+  assert.ok(!ctx.trace.includes('send'), 'BLOCKED holds the same proposal');
 });
 
 test('tick: notice elapsed and gates green → build, verify, sign, send through the loop; state CONFIRM; then DONE once the chain shows it', async () => {
