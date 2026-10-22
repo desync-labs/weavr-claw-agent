@@ -45,7 +45,8 @@ read, the first named wins.
 | `CURATOR_OPS_TOKEN` | yes, ≥ 32 bytes, no whitespace | ops bearer token (laptop via port-forward); must differ from the agent token |
 | `CURATOR_KEYPAIR` | yes | path to the 64-byte JSON keypair. The compose stack mounts it read-only at `/keys/curator.json`. A deployment that hands the key over as `CURATOR_KEYPAIR_JSON` instead gets it written by `bin/start.mjs` to `$COMPOSABLE_PORTFOLIOS_KEY_DIR/solana/curator.json` at 0600, and `CURATOR_KEYPAIR` defaulted to that path |
 | `CURATOR_PORTFOLIO_MINT` | yes, base58 | the WEAVR shares mint (the only portfolio the signer will touch) |
-| `CURATOR_TREASURY` | yes, base58 | pubkey that must equal `accountant.recipient1` |
+| `CURATOR_TREASURY` | yes, base58 | pubkey that must equal `accountant.recipient1` (`CURATOR_ROYALTY_RECIPIENT` is read first when set) |
+| `CURATOR_ROYALTY_RECIPIENT_MODE` | no | `pinned` (default): `accountant.royaltyRecipient` must equal `CURATOR_TREASURY`. `owner`: the recipient is the portfolio owner's to move (`propose_fee_recipient` → `accept_fee_recipient`), so a new or pending recipient is not drift; it must never be the curator key. Anything else refuses boot |
 | `CURATOR_EXPECTED_GUARDIAN` | yes, base58 | pubkey that must equal `factoryConfig.guardian` |
 | `CURATOR_POLICY_JSON` or `CURATOR_POLICY_FILE` | one of the two | the policy document inline (rendered from `ops/config/curator/policy.v1.json`) or a path to it |
 | `CURATOR_API_URL` | yes, `http(s)://` | the api base, e.g. `https://api.weavr.sh` |
@@ -308,7 +309,8 @@ ctx = {
   },
   config: {
     mint,               // base58 — CURATOR_PORTFOLIO_MINT (the only allowed portfolio)
-    treasury,           // base58 — CURATOR_TREASURY (== accountant.recipient1)
+    treasury,           // base58 — CURATOR_TREASURY (== accountant.recipient1 in `pinned` mode)
+    royaltyRecipientMode, // 'pinned' | 'owner' — CURATOR_ROYALTY_RECIPIENT_MODE
     expectedCurator,    // base58 — signer.wallet (== portfolio.curator)
     guardian,           // base58 — CURATOR_EXPECTED_GUARDIAN (== factoryConfig.guardian)
     rebalanceDelaySecs, // policy.invariants.rebalanceDelaySecs ?? CURATOR_REBALANCE_DELAY_SECS (86400)

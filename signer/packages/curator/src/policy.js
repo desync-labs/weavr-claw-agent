@@ -880,7 +880,9 @@ export function evaluateWithdraw(input) {
  * policy.invariants.compositionLocked`. An unreadable value is drift
  * (`actual: 'unknown'`), except `pendingCurator`, whose `null` is the
  * expected None.
- * @param {{ policy: object, chain: { curator, pendingCurator, rebalanceDelaySecs, recipient1, guardian, compositionLocked }, config: { expectedCurator: string, treasury: string, guardian: string } }} input
+ * In `owner` royalty mode (`config.royaltyRecipientMode`) the recipient may
+ * be anything but the curator key.
+ * @param {{ policy: object, chain: { curator, pendingCurator, rebalanceDelaySecs, recipient1, guardian, compositionLocked }, config: { expectedCurator: string, treasury: string, royaltyRecipientMode?: 'pinned' | 'owner', guardian: string } }} input
  * @returns {{ ok: true, drift: [] } | { ok: false, code: 'INVARIANT_DRIFT', message: string, drift: Array<{ invariant: string, expected: string, actual: string }> }}
  */
 export function evaluateInvariants({ policy, chain, config }) {
@@ -895,11 +897,19 @@ export function evaluateInvariants({ policy, chain, config }) {
   if (policy.invariants.pendingCuratorMustBeNone && facts.pendingCurator != null) {
     drift.push({ invariant: 'portfolio.pending_curator', expected: 'none', actual: toBase58(facts.pendingCurator) ?? 'set' });
   }
-  expectPubkey(
-    'accountant.royaltyRecipient',
-    facts.royaltyRecipient ?? facts.recipient1,
-    config?.treasury,
-  );
+  if (config?.royaltyRecipientMode === 'owner') {
+    // The owner may move the recipient; it must never become the curator key.
+    const have = toBase58(facts.royaltyRecipient ?? facts.recipient1) ?? 'unknown';
+    if (have === 'unknown' || have === toBase58(config?.expectedCurator)) {
+      drift.push({ invariant: 'accountant.royaltyRecipient', expected: 'not the curator key', actual: have });
+    }
+  } else {
+    expectPubkey(
+      'accountant.royaltyRecipient',
+      facts.royaltyRecipient ?? facts.recipient1,
+      config?.treasury,
+    );
+  }
   expectPubkey('factory.guardian', facts.guardian, config?.guardian);
   const locked = typeof facts.compositionLocked === 'boolean' ? facts.compositionLocked : null;
   if (locked !== policy.invariants.compositionLocked) {

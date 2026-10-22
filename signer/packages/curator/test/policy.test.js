@@ -779,6 +779,16 @@ describe('evaluateInvariants', () => {
     assert.deepEqual(result, { ok: true, drift: [] });
   });
 
+  it('owner royalty mode: any recipient but the curator key', () => {
+    const owner = { ...config, royaltyRecipientMode: 'owner' };
+    const moved = evaluateInvariants({ policy, chain: chain({ recipient1: PublicKey.unique() }), config: owner });
+    assert.deepEqual(moved, { ok: true, drift: [] });
+    const curator = evaluateInvariants({ policy, chain: chain({ recipient1: new PublicKey(CURATOR) }), config: owner });
+    assert.deepEqual(driftOf(curator), ['accountant.royaltyRecipient']);
+    const unknown = evaluateInvariants({ policy, chain: chain({ recipient1: undefined }), config: owner });
+    assert.deepEqual(driftOf(unknown), ['accountant.royaltyRecipient'], 'unreadable is still drift');
+  });
+
   it('INVARIANT_DRIFT: each invariant planted', () => {
     const other = PublicKey.unique();
     const curator = check({ curator: other });
