@@ -404,7 +404,7 @@ export function evaluateWrite(input) {
 }
 
 // ---------------------------------------------------------------------------
-// evaluateProposal: universe, shape, turnover, cost, cadence, reason.
+// evaluateTargets (universe, shape, turnover, cost) and evaluateProposal (+ cadence, reason).
 // ---------------------------------------------------------------------------
 
 /** Every leg the book carries (targets ∪ positions), as `{ poolId, symbol, targetWeightBps }`; `null` when unknown. */
@@ -478,10 +478,12 @@ function recentProposals(ledger, nowSecs, windowSecs) {
 }
 
 /**
- * §4.4 universe, shape, turnover, cost, cadence and reason rules over a
- * proposed target set. `refusals` lists every violation found, in the
- * table's order; `code` and `message` are the first, so a verb throws one
- * Refusal while `/simulate` shows the LLM the whole list.
+ * §4.4 universe, shape, turnover and cost: the rules about what a target set
+ * is. `evaluateProposal` runs them before a change is proposed and adds
+ * cadence and reason, which are about when and why. `preflight.applyGates`
+ * runs them alone on the change pending on chain before every apply, so a
+ * change the running policy no longer admits is never applied: a restart
+ * with a stricter document re-arms the loop from the chain.
  *
  * Definitions the rules rely on:
  * - a pool's category is the one naming its symbol, else the one listing
@@ -495,6 +497,151 @@ function recentProposals(ledger, nowSecs, windowSecs) {
  * - turnover = Σ|Δw| / 2 over held ∪ new; estimated cost = Σ|Δw_i| ×
  *   maxExecutionLossBps_i / 10000 with both sides of every move charged at
  *   the pool's own loss cap (a removed leg is charged at its own);
+ * - a leg that trades nothing costs nothing and needs no loss cap: a weight
+ *   kept as it is, or a removed leg the holdings show with no shares.
+ *
+ * `checked` is false when no rule could run: a malformed target set
+ * (`BAD_REQUEST`) or no catalogue (`INPUTS_INCOMPLETE`). Unknown holdings
+ * also refuse `INPUTS_INCOMPLETE`, for the rules that need them.
+ *
+ * `gaps` holds the refusals only a missing input caused: a pool the
+ * catalogue does not list, a riskTier or maxExecutionLossBps it does not
+ * know, and the stable floor or cost cap those leave open (a breach on what
+ * is known alone stays a breach). A proposal is refused for them like any
+ * other; at apply they wait, because the input may come back.
+ * @param {{ policy: object, targets: Array<{ poolId: string, weightBps: number }>, snapshot: object }} input
+ * @returns {{ checked: boolean, refusals: Array<{ code: string, message: string }>, gaps: Set<object>, turnoverBps: number | null, estimatedCostBps: number | null, legs: object[], categories: { [name: string]: number }, poolById: Map<string, object>, held: object[] | null, newPools: string[], removed: object[] }}
+ */
+export function evaluateTargets({ policy, targets, snapshot }) {
+  const refusals = [];
+  const gaps = new Set();
+  const add = (code, message) => refusals.push({ code, message });
+  const gap = (code, message) => { add(code, message); gaps.add(refusals.at(-1)); };
+  const categories = Object.fromEntries(Object.keys(policy.universe.categories).map((name) => [name, 0]));
+  const out = {
+    checked: false, refusals, gaps, turnoverBps: null, estimatedCostBps: null, legs: [], categories,
+    poolById: new Map(), held: null, newPools: [], removed: [],
+  };
+
+  const valid = validateTargets(targets);
+  if (!valid.ok) {
+    add(valid.code, valid.message);
+    return out;
+  }
+  const pools = Array.isArray(snapshot?.pools) ? snapshot.pools : null;
+  if (!pools) {
+    add('INPUTS_INCOMPLETE', 'pool catalogue unavailable; nothing can be evaluated');
+    return out;
+  }
+  out.checked = true;
+  const poolById = new Map(pools.filter((pool) => pool?.poolId).map((pool) => [pool.poolId, pool]));
+  out.poolById = poolById;
+  const { universe, shape: shp, turnover, cost } = policy;
+  const categoryOf = new Map();
+  for (const [name, symbols] of Object.entries(universe.categories)) for (const s of symbols) categoryOf.set(s, name);
+  const anyPool = universe.allowlist.includes(ANY_POOL);
+
+  // Universe — per target, in the caller's order.
+  for (const { poolId } of targets) {
+    const pool = poolById.get(poolId);
+    if (!pool) {
+      gap('POOL_DENIED', `${poolId} is not in the catalogue`);
+      continue;
+    }
+    const label = pool.symbol ?? poolId;
+    if (!universe.chains.includes(pool.chain)) add('CHAIN_DENIED', `${label} is on ${pool.chain ?? 'an unknown chain'}; allowed: ${universe.chains.join(', ')}`);
+    if (pool.status !== universe.requireStatus) add('POOL_NOT_ACTIVE', `${label} status is ${pool.status ?? 'unknown'}, not ${universe.requireStatus}`);
+    if (!anyPool && !universe.allowlist.includes(pool.symbol)) add('POOL_DENIED', `${label} is not on the allowlist`);
+    const tier = toNumber(pool.riskTier);
+    if (tier == null) gap('POOL_DENIED', `${label} riskTier unknown`);
+    else if (tier > universe.maxRiskTier) add('POOL_DENIED', `${label} riskTier ${tier} exceeds ${universe.maxRiskTier}`);
+    if (universe.requirePythFeedId && !pool.pythFeedId) add('POOL_DENIED', `${label} has no pythFeedId`);
+    const loss = toNumber(pool.maxExecutionLossBps);
+    if (loss == null) gap('POOL_COST_TOO_HIGH', `${label} maxExecutionLossBps unknown`);
+    else if (loss > universe.maxExecutionLossBps) add('POOL_COST_TOO_HIGH', `${label} maxExecutionLossBps ${loss} exceeds ${universe.maxExecutionLossBps}`);
+  }
+
+  // Shape.
+  const held = heldLegs(snapshot?.portfolioRow);
+  out.held = held;
+  const legsKnown = held !== null;
+  if (targets.length < shp.minLegs) add('MIN_LEGS', `${targets.length} legs, fewer than ${shp.minLegs}`);
+  if (targets.length > shp.maxLegs) add('MAX_LEGS', `${targets.length} legs, more than ${shp.maxLegs}`);
+  if (legsKnown) {
+    const union = new Set([...held.map((leg) => leg.poolId), ...targets.map((t) => t.poolId)]);
+    if (union.size > shp.pageLimit) add('PAGE_LIMIT', `held ∪ new is ${union.size} pools, more than the ${shp.pageLimit} one apply page holds`);
+  } else {
+    add('INPUTS_INCOMPLETE', 'portfolio holdings unavailable; page limit, turnover and cost cannot be evaluated');
+  }
+  let sum = 0;
+  let uncategorised = 0; // weight on pools the catalogue does not list: any category, the stable one included
+  for (const { poolId, weightBps } of targets) {
+    const pool = poolById.get(poolId);
+    const label = pool?.symbol ?? poolId;
+    sum += weightBps;
+    if (!pool) uncategorised += weightBps;
+    const poolCap = toNumber(pool?.maxWeightBps);
+    const cap = poolCap == null ? shp.maxLegWeightBps : Math.min(shp.maxLegWeightBps, poolCap);
+    if (weightBps < shp.minLegWeightBps) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is under the ${shp.minLegWeightBps} bps leg minimum`);
+    else if (weightBps > cap) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is over its ${cap} bps cap`);
+    const category = pool ? categoryOf.get(pool.symbol) ?? categoryOf.get(ANY_POOL) : undefined;
+    if (category) categories[category] += weightBps;
+  }
+  const stable = categories[shp.stableCategory] ?? 0;
+  if (stable < shp.stableMinBps) {
+    (stable + uncategorised >= shp.stableMinBps ? gap : add)('STABLE_BAND', `${shp.stableCategory} at ${stable} bps is under the ${shp.stableMinBps} bps floor`);
+  }
+  else if (stable > shp.stableMaxBps) add('STABLE_BAND', `${shp.stableCategory} at ${stable} bps is over the ${shp.stableMaxBps} bps ceiling`);
+  for (const [name, bps] of Object.entries(categories)) {
+    if (bps > shp.categoryMaxBps) add('CATEGORY_CAP', `${name} at ${bps} bps is over the ${shp.categoryMaxBps} bps category cap`);
+  }
+  if (sum !== shp.sumBps) add('WEIGHTS_SUM', `weights sum to ${sum} bps, not ${shp.sumBps}`);
+
+  // Turnover and cost over held ∪ new (targets first, then removed legs).
+  const { legs } = out;
+  if (legsKnown) {
+    const heldById = new Map(held.map((leg) => [leg.poolId, leg]));
+    const targetIds = new Set(targets.map((t) => t.poolId));
+    out.newPools = targets.filter((t) => !heldById.has(t.poolId)).map((t) => t.poolId);
+    out.removed = held.filter((leg) => !targetIds.has(leg.poolId) && leg.targetWeightBps > 0);
+    const noShares = new Set((snapshot.portfolioRow.holdings?.legs ?? [])
+      .filter((leg) => leg?.poolId && toBigInt(leg.shares) === 0n)
+      .map((leg) => leg.poolId));
+    let absDelta = 0;
+    let costNumerator = 0;
+    let lossKnown = true;
+    const legOf = (poolId, fromBps, toBps, symbol) => {
+      const pool = poolById.get(poolId);
+      const loss = toNumber(pool?.maxExecutionLossBps);
+      const deltaBps = toBps - fromBps;
+      absDelta += Math.abs(deltaBps);
+      const trades = deltaBps !== 0 && !(toBps === 0 && noShares.has(poolId));
+      if (trades && loss == null) lossKnown = false;
+      else if (trades) costNumerator += Math.abs(deltaBps) * loss;
+      legs.push({ poolId, symbol: pool?.symbol ?? symbol ?? null, fromBps, toBps, deltaBps, maxExecutionLossBps: loss });
+    };
+    for (const { poolId, weightBps } of targets) legOf(poolId, heldById.get(poolId)?.targetWeightBps ?? 0, weightBps, heldById.get(poolId)?.symbol);
+    for (const leg of held) if (!targetIds.has(leg.poolId)) legOf(leg.poolId, leg.targetWeightBps, 0, leg.symbol);
+    out.turnoverBps = absDelta / 2;
+    if (out.turnoverBps > turnover.maxTurnoverBps) add('TURNOVER_CAP', `turnover ${out.turnoverBps} bps exceeds the ${turnover.maxTurnoverBps} bps cap`);
+    if (lossKnown) {
+      out.estimatedCostBps = costNumerator / 10_000;
+      if (out.estimatedCostBps > cost.maxEstimatedCostBps) add('COST_CAP', `estimated cost ${out.estimatedCostBps.toFixed(2)} bps exceeds the ${cost.maxEstimatedCostBps} bps cap`);
+    } else {
+      // The legs it can price already over the cap: a breach whatever the rest costs.
+      (costNumerator / 10_000 > cost.maxEstimatedCostBps ? add : gap)('COST_CAP', 'a leg has no maxExecutionLossBps; the cost cannot be bounded');
+    }
+  }
+
+  return out;
+}
+
+/**
+ * `evaluateTargets` plus §4.4 cadence and reason: every rule a proposal
+ * must pass. `refusals` lists every violation found, in the table's order;
+ * `code` and `message` are the first, so a verb throws one Refusal while
+ * `/simulate` shows the LLM the whole list.
+ *
  * - a risk exit is a proposal that adds no pool and drops at least one held
  *   leg; it is exempt from INPUTS_INCOMPLETE because the broken pool is the
  *   one whose inputs go missing;
@@ -512,120 +659,17 @@ function recentProposals(ledger, nowSecs, windowSecs) {
 export function evaluateProposal(input) {
   const { policy, targets, why, snapshot, ledger, simulate = false } = input;
   const nowSecs = toSecs(input.now);
-  const refusals = [];
+  const what = evaluateTargets({ policy, targets, snapshot });
+  const { refusals, turnoverBps, estimatedCostBps } = what;
   const add = (code, message) => refusals.push({ code, message });
-  const emptySummary = () => ({
-    turnoverBps: null,
-    estimatedCostBps: null,
-    legs: [],
-    categories: Object.fromEntries(Object.keys(policy.universe.categories).map((name) => [name, 0])),
-    nextProposeAt: null,
-  });
   const done = (summary, intent) => {
     if (refusals.length) return { ok: false, code: refusals[0].code, message: refusals[0].message, refusals, summary };
     return { ok: true, summary, intent };
   };
-
-  const shape = validateTargets(targets);
-  if (!shape.ok) return { ...shape, refusals: [{ code: shape.code, message: shape.message }], summary: emptySummary() };
-
-  const pools = Array.isArray(snapshot?.pools) ? snapshot.pools : null;
-  if (!pools) {
-    add('INPUTS_INCOMPLETE', 'pool catalogue unavailable; nothing can be evaluated');
-    return done(emptySummary());
+  if (!what.checked) {
+    return done({ turnoverBps: null, estimatedCostBps: null, legs: [], categories: what.categories, nextProposeAt: null });
   }
-  const poolById = new Map(pools.filter((pool) => pool?.poolId).map((pool) => [pool.poolId, pool]));
-  const { universe, shape: shp, turnover, cost, cadence, reason } = policy;
-  const categoryOf = new Map();
-  for (const [name, symbols] of Object.entries(universe.categories)) for (const s of symbols) categoryOf.set(s, name);
-  const anyPool = universe.allowlist.includes(ANY_POOL);
-
-  // Universe — per target, in the caller's order.
-  for (const { poolId } of targets) {
-    const pool = poolById.get(poolId);
-    if (!pool) {
-      add('POOL_DENIED', `${poolId} is not in the catalogue`);
-      continue;
-    }
-    const label = pool.symbol ?? poolId;
-    if (!universe.chains.includes(pool.chain)) add('CHAIN_DENIED', `${label} is on ${pool.chain ?? 'an unknown chain'}; allowed: ${universe.chains.join(', ')}`);
-    if (pool.status !== universe.requireStatus) add('POOL_NOT_ACTIVE', `${label} status is ${pool.status ?? 'unknown'}, not ${universe.requireStatus}`);
-    if (!anyPool && !universe.allowlist.includes(pool.symbol)) add('POOL_DENIED', `${label} is not on the allowlist`);
-    const tier = toNumber(pool.riskTier);
-    if (tier == null) add('POOL_DENIED', `${label} riskTier unknown`);
-    else if (tier > universe.maxRiskTier) add('POOL_DENIED', `${label} riskTier ${tier} exceeds ${universe.maxRiskTier}`);
-    if (universe.requirePythFeedId && !pool.pythFeedId) add('POOL_DENIED', `${label} has no pythFeedId`);
-    const loss = toNumber(pool.maxExecutionLossBps);
-    if (loss == null) add('POOL_COST_TOO_HIGH', `${label} maxExecutionLossBps unknown`);
-    else if (loss > universe.maxExecutionLossBps) add('POOL_COST_TOO_HIGH', `${label} maxExecutionLossBps ${loss} exceeds ${universe.maxExecutionLossBps}`);
-  }
-
-  // Shape.
-  const held = heldLegs(snapshot?.portfolioRow);
-  const legsKnown = held !== null;
-  if (targets.length < shp.minLegs) add('MIN_LEGS', `${targets.length} legs, fewer than ${shp.minLegs}`);
-  if (targets.length > shp.maxLegs) add('MAX_LEGS', `${targets.length} legs, more than ${shp.maxLegs}`);
-  if (legsKnown) {
-    const union = new Set([...held.map((leg) => leg.poolId), ...targets.map((t) => t.poolId)]);
-    if (union.size > shp.pageLimit) add('PAGE_LIMIT', `held ∪ new is ${union.size} pools, more than the ${shp.pageLimit} one apply page holds`);
-  } else {
-    add('INPUTS_INCOMPLETE', 'portfolio holdings unavailable; page limit, turnover and cost cannot be evaluated');
-  }
-  const categoryBps = Object.fromEntries(Object.keys(universe.categories).map((name) => [name, 0]));
-  let sum = 0;
-  for (const { poolId, weightBps } of targets) {
-    const pool = poolById.get(poolId);
-    const label = pool?.symbol ?? poolId;
-    sum += weightBps;
-    const poolCap = toNumber(pool?.maxWeightBps);
-    const cap = poolCap == null ? shp.maxLegWeightBps : Math.min(shp.maxLegWeightBps, poolCap);
-    if (weightBps < shp.minLegWeightBps) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is under the ${shp.minLegWeightBps} bps leg minimum`);
-    else if (weightBps > cap) add('LEG_WEIGHT_CAP', `${label} at ${weightBps} bps is over its ${cap} bps cap`);
-    const category = pool ? categoryOf.get(pool.symbol) ?? categoryOf.get(ANY_POOL) : undefined;
-    if (category) categoryBps[category] += weightBps;
-  }
-  const stable = categoryBps[shp.stableCategory] ?? 0;
-  if (stable < shp.stableMinBps) add('STABLE_BAND', `${shp.stableCategory} at ${stable} bps is under the ${shp.stableMinBps} bps floor`);
-  else if (stable > shp.stableMaxBps) add('STABLE_BAND', `${shp.stableCategory} at ${stable} bps is over the ${shp.stableMaxBps} bps ceiling`);
-  for (const [name, bps] of Object.entries(categoryBps)) {
-    if (bps > shp.categoryMaxBps) add('CATEGORY_CAP', `${name} at ${bps} bps is over the ${shp.categoryMaxBps} bps category cap`);
-  }
-  if (sum !== shp.sumBps) add('WEIGHTS_SUM', `weights sum to ${sum} bps, not ${shp.sumBps}`);
-
-  // Turnover and cost over held ∪ new (targets first, then removed legs).
-  const legs = [];
-  let turnoverBps = null;
-  let estimatedCostBps = null;
-  let newPools = [];
-  let removed = [];
-  if (legsKnown) {
-    const heldById = new Map(held.map((leg) => [leg.poolId, leg]));
-    const targetIds = new Set(targets.map((t) => t.poolId));
-    newPools = targets.filter((t) => !heldById.has(t.poolId)).map((t) => t.poolId);
-    removed = held.filter((leg) => !targetIds.has(leg.poolId) && leg.targetWeightBps > 0);
-    let absDelta = 0;
-    let costNumerator = 0;
-    let lossKnown = true;
-    const legOf = (poolId, fromBps, toBps, symbol) => {
-      const pool = poolById.get(poolId);
-      const loss = toNumber(pool?.maxExecutionLossBps);
-      const deltaBps = toBps - fromBps;
-      absDelta += Math.abs(deltaBps);
-      if (loss == null) lossKnown = false;
-      else costNumerator += Math.abs(deltaBps) * loss;
-      legs.push({ poolId, symbol: pool?.symbol ?? symbol ?? null, fromBps, toBps, deltaBps, maxExecutionLossBps: loss });
-    };
-    for (const { poolId, weightBps } of targets) legOf(poolId, heldById.get(poolId)?.targetWeightBps ?? 0, weightBps, heldById.get(poolId)?.symbol);
-    for (const leg of held) if (!targetIds.has(leg.poolId)) legOf(leg.poolId, leg.targetWeightBps, 0, leg.symbol);
-    turnoverBps = absDelta / 2;
-    if (turnoverBps > turnover.maxTurnoverBps) add('TURNOVER_CAP', `turnover ${turnoverBps} bps exceeds the ${turnover.maxTurnoverBps} bps cap`);
-    if (lossKnown) {
-      estimatedCostBps = costNumerator / 10_000;
-      if (estimatedCostBps > cost.maxEstimatedCostBps) add('COST_CAP', `estimated cost ${estimatedCostBps.toFixed(2)} bps exceeds the ${cost.maxEstimatedCostBps} bps cap`);
-    } else {
-      add('COST_CAP', 'a leg has no maxExecutionLossBps; the cost cannot be bounded');
-    }
-  }
+  const { cadence, reason } = policy;
 
   // Cadence.
   const account = snapshot?.portfolioAccount;
@@ -659,10 +703,10 @@ export function evaluateProposal(input) {
     add('TARGETS_PENDING', `a change is already pending (effective ${effectiveAt ?? 'unknown'}); apply or cancel it first`);
   }
   if (cadence.requireInputsComplete) {
-    const riskExit = cadence.riskExitExemptFromInputs && legsKnown && newPools.length === 0 && removed.length > 0;
+    const riskExit = cadence.riskExitExemptFromInputs && what.held !== null && what.newPools.length === 0 && what.removed.length > 0;
     if (!riskExit) {
       for (const { poolId } of targets) {
-        const pool = poolById.get(poolId);
+        const pool = what.poolById.get(poolId);
         if (!pool) continue; // already POOL_DENIED
         const missing = ['trailingYieldBps', 'tvlUsdc', 'riskTier'].filter((key) => toNumber(pool[key]) == null);
         if (missing.length) add('INPUTS_INCOMPLETE', `${pool.symbol ?? poolId} is missing ${missing.join(', ')}`);
@@ -684,8 +728,8 @@ export function evaluateProposal(input) {
   const summary = {
     turnoverBps,
     estimatedCostBps,
-    legs,
-    categories: categoryBps,
+    legs: what.legs,
+    categories: what.categories,
     nextProposeAt: nextInsideWindow(earliest, window),
   };
   const intent = {

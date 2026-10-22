@@ -205,6 +205,9 @@ export const REFUSAL_STATUS = Object.freeze({
   METADATA_REFUSED: 502,
   METADATA_MESSAGE_MISMATCH: 502,
   NOT_TEXT: 502,
+  // The pending change against the running policy (preflight.applyGates): cancel it, or wait for its set to be readable.
+  CHANGE_OUTSIDE_POLICY: 409,
+  CHANGE_UNCHECKED: 503,
 });
 
 /** A refusal: `code` is the contract, `status` follows REFUSAL_STATUS, `detail` is optional data (never a secret). */
