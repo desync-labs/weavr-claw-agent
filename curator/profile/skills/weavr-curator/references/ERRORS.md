@@ -58,11 +58,14 @@ NO_PENDING_CHANGE (nothing to apply, or a stranger applied first; the loop
 verifies), WINDOW_CLOSED (the policy's apply window has passed since
 effectiveAt: `cancel {why}` and re-propose), NOTICE_NOT_ELAPSED (wait),
 VAULT_PAUSED (BLOCKED: `pause`, then `cancel {why}`; governance unpauses),
-CHANGE_OUTSIDE_POLICY (BLOCKED: the pending change breaks the policy the
-signer runs now, which tightened after it was proposed; its `refusals` name
-the rules: `cancel {why}`, then re-propose within them), CHANGE_UNCHECKED
-(the pending set or the catalogue could not be read: wait; the loop escalates
-on the policy's clock), LEG_NOT_ACTIVE (BLOCKED: `cancel {why}` and re-propose without the pool),
+CHANGE_OUTSIDE_POLICY (BLOCKED: the pending change breaks a rule of the
+policy the signer runs now, which tightened, or the catalogue changed a
+pool, after it was proposed; its `refusals` name the rules: `cancel {why}`,
+then re-propose within them), CHANGE_UNCHECKED (the pending set or the
+catalogue could not be read, or a pool or a value the rules need is missing
+from it — a pool the catalogue no longer lists, an unknown riskTier or loss
+cap: wait, it may come back; the loop escalates on the policy's clock),
+LEG_NOT_ACTIVE (BLOCKED: `cancel {why}` and re-propose without the pool),
 BOOK_NOT_FRESH / BOOK_PENDING_PRICE / LEG_PENDING_PRICE / LEG_STALE (waiting
 on the keeper or a publisher; the loop escalates on the policy's clock),
 WITHDRAWALS_PENDING (the keeper fulfils FIFO), APPLY_IN_FLIGHT (a paged apply

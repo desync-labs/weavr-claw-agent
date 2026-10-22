@@ -221,6 +221,11 @@ disagrees):
   the cap, or no `pythFeedId`. `POOL_COST_TOO_HIGH` is
   `maxExecutionLossBps` unknown or above the cap. `POOL_NOT_ACTIVE` is
   `status !== 'active'`. `CHAIN_DENIED` is chain not in the policy's chain list.
+- `COST_CAP` — a leg that trades nothing is priced at 0 and needs no
+  `maxExecutionLossBps`: a weight kept as it is, or a removed leg the
+  holdings show with no shares (the program retires it without reading its
+  pool). An unknown loss on a leg that trades leaves the cost unbounded
+  ("the cost cannot be bounded").
 - `BAD_REQUEST` — an argument that has the wrong shape (targets not a
   non-empty unique list, `amountUsd` not positive, `uri` empty, …) is refused
   before any policy rule runs: policy (`validateTargets`, `amountOf`), verbs
@@ -261,7 +266,7 @@ Which module raises which:
 |---|---|
 | `policy.verbAllowed` | `VERB_DENIED`, `OPS_ONLY`, `WITHDRAW_CRON_BLOCKED` |
 | `policy.evaluateWrite` | `PORTFOLIO_NOT_ALLOWED`, `SELF_LOCKED`, `PAUSED`, `RATE_LIMITED`, `LOW_SOL` |
-| `policy.evaluateTargets` | `BAD_REQUEST` (shape, returned alone), then every violation collected: `INPUTS_INCOMPLETE` (no catalogue, or no holdings), `CHAIN_DENIED`, `POOL_DENIED`, `POOL_NOT_ACTIVE`, `POOL_COST_TOO_HIGH`, `MIN_LEGS`, `MAX_LEGS`, `PAGE_LIMIT`, `LEG_WEIGHT_CAP`, `STABLE_BAND`, `CATEGORY_CAP`, `WEIGHTS_SUM`, `TURNOVER_CAP`, `COST_CAP` |
+| `policy.evaluateTargets` | `BAD_REQUEST` (shape, returned alone), then every violation collected: `INPUTS_INCOMPLETE` (no catalogue, or no holdings), `CHAIN_DENIED`, `POOL_DENIED`, `POOL_NOT_ACTIVE`, `POOL_COST_TOO_HIGH`, `MIN_LEGS`, `MAX_LEGS`, `PAGE_LIMIT`, `LEG_WEIGHT_CAP`, `STABLE_BAND`, `CATEGORY_CAP`, `WEIGHTS_SUM`, `TURNOVER_CAP`, `COST_CAP`; `gaps` marks the refusals only a missing input caused |
 | `policy.evaluateProposal` | `evaluateTargets`' codes, then `PROPOSAL_TOO_SOON`, `PROPOSAL_QUOTA`, `TARGETS_PENDING`, `INPUTS_INCOMPLETE` (a targeted pool missing an input), `OUTSIDE_WINDOW`, `WHY_REQUIRED` |
 | `policy.evaluateDeposit` | `BAD_REQUEST`, `DEPOSIT_DAILY_CAP`, `BOOK_NOT_FRESH`, `CAP_HEADROOM` |
 | `policy.evaluateWithdraw` | `BAD_REQUEST`, `WITHDRAW_CRON_BLOCKED`, `WITHDRAW_DAILY_CAP`, `BOOK_NOT_FRESH`, `INSUFFICIENT_SHARES` |
@@ -522,8 +527,8 @@ export const APPLY_STATES = ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CO
 | `WINDOW_CLOSED` | escalate | immediately |
 | `NOTICE_NOT_ELAPSED` (also when `effectiveAt` is unreadable) | wait | until `effectiveAt` |
 | `VAULT_PAUSED` | blocked | immediately |
-| `CHANGE_OUTSIDE_POLICY` (the pending set breaks a rule of `policy.evaluateTargets` — universe, shape, turnover or cost — under the policy this signer runs; carries `refusals`) | blocked | immediately |
-| `CHANGE_UNCHECKED` (those rules cannot run: the row's pending set is empty, names a pool without a `poolId` or a weight that is not a number — the program holds none of these, so the account was unreadable — or the catalogue or holdings are unknown) | wait | 30 min |
+| `CHANGE_OUTSIDE_POLICY` (the pending set breaks a rule of `policy.evaluateTargets` — universe, shape, turnover or cost — on what is known, under the policy this signer runs; carries `refusals`) | blocked | immediately |
+| `CHANGE_UNCHECKED` (those rules cannot run: the row's pending set is empty, names a pool without a `poolId` or a weight that is not a number — the program holds none of these, so the account was unreadable — or the catalogue or holdings are unknown; or they refuse only for an input that is missing: `evaluateTargets`' `gaps`, a pool the catalogue no longer lists, an unknown `riskTier` or `maxExecutionLossBps`, and the stable floor or cost cap those leave open) | wait | 30 min |
 | per held-or-new leg, unless retirable (omitted from the proposal, custody 0, no pending unwind): `LEG_STALE` (no catalogue row or `priceState !== 'fresh'`) | wait | 30 min |
 | … `LEG_NOT_ACTIVE` (`status !== 'active'`; `escalate` instead when the leg is omitted with empty custody but its unwind state is unknown) | blocked | immediately |
 | … `LEG_PENDING_PRICE` (`pendingPrice` set or `priceState === 'pending_acceptance'`; Pyth-cranked pools wait, publisher-marked escalate at once) | wait / escalate | 10 min / immediately |
@@ -539,7 +544,11 @@ after a restart with a stricter document (a tightened template, an owner's
 limits) the change proposed under the old one meets the new one here. Only
 the rules about what a change is are re-checked; cadence and reason are about
 when and why it was proposed, were checked then, and bind the next proposal.
-A rule that refuses outranks an input that is unknown.
+A rule that refuses outranks an input that is unknown. A refusal only a
+missing input caused waits instead of blocking: the api drops a halted,
+inactive or undeployed pool from the catalogue and may list it again, and
+`BLOCKED` would hold the change even then. The leg rows wait on the same
+pool (`LEG_STALE`, no catalogue row); past 30 min the loop escalates.
 
 `proposeGates(snapshot, policy, now)` — chain-state checks that are not policy, mirroring `validate_proposal` in order, then the two that would make the proposal un-applyable; same blocker shape, always `blocked` with `escalateAfterSecs: 0`:
 `COMPOSITION_LOCKED`, `WRONG_PORTFOLIO_STATE` (`state !== 'live'`), `TARGETS_PENDING`, `REBALANCE_TOO_SOON` (`now − lastRebalanceAt < rebalanceDelaySecs`, or either unreadable), `APPLY_IN_FLIGHT`, `VAULT_PAUSED`. `/propose` refuses with the first blocker's code and all of them in `detail.blockers`; `/simulate` appends them to `refusals`.
@@ -687,7 +696,7 @@ export function verbAllowed(policy, verb, { session, tokenKind }) → { ok:true 
 export function evaluateWrite({ policy, verb, portfolio, allowedPortfolio, state, ledger, lamports, now }) → { ok:true } | { ok:false, code, message }
 
 /** §4.4 universe, shape, turnover and cost: what a target set is, against the book's current targets. Run by evaluateProposal and, on the pending change, by preflight.applyGates. `checked:false` when no rule could run (BAD_REQUEST, or INPUTS_INCOMPLETE for no catalogue). */
-export function evaluateTargets({ policy, targets, snapshot }) → { checked, refusals:[{code,message}], turnoverBps, estimatedCostBps, legs, categories, poolById, held, newPools, removed }
+export function evaluateTargets({ policy, targets, snapshot }) → { checked, refusals:[{code,message}], gaps:Set<refusal>, turnoverBps, estimatedCostBps, legs, categories, poolById, held, newPools, removed }
 
 /** evaluateTargets plus the §4.4 cadence and reason rules. A malformed `targets` is BAD_REQUEST alone; otherwise `refusals` lists every violation and `code`/`message` are the first. */
 export function evaluateProposal({ policy, targets, why, snapshot, ledger, now, session }) → { ok:true, summary, intent } | { ok:false, code, message, refusals:[{code,message}], summary }

@@ -13,7 +13,7 @@ import { describe, it } from 'node:test';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import anchor from '@coral-xyz/anchor';
 import { applyGates, proposeGates, checkInvariants, readSnapshot } from '../src/preflight.js';
-import { loadPolicy } from '../src/policy.js';
+import { loadPolicy, evaluateTargets, evaluateProposal } from '../src/policy.js';
 import { POLICY as POLICY_V1 } from './fakes.js';
 
 const bn = (value) => new anchor.BN(String(value));
@@ -441,6 +441,73 @@ describe('applyGates', () => {
       const result = applyGates(snapshot, POLICY, NOW);
       assert.ok(outside(result).refusals.every((refusal) => refusal.code !== 'INPUTS_INCOMPLETE'));
       assert.equal(codes(result).includes('CHANGE_UNCHECKED'), false);
+    });
+
+    const PENDING_SET = fixture().portfolioRow.pendingTargets.targets;
+    const without = (snapshot, poolId) => ({ ...snapshot, pools: snapshot.pools.filter((row) => row.poolId !== poolId) });
+    const withHeld = (snapshot, leg) => ({
+      ...snapshot,
+      portfolioRow: {
+        ...snapshot.portfolioRow,
+        holdings: { ...snapshot.portfolioRow.holdings, legs: [...snapshot.portfolioRow.holdings.legs, leg] },
+        positions: [...snapshot.portfolioRow.positions, leg.poolId],
+      },
+    });
+
+    it('a refusal only a missing input caused waits, 30 min to escalate: the pool or the value may come back', () => {
+      const gaps = [
+        ['a new pool the catalogue dropped', without(fixture(), JITO), ['POOL_DENIED', 'COST_CAP']],
+        ['a kept pool the catalogue dropped, its weight unchanged', without(fixture(), SOL), ['POOL_DENIED']],
+        ['a stable pool the catalogue dropped leaves the stable floor open', without(fixture(), USDT), ['POOL_DENIED', 'STABLE_BAND', 'COST_CAP']],
+        ['a funded leg leaving a pool the catalogue dropped', without(fixture(), MSOL), ['COST_CAP']],
+        ['riskTier unknown', withPool(fixture(), JITO, { riskTier: null }), ['POOL_DENIED']],
+        ['maxExecutionLossBps unknown on a leg that trades', withPool(fixture(), JITO, { maxExecutionLossBps: null }), ['POOL_COST_TOO_HIGH', 'COST_CAP']],
+      ];
+      for (const [label, snapshot, refused] of gaps) {
+        const what = evaluateTargets({ policy: POLICY, targets: PENDING_SET, snapshot });
+        assert.deepEqual(what.refusals.map((refusal) => refusal.code), refused, label);
+        assert.ok(what.refusals.every((refusal) => what.gaps.has(refusal)), label);
+        const result = applyGates(snapshot, POLICY, NOW);
+        const found = only(result, 'CHANGE_UNCHECKED');
+        assert.equal(found.action, 'wait', label);
+        assert.equal(found.escalateAfterSecs, 1800, label);
+        assert.equal(codes(result).includes('CHANGE_OUTSIDE_POLICY'), false, label);
+      }
+    });
+
+    it('a rule that refuses on what is known still blocks, a gap beside it or not', () => {
+      const cases = [
+        ['turnover over a lower cap beside an unknown risk tier', withPool(fixture(), JITO, { riskTier: null }), stricter('turnover', { maxTurnoverBps: 2000 }), ['TURNOVER_CAP']],
+        ['the legs it can price already over the cost cap', withPool(fixture(), JITO, { maxExecutionLossBps: null }), stricter('cost', { maxEstimatedCostBps: 10 }), ['COST_CAP']],
+        ['a stable floor the dropped pool could not fill either', without(fixture(), USDT), stricter('shape', { stableMinBps: 4000 }), ['STABLE_BAND']],
+      ];
+      for (const [label, snapshot, policy, refused] of cases) {
+        const found = outside(applyGates(snapshot, policy, NOW));
+        assert.equal(found.action, 'blocked', label);
+        assert.deepEqual(found.refusals.map((refusal) => refusal.code), refused, label);
+      }
+    });
+
+    it('a leg that trades nothing needs no loss cap and no catalogue row, at apply and at propose', () => {
+      const GONE = 'pGONE@solana';
+      const retired = [
+        ['a position with no target and no shares', withHeld(fixture(), { poolId: GONE, symbol: 'pGONE', targetWeightBps: 0, weightBps: 0, valueUsdc: '0', shares: '0' })],
+        ['a target never funded, dropped', withHeld(fixture(), { poolId: GONE, symbol: 'pGONE', targetWeightBps: 1000, weightBps: 0, valueUsdc: '0', shares: '0' })],
+      ];
+      for (const [label, snapshot] of retired) {
+        assert.deepEqual(applyGates(snapshot, POLICY, NOW), { ok: true }, label);
+        const proposing = {
+          ...snapshot,
+          portfolioRow: { ...snapshot.portfolioRow, pendingTargets: null },
+          portfolioAccount: { ...snapshot.portfolioAccount, pendingTargets: null },
+        };
+        const proposal = evaluateProposal({ policy: POLICY, targets: PENDING_SET, why: 'rotate pMSOL into pJITOSOL', snapshot: proposing, ledger: { proposals: [] }, now: NOW });
+        assert.equal(proposal.ok, true, `${label}: ${JSON.stringify(proposal.refusals)}`);
+        assert.equal(proposal.summary.estimatedCostBps, 23.5, label);
+      }
+      const kept = evaluateTargets({ policy: POLICY, targets: PENDING_SET, snapshot: withPool(fixture(), SOL, { maxExecutionLossBps: null }) });
+      assert.deepEqual(kept.refusals.map((refusal) => refusal.code), ['POOL_COST_TOO_HIGH'], 'a kept weight is priced at 0; the universe still names the unknown cap');
+      assert.equal(kept.estimatedCostBps, 23.5);
     });
 
     it('reads a catalogue given as a Map like one given as a list', () => {

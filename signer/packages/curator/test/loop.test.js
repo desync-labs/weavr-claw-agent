@@ -261,6 +261,23 @@ test('tick: after a restart with a stricter policy, the re-armed change is block
   assert.ok(!ctx.trace.includes('send'), 'BLOCKED holds the same proposal');
 });
 
+test('tick: a pool the catalogue drops for a while holds the change in a wait on the real gates, and the next tick after it returns sends', async () => {
+  const policy = loadPolicy({ ...POLICY, cost: { maxEstimatedCostBps: 400 } });
+  const full = fakeSnapshot({ pending: ROW_PENDING, at: EFF + 5 });
+  const ctx = mk({ snapshot: { ...full, pools: full.pools.filter((pool) => pool.poolId !== 'pJITOSOL') }, policy, depsOverrides: { applyGates } });
+  ctx.clock.set((EFF + 5) * 1000);
+  const loop = createLoop({ ctx });
+  const out = await loop.tick();
+  assert.notEqual(out.applyState, 'BLOCKED');
+  assert.ok(out.blockers.some((entry) => entry.code === 'CHANGE_UNCHECKED' && entry.action === 'wait'), JSON.stringify(out.blockers));
+  assert.ok(!out.blockers.some((entry) => entry.code === 'CHANGE_OUTSIDE_POLICY'));
+  assert.ok(!ctx.trace.includes('send'));
+  ctx.deps.setSnapshot(full);
+  ctx.clock.advance(30);
+  await loop.tick();
+  assert.ok(ctx.trace.includes('send'), 'the pool is back: the change goes out');
+});
+
 test('tick: notice elapsed and gates green → build, verify, sign, send through the loop; state CONFIRM; then DONE once the chain shows it', async () => {
   const ctx = mk({ snapshot: fakeSnapshot({ pending: ROW_PENDING }) });
   const loop = createLoop({ ctx });

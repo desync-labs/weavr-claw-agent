@@ -152,20 +152,25 @@ const NOT_EVALUATED = new Set(['BAD_REQUEST', 'INPUTS_INCOMPLETE']);
  *
  * The target set is the api row's; the program refuses an empty set or a
  * zero weight, so an empty set or an unnamed pool is an unreadable account,
- * never a change, and waits like any other unknown.
+ * never a change, and waits like any other unknown. So does a refusal only a
+ * missing input caused (`evaluateTargets`' gaps: a pool the catalogue no
+ * longer lists, an unknown riskTier or loss cap): the input may come back,
+ * and BLOCKED would hold the change even then. A rule that refuses on what
+ * is known still blocks.
+ * @param {{ targets: object[] | null }} pending `pendingChange()`
  * @returns {object | null} a CHANGE_OUTSIDE_POLICY or CHANGE_UNCHECKED blocker, or null when the change passes
  */
-function changeBlocker(snapshot, policy, tickSecs) {
+function changeBlocker(pending, snapshot, policy, tickSecs) {
   const unchecked = (message) => blocker('CHANGE_UNCHECKED', 'wait', message,
     { waitSecs: tickSecs, escalateAfterSecs: escalateSecs(policy, 'CHANGE_UNCHECKED', 1800) });
-  const listed = snapshot.portfolioRow?.pendingTargets?.targets;
+  const listed = pending.targets;
   if (!Array.isArray(listed) || listed.length === 0 || listed.some((target) => !target?.poolId)) {
     return unchecked('the pending target set is unreadable, so the policy cannot be checked against it');
   }
   const targets = listed.map((target) => ({ poolId: String(target.poolId), weightBps: Number(target.weightBps) }));
   const pools = snapshot.pools instanceof Map ? [...snapshot.pools.values()] : snapshot.pools;
-  const { refusals } = evaluateTargets({ policy, targets, snapshot: { ...snapshot, pools } });
-  const broken = refusals.filter((refusal) => !NOT_EVALUATED.has(refusal.code));
+  const { refusals, gaps } = evaluateTargets({ policy, targets, snapshot: { ...snapshot, pools } });
+  const broken = refusals.filter((refusal) => !NOT_EVALUATED.has(refusal.code) && !gaps.has(refusal));
   if (broken.length > 0) {
     return blocker('CHANGE_OUTSIDE_POLICY', 'blocked',
       `the pending change breaks the policy this signer runs: ${broken.map((r) => `${r.code} ${r.message}`).join('; ')}; cancel it and re-propose`,
@@ -237,7 +242,7 @@ export function applyGates(snapshot, policy, now, slot = snapshot?.slot ?? null)
       { escalateAfterSecs: escalateSecs(policy, 'VAULT_PAUSED', 0) }));
   }
 
-  const outsidePolicy = changeBlocker(snapshot, policy, tickSecs);
+  const outsidePolicy = changeBlocker(pending, snapshot, policy, tickSecs);
   if (outsidePolicy) blockers.push(outsidePolicy);
 
   const row = snapshot.portfolioRow ?? null;
