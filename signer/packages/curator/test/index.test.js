@@ -46,6 +46,7 @@ test('readConfig refuses each missing or malformed variable by name, never by va
     [{ CURATOR_KEYPAIR: '' }, /CURATOR_KEYPAIR is required/],
     [{ CURATOR_PORTFOLIO_MINT: 'nope' }, /CURATOR_PORTFOLIO_MINT is not a base58 public key/],
     [{ CURATOR_TREASURY: undefined }, /CURATOR_TREASURY is required/],
+    [{ CURATOR_ROYALTY_RECIPIENT_MODE: 'floating' }, /CURATOR_ROYALTY_RECIPIENT_MODE must be one of pinned, owner/],
     [{ CURATOR_EXPECTED_GUARDIAN: '1234' }, /CURATOR_EXPECTED_GUARDIAN is not a base58 public key/],
     [{ CURATOR_API_URL: 'api:8080' }, /CURATOR_API_URL must be an http/],
     [{ CURATOR_RPC_URL: undefined }, /CURATOR_RPC_URL \(or SOLANA_RPC_URL\) is required/],
@@ -67,6 +68,8 @@ test('readConfig refuses each missing or malformed variable by name, never by va
       return true;
     });
   }
+  assert.equal(readConfig(fullEnv({})).royaltyRecipientMode, 'pinned', 'pinned by default');
+  assert.equal(readConfig(fullEnv({ CURATOR_ROYALTY_RECIPIENT_MODE: 'owner' })).royaltyRecipientMode, 'owner');
   const cfg = readConfig(fullEnv({ SOLANA_RPC_URL: 'http://fallback.test', CURATOR_RPC_URL: undefined, CURATOR_JOURNAL_PATH: '/tmp/j.jsonl', CURATOR_SIGNER_PORT: '9000', CURATOR_PORT: undefined, CURATOR_PAUSED: '1' }));
   assert.equal(cfg.rpcUrl, 'http://fallback.test');
   assert.equal(cfg.journalFile, '/tmp/j.jsonl');

@@ -128,6 +128,15 @@ const integer = (env, name, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER }
 };
 
 /**
+ * How the signer checks `accountant.royaltyRecipient`
+ * (CURATOR_ROYALTY_RECIPIENT_MODE): `pinned`, the default, requires it to
+ * equal CURATOR_ROYALTY_RECIPIENT / CURATOR_TREASURY; `owner` means the
+ * recipient is the portfolio owner's to move (propose → accept), so any
+ * recipient is accepted except the curator key.
+ */
+export const ROYALTY_RECIPIENT_MODES = Object.freeze(['pinned', 'owner']);
+
+/**
  * The environment, validated. Throws `Error` with a plain reason that names
  * the variable and never echoes a token, a URL or a key.
  * @param {NodeJS.ProcessEnv} env
@@ -138,6 +147,10 @@ export function readConfig(env = process.env) {
   const keypairFile = need(env, 'CURATOR_KEYPAIR');
   const mint = pubkey(env, 'CURATOR_PORTFOLIO_MINT');
   const treasury = pubkey(env, env.CURATOR_ROYALTY_RECIPIENT ? 'CURATOR_ROYALTY_RECIPIENT' : 'CURATOR_TREASURY');
+  const royaltyRecipientMode = String(env.CURATOR_ROYALTY_RECIPIENT_MODE ?? '').trim() || 'pinned';
+  if (!ROYALTY_RECIPIENT_MODES.includes(royaltyRecipientMode)) {
+    throw new Error(`CURATOR_ROYALTY_RECIPIENT_MODE must be one of ${ROYALTY_RECIPIENT_MODES.join(', ')}`);
+  }
   const guardian = pubkey(env, 'CURATOR_EXPECTED_GUARDIAN');
   const apiUrl = need(env, 'CURATOR_API_URL');
   if (!/^https?:\/\//.test(apiUrl)) throw new Error('CURATOR_API_URL must be an http(s) URL');
@@ -161,7 +174,7 @@ export function readConfig(env = process.env) {
   const metadataDomain = String(env.CURATOR_METADATA_SIGN_DOMAIN ?? '').trim() || DEFAULT_SIGN_DOMAIN;
   if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(metadataDomain)) throw new Error('CURATOR_METADATA_SIGN_DOMAIN must be a host name');
   return {
-    tokens, keypairFile, mint, treasury, guardian, apiUrl, rpcUrl, policyJson, policyFile, journalFile, port, tickMs, startPaused, rebalanceDelaySecs,
+    tokens, keypairFile, mint, treasury, royaltyRecipientMode, guardian, apiUrl, rpcUrl, policyJson, policyFile, journalFile, port, tickMs, startPaused, rebalanceDelaySecs,
     metadataUrl, metadataTags, metadataLinks, metadataDomain,
   };
 }
@@ -259,6 +272,7 @@ export async function boot(opts = {}) {
     config: {
       mint: cfg.mint,
       treasury: cfg.treasury,
+      royaltyRecipientMode: cfg.royaltyRecipientMode,
       expectedCurator: signer.wallet,
       guardian: cfg.guardian,
       rebalanceDelaySecs,

@@ -367,7 +367,8 @@ export function proposeGates(snapshot, policy, now) {
 
 /**
  * The every-tick invariants: curator == expected, pending_curator == None,
- * accountant.recipient1 == treasury, factory.guardian == expected,
+ * accountant.recipient1 == treasury (in `owner` royalty mode: != the
+ * curator key, whatever else the owner moved it to), factory.guardian == expected,
  * composition_locked == false. The notice is a governance floor, not a field
  * on the portfolio, so a stored delay is not drift. Any drift makes the loop
  * self-lock every write until an operator unlocks.
@@ -377,7 +378,7 @@ export function proposeGates(snapshot, policy, now) {
  * need an operator unlock — but it is not proof either: those invariants are
  * listed under `unverified` so the loop can hold writes and alert.
  * @param {object} snapshot
- * @param {{ expectedCurator: string, treasury: string, guardian: string, rebalanceDelaySecs: number }} config
+ * @param {{ expectedCurator: string, treasury: string, royaltyRecipientMode?: 'pinned' | 'owner', guardian: string, rebalanceDelaySecs: number }} config
  * @param {object} policy `invariants.*` overrides the expected delay / lock flag
  * @returns {{ ok: true, unverified: string[] } | { ok: false, drift: Array<{ invariant: string, expected: string, actual: string }>, unverified: string[] }}
  */
@@ -398,11 +399,16 @@ export function checkInvariants(snapshot, config, policy) {
   check('portfolio.compositionLocked', expectations.compositionLocked ?? false, Boolean(account.compositionLocked));
 
   if (snapshot.accountantAccount) {
-    check(
-      'accountant.royaltyRecipient',
-      config.treasury,
-      b58(snapshot.accountantAccount.royaltyRecipient ?? snapshot.accountantAccount.recipient1),
-    );
+    const recipient = b58(snapshot.accountantAccount.royaltyRecipient ?? snapshot.accountantAccount.recipient1);
+    if (config.royaltyRecipientMode === 'owner') {
+      // The owner may move the recipient (a pending proposal is not drift
+      // either); it must never become the curator key.
+      if (recipient === String(config.expectedCurator)) {
+        drift.push({ invariant: 'accountant.royaltyRecipient', expected: 'not the curator key', actual: recipient });
+      }
+    } else {
+      check('accountant.royaltyRecipient', config.treasury, recipient);
+    }
   } else {
     unverified.push('accountant.royaltyRecipient');
   }

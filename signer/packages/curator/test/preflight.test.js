@@ -448,6 +448,30 @@ describe('checkInvariants', () => {
     drifted(fixture({ accountantAccount: { recipient1: key() } }), 'accountant.royaltyRecipient');
   });
 
+  it('owner royalty mode: a moved or pending recipient is not drift', () => {
+    const owner = { ...CONFIG, royaltyRecipientMode: 'owner' };
+    const moved = fixture({ accountantAccount: { recipient1: key() } });
+    assert.deepEqual(checkInvariants(moved, owner, POLICY), { ok: true, unverified: [] });
+    const pending = fixture({ accountantAccount: { pendingRecipients: { recipient1: key(), recipient2: key() } } });
+    assert.deepEqual(checkInvariants(pending, owner, POLICY), { ok: true, unverified: [] });
+    const royalty = fixture({ accountantAccount: { recipient1: undefined, royaltyRecipient: key() } });
+    assert.deepEqual(checkInvariants(royalty, owner, POLICY), { ok: true, unverified: [] });
+  });
+
+  it('INVARIANT_DRIFT: the recipient is the curator key, in either royalty mode', () => {
+    for (const mode of ['owner', 'pinned']) {
+      const result = checkInvariants(fixture({ accountantAccount: { recipient1: CURATOR } }), { ...CONFIG, royaltyRecipientMode: mode }, POLICY);
+      assert.equal(result.ok, false, mode);
+      assert.deepEqual(result.drift.map((d) => d.invariant), ['accountant.royaltyRecipient'], mode);
+    }
+  });
+
+  it('pinned royalty mode (explicit) still refuses any other recipient', () => {
+    const result = checkInvariants(fixture({ accountantAccount: { recipient1: key() } }), { ...CONFIG, royaltyRecipientMode: 'pinned' }, POLICY);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.drift.map((d) => d.invariant), ['accountant.royaltyRecipient']);
+  });
+
   it('INVARIANT_DRIFT: guardian changed', () => {
     drifted(fixture({ factoryConfig: { guardian: key() } }), 'factory.guardian');
   });
