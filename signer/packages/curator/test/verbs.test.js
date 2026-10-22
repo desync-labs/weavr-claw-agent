@@ -14,7 +14,8 @@ import { OPS_VERBS } from '../src/verbs.js';
 import { ROUTES } from '../src/server.js';
 import { deriveReview as realDeriveReview } from '../src/metrics.js';
 import { Journal, canonicalSha256 } from '../src/journal.js';
-import { utcDay } from '../src/policy.js';
+import { utcDay, loadPolicy } from '../src/policy.js';
+import { applyGates } from '../src/preflight.js';
 import { Refusal } from '../src/errors.js';
 
 const { BN } = anchor;
@@ -275,6 +276,19 @@ test('apply: a blocked pre-flight answers the blockers with the blocker status a
   assert.equal(out.blockers[0].code, 'VAULT_PAUSED');
   assert.ok(!ctx.trace.includes('buildApply') && !ctx.trace.includes('sign'));
   assert.equal(records(ctx).find((r) => r.kind === 'refusal').code, 'VAULT_PAUSED');
+});
+
+test('apply: a forced apply of a change the running policy refuses answers 409 with the rules it breaks, and never builds', async () => {
+  const pending = { targets: NEW_TARGETS, proposedAt: T0 - 86400, effectiveAt: T0 - 10 };
+  const ctx = mk({ snapshot: fakeSnapshot({ pending }), policy: loadPolicy(POLICY), depsOverrides: { applyGates } });
+  ctx.state.apply = { ...verbs.initialApplyState(), state: 'BLOCKED', targets: NEW_TARGETS, effectiveAt: T0 - 10 };
+  const out = await verbs.apply(ctx, {}, meta());
+  assert.equal(out.ok, false);
+  assert.equal(out.httpStatus, 409);
+  assert.equal(out.blockers[0].code, 'CHANGE_OUTSIDE_POLICY');
+  assert.equal(out.blockers[0].refusals[0].code, 'COST_CAP');
+  assert.ok(!ctx.trace.includes('buildApply') && !ctx.trace.includes('sign'));
+  assert.equal(records(ctx).find((r) => r.kind === 'refusal').code, 'CHANGE_OUTSIDE_POLICY');
 });
 
 test('apply: gates pass → apply_targets built with the caller, signed, sent, machine CONFIRM', async () => {
