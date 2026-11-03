@@ -43,7 +43,7 @@ Flow: the user types a thesis → list_assets (never before they have typed one)
 6. Never print walletPayload, never ask whether they signed, and never ask them to check again. Wallets sign but do not send: the wallet tool passes what it signed to weavr, which sends it and watches the chain.
 7. Reads (get_portfolio, list_portfolios, get_asset, the histories, simulate_rebalance) need no wallet.
 
-Fees: 0.40% round trip (0.20% in, 0.20% out), 60% of the fee stream to the creator, no management fee, 5% idle, 2% rebalance band. Amounts are in USD; percents are percents.
+Fees: 0.50% round trip (0.25% in, 0.25% out), no management fee, 0.25% of a rebalance sale capped at 0.50% of NAV per 30 days. Portfolio royalty starts at 25% of fees. 5% idle, 2% rebalance band. Amounts are in USD; percents are percents.
 
 ## Wallet
 The wallet is the command `node $WEAVR_SIGN_TOOL ...`, run with the terminal tool only (never with code execution, which strips the variables it needs). It reads its own keys from files; you never see or handle them. It signs with PayBox, a local key or nothing at all (the sign link), as the host configured; every line it prints carries `wallet` with the one in use. Run it as one plain command, exactly `node $WEAVR_SIGN_TOOL --address` and so on: never wrap it in `if`, `&&`, `;`, `$(...)` or a subshell, and never add echo or checks around it. Compound commands trip the host's security scanner and the user gets a scary prompt for a harmless read; the tool's own JSON already reports every error.
