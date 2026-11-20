@@ -28,7 +28,7 @@ const gateWait = (code, extra = {}, blockerExtra = {}) => ({ ok: false, blockers
 const gateBlocked = (code) => ({ ok: false, blockers: [{ code, action: 'blocked', message: `${code} message` }], pending: PENDING });
 
 test('APPLY_STATES is the §4.5 list', () => {
-  assert.deepEqual([...APPLY_STATES], ['IDLE', 'ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM', 'DONE', 'BLOCKED', 'ESCALATED']);
+  assert.deepEqual([...APPLY_STATES], ['IDLE', 'ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM', 'DONE', 'BLOCKED', 'ESCALATED', 'INACTIVE']);
 });
 
 test('IDLE → ARMED when the chain shows a pending change (own or a stranger\'s)', () => {
@@ -133,6 +133,32 @@ test('the window closes 6 h after effectiveAt → ESCALATED WINDOW_CLOSED', () =
   assert.equal(next.state, 'ESCALATED');
   assert.equal(next.lastBlocker.code, 'WINDOW_CLOSED');
   assert.ok(actions.includes('alert:WINDOW_CLOSED'));
+});
+
+test('BOOK_INACTIVE → INACTIVE: no alert and no send, even past the window', () => {
+  const inactive = () => gateWait('BOOK_INACTIVE', {}, { escalateAfterSecs: null });
+  const late = EFF + 21601;
+  const parked = stepApply(armed({ state: 'PREFLIGHT' }), inactive(), late, POLICY);
+  assert.equal(parked.next.state, 'INACTIVE');
+  assert.equal(parked.next.lastBlocker.code, 'BOOK_INACTIVE');
+  assert.ok(!parked.actions.some((action) => action === 'send' || action.startsWith('alert:')), JSON.stringify(parked.actions));
+  const days = stepApply(parked.next, inactive(), late + 3 * 86400, POLICY);
+  assert.equal(days.next.state, 'INACTIVE');
+  assert.deepEqual(days.actions, []);
+});
+
+test('INACTIVE leaves on its own: a revived book applies inside the window, escalates WINDOW_CLOSED after it, and a cancelled change goes IDLE', () => {
+  const inactive = gateWait('BOOK_INACTIVE', {}, { escalateAfterSecs: null });
+  const early = stepApply(armed({ state: 'PREFLIGHT' }), inactive, EFF + 60, POLICY).next;
+  assert.equal(early.state, 'INACTIVE');
+  const revived = stepApply(early, gateOk(), EFF + 90, POLICY);
+  assert.equal(revived.next.state, 'SEND');
+  assert.ok(revived.actions.includes('send'));
+  const late = stepApply(early, gateOk(), EFF + 21601, POLICY);
+  assert.equal(late.next.state, 'ESCALATED');
+  assert.equal(late.next.lastBlocker.code, 'WINDOW_CLOSED');
+  const cancelled = stepApply(early, { ok: true, pending: null, currentTargets: null, lastRebalanceAt: null }, EFF + 90, POLICY);
+  assert.equal(cancelled.next.state, 'IDLE');
 });
 
 test('APPLY_IN_FLIGHT escalates after the attempt cap', () => {
@@ -276,6 +302,20 @@ test('tick: a pool the catalogue drops for a while holds the change in a wait on
   ctx.clock.advance(30);
   await loop.tick();
   assert.ok(ctx.trace.includes('send'), 'the pool is back: the change goes out');
+});
+
+test('tick: an inactive book parks the change on the real gates: nothing sent, no apply alert, and pending_effective_at reads 0 so ApplyOverdue stays quiet', async () => {
+  const late = EFF + 7 * 3600;
+  const ctx = mk({ snapshot: fakeSnapshot({ pending: ROW_PENDING, priceState: 'inactive', at: late }), depsOverrides: { applyGates } });
+  ctx.clock.set(late * 1000);
+  const out = await createLoop({ ctx }).tick();
+  assert.equal(out.applyState, 'INACTIVE');
+  assert.deepEqual(out.blockers.map((entry) => entry.code), ['BOOK_INACTIVE']);
+  assert.ok(![...ctx.state.alerts.keys()].some((name) => name.startsWith('apply:')), JSON.stringify([...ctx.state.alerts.keys()]));
+  assert.ok(!ctx.trace.includes('send'));
+  const gauges = gaugesOf(ctx);
+  assert.equal(gauges.curator_apply_state, 'INACTIVE');
+  assert.equal(gauges.curator_pending_effective_at, 0);
 });
 
 test('tick: notice elapsed and gates green → build, verify, sign, send through the loop; state CONFIRM; then DONE once the chain shows it', async () => {

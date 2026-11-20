@@ -55,7 +55,11 @@ nudge.
 
 Apply blockers (from `status.apply.lastBlocker` or a forced `apply`):
 NO_PENDING_CHANGE (nothing to apply, or a stranger applied first; the loop
-verifies), WINDOW_CLOSED (the policy's apply window has passed since
+verifies), BOOK_INACTIVE (the book is empty or has had no deposit or
+withdrawal for the quiet window; the keeper does not mark it, so an inactive
+book is not rebalanced: the apply state is INACTIVE, nothing escalates, and
+the change applies by itself if a deposit or a revive wakes the book inside
+the window; do not cancel or re-propose for it), WINDOW_CLOSED (the policy's apply window has passed since
 effectiveAt: `cancel {why}` and re-propose), NOTICE_NOT_ELAPSED (wait),
 VAULT_PAUSED (BLOCKED: `pause`, then `cancel {why}`; governance unpauses),
 CHANGE_OUTSIDE_POLICY (BLOCKED: the pending change breaks a rule of the

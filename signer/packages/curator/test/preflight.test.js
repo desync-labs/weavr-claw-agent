@@ -214,6 +214,22 @@ describe('applyGates', () => {
     assert.equal(result.blockers[0].action, 'done');
   });
 
+  it('BOOK_INACTIVE: an inactive book waits for a deposit or a revive, never escalates, and nothing else is evaluated', () => {
+    // An empty or quiet book: the keeper marks neither it nor its idle legs, so
+    // a change on it would sit on BOOK_NOT_FRESH and LEG_STALE until the window closed.
+    const effective = NOW - POLICY.apply.windowAfterEffectiveSecs - 3600;
+    const result = applyGates(fixture({
+      portfolioRow: { priceState: 'inactive' },
+      portfolioAccount: { pendingTargets: { proposedAt: bn(effective - 60), effectiveAt: bn(effective) } },
+      vaultAccount: { totalShares: bn(0), lastPriceUpdateTimestamp: bn(NOW - 30 * DAY) },
+    }), POLICY, NOW);
+    assert.equal(result.ok, false);
+    assert.deepEqual(codes(result), ['BOOK_INACTIVE']);
+    assert.equal(result.blockers[0].action, 'wait');
+    assert.equal(result.blockers[0].waitSecs, POLICY.apply.tickSecs);
+    assert.equal(result.blockers[0].escalateAfterSecs, null);
+  });
+
   it('WINDOW_CLOSED: past effectiveAt + 6 h escalates at once', () => {
     const effective = NOW - POLICY.apply.windowAfterEffectiveSecs - 1;
     const result = applyGates(fixture({ portfolioAccount: { pendingTargets: { proposedAt: bn(effective - DAY), effectiveAt: bn(effective) } } }), POLICY, NOW);

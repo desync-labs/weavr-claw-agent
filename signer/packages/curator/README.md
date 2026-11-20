@@ -140,7 +140,7 @@ status from `REFUSAL_STATUS` (errors.js). Default `422`; overrides:
 | 401 | `UNAUTHORIZED` |
 | 403 | `OPS_ONLY`, `VERB_DENIED`, `WITHDRAW_CRON_BLOCKED`, `PORTFOLIO_NOT_ALLOWED` |
 | 404 | `NOT_FOUND` |
-| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`, `CHANGE_OUTSIDE_POLICY`, `NOT_CURATOR`, `METADATA_TAGS_FULL`, `METADATA_LINKS_FULL`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
+| 409 | `TARGETS_PENDING`, `SELF_LOCKED`, `PAUSED`, `NO_PENDING_CHANGE`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED`, `CHANGE_OUTSIDE_POLICY`, `BOOK_INACTIVE`, `NOT_CURATOR`, `METADATA_TAGS_FULL`, `METADATA_LINKS_FULL`; `/apply` also answers 409 for `APPLIED_MISMATCH` (a body, not a `Refusal`) |
 | 429 | `RATE_LIMITED`, `PROPOSAL_QUOTA`, `DEPOSIT_DAILY_CAP`, `WITHDRAW_DAILY_CAP` |
 | 502 | `UPSTREAM` (api HTTP ≥ 500, unreachable, timed out or non-JSON), `BUILD_REFUSED` (api 4xx on a build — its `error.code` is in `detail`), `SEND_FAILED`, and the decode.js codes `NOT_A_TRANSACTION`, `WRONG_PAYER`, `FOREIGN_PROGRAM`, `FOREIGN_LOOKUP_TABLE`, `UNKNOWN_INSTRUCTION`, `UNEXPECTED_INSTRUCTIONS`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH`, `UNEXPECTED_STEP`, `PAGED_PROPOSE_UNSUPPORTED` — the api built something the signer would not sign; `METADATA_REFUSED` (the metadata service's 4xx, its `error.code` in `detail`), `METADATA_MESSAGE_MISMATCH` (the service asked for a signature over a text that is not the expected one), `NOT_TEXT` |
 | 503 | `LOW_SOL`, `INVARIANT_DRIFT`, `INVARIANTS_UNVERIFIED` (writes held while the accountant or FactoryConfig could not be read on the last tick), `BOOK_NOT_FRESH`, `MISSING_CUSTODY`, `CHANGE_UNCHECKED` |
@@ -272,7 +272,7 @@ Which module raises which:
 | `policy.evaluateWithdraw` | `BAD_REQUEST`, `WITHDRAW_CRON_BLOCKED`, `WITHDRAW_DAILY_CAP`, `BOOK_NOT_FRESH`, `INSUFFICIENT_SHARES` |
 | `policy.evaluateInvariants` | `INVARIANT_DRIFT` (pure twin of `preflight.checkInvariants` over `{ policy, chain, config }`; exported, not on the runtime path) |
 | `preflight.checkInvariants` | no code: `{ ok, drift, unverified }`; the loop turns `ok:false` into a self-lock + alert `INVARIANT_DRIFT`, `/unlock` refuses `INVARIANT_DRIFT` while it holds |
-| `preflight.applyGates` | blocker codes, §5 below (`NO_PENDING_CHANGE`, `WINDOW_CLOSED`, `NOTICE_NOT_ELAPSED`, `VAULT_PAUSED`, `CHANGE_OUTSIDE_POLICY`, `CHANGE_UNCHECKED`, `LEG_STALE`, `LEG_NOT_ACTIVE`, `LEG_PENDING_PRICE`, `BOOK_NOT_FRESH`, `BOOK_PENDING_PRICE`, `WITHDRAWALS_PENDING`, `APPLY_IN_FLIGHT`, `MISSING_CUSTODY`) |
+| `preflight.applyGates` | blocker codes, §5 below (`NO_PENDING_CHANGE`, `BOOK_INACTIVE`, `WINDOW_CLOSED`, `NOTICE_NOT_ELAPSED`, `VAULT_PAUSED`, `CHANGE_OUTSIDE_POLICY`, `CHANGE_UNCHECKED`, `LEG_STALE`, `LEG_NOT_ACTIVE`, `LEG_PENDING_PRICE`, `BOOK_NOT_FRESH`, `BOOK_PENDING_PRICE`, `WITHDRAWALS_PENDING`, `APPLY_IN_FLIGHT`, `MISSING_CUSTODY`) |
 | `preflight.proposeGates` | six blocker codes: `COMPOSITION_LOCKED`, `WRONG_PORTFOLIO_STATE`, `TARGETS_PENDING`, `REBALANCE_TOO_SOON`, `APPLY_IN_FLIGHT`, `VAULT_PAUSED` |
 | `decode.verifyBuilt` | `NOT_A_TRANSACTION`, `FOREIGN_LOOKUP_TABLE`, `FOREIGN_PROGRAM`, `UNKNOWN_INSTRUCTION`, `WRONG_PAYER`, `UNEXPECTED_STEP`, `UNEXPECTED_INSTRUCTIONS`, `PAGED_PROPOSE_UNSUPPORTED`, `WRONG_PORTFOLIO`, `WRONG_ACCOUNT`, `TARGETS_MISMATCH` — §6 below |
 | `keys.loadSigner` | `CONFIG` at load; `NOT_A_TRANSACTION` from `sign()`; `NOT_TEXT` from `signText()` |
@@ -508,7 +508,7 @@ A `deriveReview` that returns no `metrics` (a test fake) journals nothing.
 ## 5. Apply state machine and gates (plan §4.5)
 
 ```js
-export const APPLY_STATES = ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CONFIRM','DONE','BLOCKED','ESCALATED'];
+export const APPLY_STATES = ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CONFIRM','DONE','BLOCKED','ESCALATED','INACTIVE'];
 ```
 
 - `IDLE` → `ARMED` when the snapshot shows `pendingTargets` (own proposal or a stranger's — the loop applies whatever is pending on WEAVR, since apply is permissionless). A terminal state re-arms only for a different proposal (other targets, or another `effectiveAt`).
@@ -517,13 +517,15 @@ export const APPLY_STATES = ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CO
 - `SEND`: build (`buildApply`) → `verifyBuilt` → sign → send (`verbs.applySend`, gates already run on the loop's snapshot), ≤ `policy.apply.maxSendsPerTick` (3) per tick; `applyOutcome` then: ok ⇒ `CONFIRM`; a decode code (`loop.DECODE_CODES`) ⇒ `ESCALATED` at once (a rebuild would build the same thing); `MISSING_CUSTODY` ⇒ retry once, then `ESCALATED`; `NO_PENDING_CHANGE` ⇒ `CONFIRM`; `LOW_SOL` / `RATE_LIMITED` ⇒ `PREFLIGHT` + alert; `PAUSED` / `SELF_LOCKED` ⇒ hold; anything else ⇒ `SEND_FAILED`, `ESCALATED` after `sendFailedTicksBeforeEscalate` (3).
 - `CONFIRM`: the pending change gone and the holdings' targets equal to the proposal (or `lastRebalanceAt` advanced) ⇒ `DONE`; gone but the chain differs ⇒ `ESCALATED` (`APPLIED_MISMATCH`); gone and nothing moved ⇒ `IDLE` (cancelled).
 - Window closes `policy.apply.windowAfterEffectiveSecs` (6 h) after `effectiveAt` ⇒ `ESCALATED` (`WINDOW_CLOSED`).
+- `BOOK_INACTIVE` (the api row reads `priceState: 'inactive'`: an empty book, or one with no deposit or withdrawal for the quiet window) ⇒ `INACTIVE`, checked before the window: no send, no alert, and `curator_pending_effective_at` reads 0, so `ThesisUnitApplyOverdue` stays quiet. The keeper does not mark an inactive book or the legs only quiet books hold, so the change could only sit on `BOOK_NOT_FRESH` and `LEG_STALE`; an inactive book is not rebalanced. The first tick it is active again (a deposit or a revive) runs the gates as usual: inside the window the change applies, past it `WINDOW_CLOSED` escalates. A cancelled change goes `IDLE`.
 - `paused` or `selfLocked` ⇒ the machine holds in its state and does nothing (`tick-held`).
 
-`applyGates(snapshot, policy, now, slot = snapshot.slot)` blockers, in evaluation order — every blocker is collected so `/apply` shows the LLM the whole list, except `NO_PENDING_CHANGE`, which stands alone:
+`applyGates(snapshot, policy, now, slot = snapshot.slot)` blockers, in evaluation order — every blocker is collected so `/apply` shows the LLM the whole list, except `NO_PENDING_CHANGE` and `BOOK_INACTIVE`, which stand alone:
 
 | Code | action | waitSecs / escalateAfterSecs (`policy.apply.escalateAfterSecs[<code>]` overrides) |
 |---|---|---|
 | `NO_PENDING_CHANGE` | done (nothing else is evaluated) | — |
+| `BOOK_INACTIVE` (the row's `priceState` is `inactive`; nothing else is evaluated) | wait | never |
 | `WINDOW_CLOSED` | escalate | immediately |
 | `NOTICE_NOT_ELAPSED` (also when `effectiveAt` is unreadable) | wait | until `effectiveAt` |
 | `VAULT_PAUSED` | blocked | immediately |
@@ -851,7 +853,7 @@ export const JOURNAL_VERB // route → camelCase journal verb; REALERT_SECS (6 h
 ### `src/loop.js`
 
 ```js
-export const APPLY_STATES   // ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CONFIRM','DONE','BLOCKED','ESCALATED']
+export const APPLY_STATES   // ['IDLE','ARMED','WAIT_NOTICE','PREFLIGHT','SEND','CONFIRM','DONE','BLOCKED','ESCALATED','INACTIVE']
 export const DECODE_CODES   // Set of the decode codes a SEND never retries (a rebuild would build the same thing)
 export function createLoop({ ctx, intervalMs = ctx.config.tickMs }) → { start(), stop() → Promise, tick() → Promise<{ at, ok, applyState, blockers, alerts, error? }>, state() → { running, … } }
 /** One pure step of the machine: `(state.apply, gate, now, policy) → next apply state + actions`; `gate` is the applyGates result plus `pending`, `currentTargets`, `lastRebalanceAt`, `keeperOk` from the snapshot. */

@@ -34,6 +34,13 @@ test('the real gauges render with their values through the real renderer (no fak
   assert.match(text, /^curator_paused 0$/m);
 });
 
+test('an inactive book renders apply_state INACTIVE and pending_effective_at 0 (the ApplyOverdue rule reads that gauge)', () => {
+  const text = renderPrometheus({ curator_apply_state: 'INACTIVE', curator_pending_effective_at: 0 });
+  assert.match(text, /^curator_apply_state\{state="INACTIVE"\} 1$/m);
+  assert.match(text, /^curator_apply_state\{state="PREFLIGHT"\} 0$/m);
+  assert.match(text, /^curator_pending_effective_at 0$/m);
+});
+
 test('planted: a producer that emits only the metric-name spelling still renders values, and unknown keys render nothing', () => {
   const text = renderPrometheus({ curator_signer_lamports: 42, curator_paused: 1, curator_apply_state: 'ARMED', unrelated: 7 });
   assert.match(text, /^curator_signer_lamports 42$/m);

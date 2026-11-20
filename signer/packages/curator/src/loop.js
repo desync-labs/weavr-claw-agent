@@ -43,9 +43,13 @@ import {
   pendingOf, currentTargetsOf, targetsEqual, keeperOkOf, initialApplyState, writeAttemptsLastHour, num,
 } from './verbs.js';
 
-/** The machine's states, in order of a normal cycle. */
+/**
+ * The machine's states, in order of a normal cycle. `INACTIVE` is not part of
+ * one: a change pending on an inactive book (`BOOK_INACTIVE`) waits there for
+ * a deposit or a revive, outside the window and without an alert.
+ */
 export const APPLY_STATES = Object.freeze([
-  'IDLE', 'ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM', 'DONE', 'BLOCKED', 'ESCALATED',
+  'IDLE', 'ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM', 'DONE', 'BLOCKED', 'ESCALATED', 'INACTIVE',
 ]);
 
 const ACTIVE = new Set(['ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM']);
@@ -125,6 +129,14 @@ export function stepApply(applyState, gate, now, policy) {
     if (s.state === 'ARMED') {
       if (now < s.effectiveAt - a.armBeforeEffectiveSecs) return finish();
       go('WAIT_NOTICE');
+    }
+    // Before the window: an inactive book is not rebalanced, so its change is
+    // not late. The first tick the book is active again runs the rest.
+    const inactive = Array.isArray(gate?.blockers) ? gate.blockers.find((b) => b.code === 'BOOK_INACTIVE') : null;
+    if (gate?.ok === false && inactive) {
+      const prev = s.lastBlocker?.code === inactive.code ? s.lastBlocker : { code: inactive.code, since: now, message: inactive.message ?? null };
+      go('INACTIVE', { lastBlocker: prev });
+      return finish();
     }
     if (now > s.effectiveAt + a.windowAfterEffectiveSecs) {
       escalate('WINDOW_CLOSED', `the apply window closed ${a.windowAfterEffectiveSecs} s after effectiveAt`);
@@ -246,6 +258,8 @@ export function gaugesOf(ctx) {
   const state = ctx.state;
   const nowSecs = Math.floor(ctx.now() / 1000);
   const apply = state.apply ?? initialApplyState();
+  // 0 in INACTIVE too: the ApplyOverdue rule reads this gauge, and a change
+  // on an inactive book waits for a revive, it is not overdue.
   const pendingEffectiveAt = (ACTIVE.has(apply.state) || apply.state === 'BLOCKED' || apply.state === 'ESCALATED') && apply.effectiveAt != null ? apply.effectiveAt : 0;
   const row = state.lastSnapshot?.portfolioRow ?? null;
   return {

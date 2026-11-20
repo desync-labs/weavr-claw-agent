@@ -195,4 +195,8 @@ describe('Refusal', () => {
       assert.equal(REFUSAL_STATUS[code], 502, code);
     }
   });
+
+  it('a forced apply on an inactive book is a conflict with the book state, not a transient 503', () => {
+    assert.equal(REFUSAL_STATUS.BOOK_INACTIVE, 409);
+  });
 });

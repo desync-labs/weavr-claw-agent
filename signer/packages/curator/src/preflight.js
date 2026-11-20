@@ -187,7 +187,9 @@ function changeBlocker(pending, snapshot, policy, tickSecs) {
  * the loop checks whether a stranger applied our proposal). Every blocker is
  * collected, not only the first, so `/apply` can show the LLM the whole list;
  * `NO_PENDING_CHANGE` alone short-circuits because nothing else means
- * anything without a pending change.
+ * anything without a pending change, and so does `BOOK_INACTIVE` (the api row
+ * reads `priceState: 'inactive'`): nothing marks an inactive book, so it waits
+ * for a deposit or a revive and never escalates.
  *
  * Mirror of `apply_targets_handler`: TargetsNotEffective → NOTICE_NOT_ELAPSED,
  * VaultPaused → VAULT_PAUSED, PortfolioPriceStale → BOOK_NOT_FRESH,
@@ -219,6 +221,20 @@ export function applyGates(snapshot, policy, now, slot = snapshot?.slot ?? null)
     return {
       ok: false,
       blockers: [blocker('NO_PENDING_CHANGE', 'done', 'no targets change is pending on chain', { escalateAfterSecs: null })],
+    };
+  }
+
+  // An inactive book (empty, or no deposit or withdrawal for the quiet window)
+  // is one the keeper no longer marks, and neither are the legs only quiet
+  // books hold: the change would wait on BOOK_NOT_FRESH and LEG_STALE until
+  // the window closed. It is not rebalanced. It waits for a deposit or a
+  // revive and never escalates; nothing else means anything until then.
+  if (snapshot.portfolioRow?.priceState === 'inactive') {
+    return {
+      ok: false,
+      blockers: [blocker('BOOK_INACTIVE', 'wait',
+        'the book is inactive (empty, or no deposit or withdrawal for the quiet window), so the keeper does not mark it; the change waits for a deposit or a revive',
+        { waitSecs: tickSecs, escalateAfterSecs: null })],
     };
   }
 
