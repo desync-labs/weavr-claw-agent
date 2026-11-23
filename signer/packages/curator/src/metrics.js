@@ -26,7 +26,7 @@ const REVIEW_DEFAULTS = Object.freeze({
 });
 
 /** The apply machine's states in gauge order (loop.js APPLY_STATES; repeated here so metrics stays import-free). */
-const APPLY_STATES = ['IDLE', 'ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM', 'DONE', 'BLOCKED', 'ESCALATED'];
+const APPLY_STATES = ['IDLE', 'ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM', 'DONE', 'BLOCKED', 'ESCALATED', 'INACTIVE'];
 
 const DAY = 86400;
 
@@ -412,7 +412,7 @@ export function renderPrometheus(rawGauges = {}) {
   const lines = [
     ...gauge('curator_last_tick_ts', 'Unix time of the last loop tick.', gauges.lastTickTs),
     ...gauge('curator_hermes_heartbeat_ts', 'Unix time of the last POST /hermes-heartbeat.', gauges.hermesHeartbeatTs),
-    ...gauge('curator_pending_effective_at', 'effectiveAt of the pending targets change, 0 when none.', gauges.pendingEffectiveAt),
+    ...gauge('curator_pending_effective_at', 'effectiveAt of the pending targets change, 0 when none or while the book is inactive.', gauges.pendingEffectiveAt),
     '# HELP curator_apply_state Apply state machine; 1 on the current state.',
     '# TYPE curator_apply_state gauge',
     ...APPLY_STATES.map((state) => `curator_apply_state{state="${state}"} ${gauges.applyState === state ? 1 : 0}`),

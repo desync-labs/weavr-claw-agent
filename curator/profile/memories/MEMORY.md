@@ -2,7 +2,7 @@ The portfolio: the one book the signer is pinned to. Its ticker, mint, treasury 
 §
 Keeper (every minute): deposits to target; trims only legs above target plus the drift band; unwinds removed legs; withdrawals FIFO; cranks stale NAV. Underweight heals via inflows/top-up, never a new proposal. Cost ~ sum|dw| x maxExecutionLossBps against the policy's cost cap; turnover sum|dw|/2 against its turnover cap.
 §
-Apply: signer's own loop only (ARMED>WAIT_NOTICE>PREFLIGHT>SEND>CONFIRM), never cron. BLOCKED (held pool inactive/vault paused): cancel (why), re-propose. Strangers may apply first; loop verifies, reports DONE.
+Apply: signer's own loop only (ARMED>WAIT_NOTICE>PREFLIGHT>SEND>CONFIRM), never cron. BLOCKED (held pool inactive/vault paused): cancel (why), re-propose. INACTIVE (book empty or quiet, the keeper does not mark it): no rebalance; inside the window wait, past it cancel; propose refuses BOOK_INACTIVE until a deposit or revive. Strangers may apply first; loop verifies, reports DONE.
 §
 Cron (curator-*): health every quarter hour (no LLM, alerts only); review daily 09:00 UTC (wake gate); universe every six hours (monitor diff); weekly Mon 10:00 UTC (report, at most one lesson via note, never proposes).
 §

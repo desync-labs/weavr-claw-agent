@@ -30,6 +30,7 @@ nudge.
 | PROPOSAL_TOO_SOON | the last rebalance is younger than the policy's minimum | HOLD until `nextProposeAt` |
 | PROPOSAL_QUOTA | the policy's proposals-per-window quota is spent | HOLD; say when the quota frees |
 | TARGETS_PENDING | a change is already pending | wait for the apply, or `cancel {why}` first |
+| BOOK_INACTIVE | the book is empty or has had no deposit or withdrawal for the quiet window, so nothing would apply a proposal | do not propose or retry while `status.portfolio.priceState` is `inactive`; a deposit or a revive wakes the book |
 | INPUTS_INCOMPLETE | a targeted pool lacks yield / TVL / risk tier | HOLD unless it is a risk exit; say which pool |
 | OUTSIDE_WINDOW | outside the policy's UTC propose window; the message carries it | HOLD; propose in the next window |
 | WHY_REQUIRED | `why` empty or over the policy's length limit | write the reason |
@@ -55,7 +56,14 @@ nudge.
 
 Apply blockers (from `status.apply.lastBlocker` or a forced `apply`):
 NO_PENDING_CHANGE (nothing to apply, or a stranger applied first; the loop
-verifies), WINDOW_CLOSED (the policy's apply window has passed since
+verifies), BOOK_INACTIVE (the book is empty or has had no deposit or
+withdrawal for the quiet window; the keeper does not mark it, so an inactive
+book is not rebalanced: the apply state is INACTIVE and nothing escalates.
+Inside the window wait: the change applies by itself if a deposit or a
+revive wakes the book. Once the blocker carries `windowClosed: true`,
+`cancel {why}` quietly, since a closed-window change left on chain would
+escalate the moment the book wakes and blocks every later proposal; do not
+re-propose until the book is active again), WINDOW_CLOSED (the policy's apply window has passed since
 effectiveAt: `cancel {why}` and re-propose), NOTICE_NOT_ELAPSED (wait),
 VAULT_PAUSED (BLOCKED: `pause`, then `cancel {why}`; governance unpauses),
 CHANGE_OUTSIDE_POLICY (BLOCKED: the pending change breaks a rule of the
