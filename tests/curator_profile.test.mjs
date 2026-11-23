@@ -347,7 +347,7 @@ test('ERRORS.md names every refusal code of the signer and all 66 factory error 
     LEG_WEIGHT_CAP CATEGORY_CAP WEIGHTS_SUM TURNOVER_CAP COST_CAP PROPOSAL_TOO_SOON PROPOSAL_QUOTA TARGETS_PENDING
     INPUTS_INCOMPLETE OUTSIDE_WINDOW WHY_REQUIRED DEPOSIT_DAILY_CAP BOOK_NOT_FRESH CAP_HEADROOM WITHDRAW_CRON_BLOCKED
     WITHDRAW_DAILY_CAP VERB_DENIED OPS_ONLY RATE_LIMITED LOW_SOL SELF_LOCKED INVARIANT_DRIFT PAUSED INVARIANTS_UNVERIFIED
-    PAGED_PROPOSE_UNSUPPORTED UPSTREAM BUILD_REFUSED SEND_FAILED CHANGE_OUTSIDE_POLICY CHANGE_UNCHECKED`.split(/\s+/).filter(Boolean);
+    PAGED_PROPOSE_UNSUPPORTED UPSTREAM BUILD_REFUSED SEND_FAILED CHANGE_OUTSIDE_POLICY CHANGE_UNCHECKED BOOK_INACTIVE`.split(/\s+/).filter(Boolean);
   for (const code of codes) assert.ok(errors.includes(code), `ERRORS.md lacks ${code}`);
   // No programs repo here to cross-check names against errors.rs; the table
   // must still carry every code 6000..6065 exactly once, in the row shape.
@@ -355,6 +355,16 @@ test('ERRORS.md names every refusal code of the signer and all 66 factory error 
   assert.equal(rows.length, 66, 'one row per factory error');
   assert.deepEqual([...new Set(rows.map(([c]) => c))].sort((a, b) => a - b), Array.from({ length: 66 }, (_, i) => 6000 + i));
   assert.ok(rows.some(([c, n]) => c === 6020 && n === 'RebalanceTooSoon') && rows.some(([c, n]) => c === 6065 && n === 'Unauthorized'));
+});
+
+test('an inactive book: the change waits inside the window, is cancelled past it, and the book takes no proposal', () => {
+  const errors = readFileSync(join(SKILL, 'references/ERRORS.md'), 'utf8');
+  assert.match(errors, /^\| BOOK_INACTIVE \| .* \| .* \|$/m, 'a propose refusal row');
+  assert.match(errors, /windowClosed/, 'the apply blocker names the flag that turns wait into cancel');
+  assert.doesNotMatch(errors, /do not cancel or re-propose for it/, 'a dead change left on chain blocks every later proposal');
+  const memory = readFileSync(join(PROFILE, 'memories/MEMORY.md'), 'utf8');
+  assert.match(memory, /INACTIVE[^§]*past it cancel/);
+  assert.doesNotMatch(memory, /never cancel for it/);
 });
 
 test('SOUL.md and the memories fit the Hermes memory tool limits and its § delimiter', () => {

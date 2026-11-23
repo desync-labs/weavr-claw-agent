@@ -187,7 +187,9 @@ function changeBlocker(pending, snapshot, policy, tickSecs) {
  * the loop checks whether a stranger applied our proposal). Every blocker is
  * collected, not only the first, so `/apply` can show the LLM the whole list;
  * `NO_PENDING_CHANGE` alone short-circuits because nothing else means
- * anything without a pending change.
+ * anything without a pending change, and so does `BOOK_INACTIVE` (the api row
+ * reads `priceState: 'inactive'`): nothing marks an inactive book, so it waits
+ * for a deposit or a revive and never escalates.
  *
  * Mirror of `apply_targets_handler`: TargetsNotEffective → NOTICE_NOT_ELAPSED,
  * VaultPaused → VAULT_PAUSED, PortfolioPriceStale → BOOK_NOT_FRESH,
@@ -222,8 +224,28 @@ export function applyGates(snapshot, policy, now, slot = snapshot?.slot ?? null)
     };
   }
 
+  // An inactive book (empty, or no deposit or withdrawal for the quiet window)
+  // is one the keeper no longer marks, and neither are the legs only quiet
+  // books hold: the change would wait on BOOK_NOT_FRESH and LEG_STALE until
+  // the window closed. It is not rebalanced. It waits for a deposit or a
+  // revive and never escalates; nothing else means anything until then.
+  // Past the window a wake would escalate WINDOW_CLOSED, so the blocker says
+  // to cancel the change instead.
   const { effectiveAt } = pending;
   const windowSecs = apply.windowAfterEffectiveSecs ?? 21600;
+  if (snapshot.portfolioRow?.priceState === 'inactive') {
+    const windowClosed = effectiveAt != null && now > effectiveAt + windowSecs;
+    const inactive = 'the book is inactive (empty, or no deposit or withdrawal for the quiet window), so the keeper does not mark it';
+    return {
+      ok: false,
+      blockers: [blocker('BOOK_INACTIVE', 'wait',
+        windowClosed
+          ? `${inactive}; the apply window has closed, so cancel the change, and propose again once a deposit or a revive wakes the book`
+          : `${inactive}; the change waits for a deposit or a revive inside the apply window`,
+        { waitSecs: tickSecs, escalateAfterSecs: null, windowClosed })],
+    };
+  }
+
   if (effectiveAt != null && now > effectiveAt + windowSecs) {
     blockers.push(blocker('WINDOW_CLOSED', 'escalate',
       `the apply window closed ${now - effectiveAt - windowSecs} s ago (effectiveAt + ${windowSecs} s)`,
@@ -409,6 +431,9 @@ export function proposeGates(snapshot, policy, now) {
   }
   if (vault.paused) {
     blocked('VAULT_PAUSED', 'the book vault is paused; a proposal could not be applied');
+  }
+  if (snapshot?.portfolioRow?.priceState === 'inactive') {
+    blocked('BOOK_INACTIVE', 'the book is inactive (empty, or no deposit or withdrawal for the quiet window), so nothing would apply a proposal; propose once a deposit or a revive wakes it');
   }
   return blockers.length === 0 ? { ok: true } : { ok: false, blockers };
 }
