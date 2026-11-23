@@ -8,13 +8,14 @@
  * a faked test; `createLoop` is the only place with a clock, a snapshot
  * read and a send, and all three come through `ctx`.
  *
- * Why the gate the machine sees is `applyGates(...)` plus four fields the
+ * Why the gate the machine sees is `applyGates(...)` plus five fields the
  * loop adds from the same snapshot (`pending`, `currentTargets`,
- * `lastRebalanceAt`, `keeperOk`): the gates say whether an apply may go;
- * the machine also needs to know whether a proposal exists at all, whether
- * a vanished one was applied by a stranger or cancelled, and whether the
- * keeper is up before it spends a refresh-nav. Passing them on the gate
- * keeps `stepApply` a function of its arguments.
+ * `lastRebalanceAt`, `keeperOk`, `rowRead`): the gates say whether an apply
+ * may go; the machine also needs to know whether a proposal exists at all,
+ * whether a vanished one was applied by a stranger or cancelled, whether the
+ * keeper is up before it spends a refresh-nav, and whether the api row was
+ * read at all before it lets a parked change out of `INACTIVE`. Passing them
+ * on the gate keeps `stepApply` a function of its arguments.
  *
  * Why the chain is authoritative on `effectiveAt`: the propose verb arms
  * the machine with `now + delay`, a few seconds off the on-chain value; the
@@ -46,7 +47,8 @@ import {
 /**
  * The machine's states, in order of a normal cycle. `INACTIVE` is not part of
  * one: a change pending on an inactive book (`BOOK_INACTIVE`) waits there for
- * a deposit or a revive, outside the window and without an alert.
+ * a deposit or a revive, outside the window and without an alert, and leaves
+ * only on a tick that read the api row.
  */
 export const APPLY_STATES = Object.freeze([
   'IDLE', 'ARMED', 'WAIT_NOTICE', 'PREFLIGHT', 'SEND', 'CONFIRM', 'DONE', 'BLOCKED', 'ESCALATED', 'INACTIVE',
@@ -77,8 +79,8 @@ const applyPolicy = (policy) => ({ ...DEFAULT_APPLY_POLICY, ...(policy?.apply ??
 /**
  * One pure step of the machine.
  * @param {object} applyState README §4.1 `state.apply`
- * @param {{ ok?: boolean, blockers?: object[], pending?: { effectiveAt: number, proposedAt: number | null, targets: object[] } | null, currentTargets?: object[] | null, lastRebalanceAt?: number | null, keeperOk?: boolean | null }} gate
- *   the applyGates result for this tick plus the loop's four snapshot-derived fields; `ok === undefined` means "no gate result: wait"
+ * @param {{ ok?: boolean, blockers?: object[], pending?: { effectiveAt: number, proposedAt: number | null, targets: object[] } | null, currentTargets?: object[] | null, lastRebalanceAt?: number | null, keeperOk?: boolean | null, rowRead?: boolean }} gate
+ *   the applyGates result for this tick plus the loop's five snapshot-derived fields; `ok === undefined` means "no gate result: wait"
  * @param {number} now unix secs
  * @param {object} policy
  * @returns {{ next: object, actions: Array<'send' | 'refresh-nav' | `alert:${string}` | 'journal'> }}
@@ -134,10 +136,15 @@ export function stepApply(applyState, gate, now, policy) {
     // not late. The first tick the book is active again runs the rest.
     const inactive = Array.isArray(gate?.blockers) ? gate.blockers.find((b) => b.code === 'BOOK_INACTIVE') : null;
     if (gate?.ok === false && inactive) {
-      const prev = s.lastBlocker?.code === inactive.code ? s.lastBlocker : { code: inactive.code, since: now, message: inactive.message ?? null };
-      go('INACTIVE', { lastBlocker: prev });
+      // The message is the current one: it turns to "cancel" when the window closes.
+      const since = s.lastBlocker?.code === inactive.code ? s.lastBlocker.since : now;
+      go('INACTIVE', { lastBlocker: { code: inactive.code, since, message: inactive.message ?? null } });
       return finish();
     }
+    // A parked change leaves INACTIVE only on a tick that read the api row and
+    // ran the gates: a failed read is not a revive, and past the window it
+    // would escalate WINDOW_CLOSED for good.
+    if (s.state === 'INACTIVE' && (gate?.rowRead !== true || typeof gate?.ok !== 'boolean')) return finish();
     if (now > s.effectiveAt + a.windowAfterEffectiveSecs) {
       escalate('WINDOW_CLOSED', `the apply window closed ${a.windowAfterEffectiveSecs} s after effectiveAt`);
       return finish();
@@ -430,7 +437,7 @@ export function createLoop(opts) {
       log('info', 'tick-held', { paused: Boolean(ctx.state.paused), selfLocked: Boolean(ctx.state.selfLocked), unverified, applyState: ctx.state.apply.state });
     } else {
       const pending = pendingOf(snapshot);
-      let gate = { pending, currentTargets: currentTargetsOf(snapshot), lastRebalanceAt, keeperOk: keeperOkOf(snapshot.health) };
+      let gate = { pending, currentTargets: currentTargetsOf(snapshot), lastRebalanceAt, keeperOk: keeperOkOf(snapshot.health), rowRead: snapshot.portfolioRow != null };
       if (pending || ACTIVE.has(ctx.state.apply.state)) {
         try {
           const gates = deps.applyGates(snapshot, ctx.policy, nowSecs);

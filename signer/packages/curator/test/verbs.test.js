@@ -154,6 +154,17 @@ test('a chain-state blocker from proposeGates refuses with the blocker code befo
   assert.ok(!ctx.trace.includes('buildPropose'));
 });
 
+test('a propose on an inactive book is refused BOOK_INACTIVE (409) on the real gates, before any build', async () => {
+  const { proposeGates } = await import('../src/preflight.js');
+  const base = fakeSnapshot({ priceState: 'inactive' });
+  const snapshot = { ...base, portfolioAccount: { ...base.portfolioAccount, state: { live: {} } } };
+  const ctx = mk({ snapshot, depsOverrides: { proposeGates } });
+  const error = await rejectsWith(verbs.propose(ctx, { targets: NEW_TARGETS, why: 'x' }, meta()), 'BOOK_INACTIVE');
+  assert.equal(error.status, 409);
+  assert.ok(!ctx.trace.includes('buildPropose'));
+  assert.ok(!ctx.trace.includes('sign'));
+});
+
 test('a payload the decoder refuses is never signed', async () => {
   const ctx = mk({ depsOverrides: { verifyBuilt: () => ({ ok: false, code: 'WRONG_PAYER', message: 'fee payer is not the curator' }) } });
   const error = await rejectsWith(verbs.propose(ctx, { targets: NEW_TARGETS, why: 'x' }, meta()), 'WRONG_PAYER');

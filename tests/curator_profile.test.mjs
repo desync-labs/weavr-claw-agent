@@ -357,6 +357,16 @@ test('ERRORS.md names every refusal code of the signer and all 66 factory error 
   assert.ok(rows.some(([c, n]) => c === 6020 && n === 'RebalanceTooSoon') && rows.some(([c, n]) => c === 6065 && n === 'Unauthorized'));
 });
 
+test('an inactive book: the change waits inside the window, is cancelled past it, and the book takes no proposal', () => {
+  const errors = readFileSync(join(SKILL, 'references/ERRORS.md'), 'utf8');
+  assert.match(errors, /^\| BOOK_INACTIVE \| .* \| .* \|$/m, 'a propose refusal row');
+  assert.match(errors, /windowClosed/, 'the apply blocker names the flag that turns wait into cancel');
+  assert.doesNotMatch(errors, /do not cancel or re-propose for it/, 'a dead change left on chain blocks every later proposal');
+  const memory = readFileSync(join(PROFILE, 'memories/MEMORY.md'), 'utf8');
+  assert.match(memory, /INACTIVE[^§]*past it cancel/);
+  assert.doesNotMatch(memory, /never cancel for it/);
+});
+
 test('SOUL.md and the memories fit the Hermes memory tool limits and its § delimiter', () => {
   assert.ok(read('SOUL.md').length <= 800, 'SOUL.md ≈ 600 chars');
   const memory = read('memories/MEMORY.md');

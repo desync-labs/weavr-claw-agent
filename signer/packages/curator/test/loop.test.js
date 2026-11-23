@@ -151,14 +151,26 @@ test('INACTIVE leaves on its own: a revived book applies inside the window, esca
   const inactive = gateWait('BOOK_INACTIVE', {}, { escalateAfterSecs: null });
   const early = stepApply(armed({ state: 'PREFLIGHT' }), inactive, EFF + 60, POLICY).next;
   assert.equal(early.state, 'INACTIVE');
-  const revived = stepApply(early, gateOk(), EFF + 90, POLICY);
+  const revived = stepApply(early, gateOk({ rowRead: true }), EFF + 90, POLICY);
   assert.equal(revived.next.state, 'SEND');
   assert.ok(revived.actions.includes('send'));
-  const late = stepApply(early, gateOk(), EFF + 21601, POLICY);
+  const late = stepApply(early, gateOk({ rowRead: true }), EFF + 21601, POLICY);
   assert.equal(late.next.state, 'ESCALATED');
   assert.equal(late.next.lastBlocker.code, 'WINDOW_CLOSED');
   const cancelled = stepApply(early, { ok: true, pending: null, currentTargets: null, lastRebalanceAt: null }, EFF + 90, POLICY);
   assert.equal(cancelled.next.state, 'IDLE');
+});
+
+test('INACTIVE holds on a tick that did not read the api row or did not run the gates: a failed read is not a revive', () => {
+  const late = EFF + 21601;
+  const parked = stepApply(armed({ state: 'PREFLIGHT' }), gateWait('BOOK_INACTIVE', {}, { escalateAfterSecs: null }), late, POLICY).next;
+  assert.equal(parked.state, 'INACTIVE');
+  const unread = stepApply(parked, gateWait('BOOK_NOT_FRESH', { rowRead: false }), late + 30, POLICY);
+  assert.equal(unread.next.state, 'INACTIVE');
+  assert.deepEqual(unread.actions, []);
+  const threw = stepApply(parked, { pending: PENDING, rowRead: true }, late + 60, POLICY);
+  assert.equal(threw.next.state, 'INACTIVE');
+  assert.deepEqual(threw.actions, []);
 });
 
 test('APPLY_IN_FLIGHT escalates after the attempt cap', () => {
@@ -316,6 +328,25 @@ test('tick: an inactive book parks the change on the real gates: nothing sent, n
   const gauges = gaugesOf(ctx);
   assert.equal(gauges.curator_apply_state, 'INACTIVE');
   assert.equal(gauges.curator_pending_effective_at, 0);
+});
+
+test('tick: one failed api read past the window leaves the parked change parked, and it is still parked when the api answers again', async () => {
+  const late = EFF + 7 * 3600;
+  // The pending header comes from the chain, so it survives a failed api read.
+  const base = fakeSnapshot({ pending: ROW_PENDING, priceState: 'inactive', at: late });
+  const parked = { ...base, portfolioAccount: { ...base.portfolioAccount, pendingTargets: { proposedAt: new BN(T0), effectiveAt: new BN(EFF) } } };
+  const ctx = mk({ snapshot: parked, depsOverrides: { applyGates } });
+  ctx.clock.set(late * 1000);
+  const loop = createLoop({ ctx });
+  assert.equal((await loop.tick()).applyState, 'INACTIVE');
+  ctx.deps.setSnapshot({ ...parked, portfolioRow: null });
+  ctx.clock.advance(30);
+  assert.equal((await loop.tick()).applyState, 'INACTIVE');
+  ctx.deps.setSnapshot(parked);
+  ctx.clock.advance(30);
+  assert.equal((await loop.tick()).applyState, 'INACTIVE');
+  assert.ok(![...ctx.state.alerts.keys()].some((name) => name.startsWith('apply:')), JSON.stringify([...ctx.state.alerts.keys()]));
+  assert.ok(!ctx.trace.includes('send'));
 });
 
 test('tick: notice elapsed and gates green → build, verify, sign, send through the loop; state CONFIRM; then DONE once the chain shows it', async () => {

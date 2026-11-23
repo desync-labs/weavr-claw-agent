@@ -228,6 +228,20 @@ describe('applyGates', () => {
     assert.equal(result.blockers[0].action, 'wait');
     assert.equal(result.blockers[0].waitSecs, POLICY.apply.tickSecs);
     assert.equal(result.blockers[0].escalateAfterSecs, null);
+    // Past the window the change can no longer apply on its own: the blocker says so, and says to cancel it.
+    assert.equal(result.blockers[0].windowClosed, true);
+    assert.match(result.blockers[0].message, /cancel/);
+  });
+
+  it('BOOK_INACTIVE inside the window: the change still waits for a deposit or a revive', () => {
+    const effective = NOW - 60;
+    const result = applyGates(fixture({
+      portfolioRow: { priceState: 'inactive' },
+      portfolioAccount: { pendingTargets: { proposedAt: bn(effective - 60), effectiveAt: bn(effective) } },
+    }), POLICY, NOW);
+    assert.deepEqual(codes(result), ['BOOK_INACTIVE']);
+    assert.equal(result.blockers[0].windowClosed, false);
+    assert.doesNotMatch(result.blockers[0].message, /cancel/);
   });
 
   it('WINDOW_CLOSED: past effectiveAt + 6 h escalates at once', () => {
@@ -572,6 +586,12 @@ describe('proposeGates', () => {
   it('APPLY_IN_FLIGHT and VAULT_PAUSED block a proposal too', () => {
     assert.equal(only(proposeGates(clear({ applyNextPage: 1 }), POLICY, NOW), 'APPLY_IN_FLIGHT').action, 'blocked');
     assert.equal(only(proposeGates(fixture({ portfolioAccount: { pendingTargets: null }, vaultAccount: { paused: true } }), POLICY, NOW), 'VAULT_PAUSED').action, 'blocked');
+  });
+
+  it('BOOK_INACTIVE: an inactive book takes no proposal, since nothing would apply it', () => {
+    const found = only(proposeGates(fixture({ portfolioAccount: { pendingTargets: null }, portfolioRow: { priceState: 'inactive' } }), POLICY, NOW), 'BOOK_INACTIVE');
+    assert.equal(found.action, 'blocked');
+    assert.match(found.message, /deposit or a revive/);
   });
 
   it('reports in validate_proposal order', () => {

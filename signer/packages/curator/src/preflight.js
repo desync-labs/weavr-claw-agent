@@ -229,17 +229,23 @@ export function applyGates(snapshot, policy, now, slot = snapshot?.slot ?? null)
   // books hold: the change would wait on BOOK_NOT_FRESH and LEG_STALE until
   // the window closed. It is not rebalanced. It waits for a deposit or a
   // revive and never escalates; nothing else means anything until then.
+  // Past the window a wake would escalate WINDOW_CLOSED, so the blocker says
+  // to cancel the change instead.
+  const { effectiveAt } = pending;
+  const windowSecs = apply.windowAfterEffectiveSecs ?? 21600;
   if (snapshot.portfolioRow?.priceState === 'inactive') {
+    const windowClosed = effectiveAt != null && now > effectiveAt + windowSecs;
+    const inactive = 'the book is inactive (empty, or no deposit or withdrawal for the quiet window), so the keeper does not mark it';
     return {
       ok: false,
       blockers: [blocker('BOOK_INACTIVE', 'wait',
-        'the book is inactive (empty, or no deposit or withdrawal for the quiet window), so the keeper does not mark it; the change waits for a deposit or a revive',
-        { waitSecs: tickSecs, escalateAfterSecs: null })],
+        windowClosed
+          ? `${inactive}; the apply window has closed, so cancel the change, and propose again once a deposit or a revive wakes the book`
+          : `${inactive}; the change waits for a deposit or a revive inside the apply window`,
+        { waitSecs: tickSecs, escalateAfterSecs: null, windowClosed })],
     };
   }
 
-  const { effectiveAt } = pending;
-  const windowSecs = apply.windowAfterEffectiveSecs ?? 21600;
   if (effectiveAt != null && now > effectiveAt + windowSecs) {
     blockers.push(blocker('WINDOW_CLOSED', 'escalate',
       `the apply window closed ${now - effectiveAt - windowSecs} s ago (effectiveAt + ${windowSecs} s)`,
@@ -425,6 +431,9 @@ export function proposeGates(snapshot, policy, now) {
   }
   if (vault.paused) {
     blocked('VAULT_PAUSED', 'the book vault is paused; a proposal could not be applied');
+  }
+  if (snapshot?.portfolioRow?.priceState === 'inactive') {
+    blocked('BOOK_INACTIVE', 'the book is inactive (empty, or no deposit or withdrawal for the quiet window), so nothing would apply a proposal; propose once a deposit or a revive wakes it');
   }
   return blockers.length === 0 ? { ok: true } : { ok: false, blockers };
 }
